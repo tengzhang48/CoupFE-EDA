@@ -2,7 +2,7 @@
 
 The fixture is deliberately small and uses no third-party design, platform, or
 generated output.  A symmetric 3x3 resistor grid makes the reference voltages
-available in closed form while retaining the same solver-neutral files consumed
+available in closed form while retaining the same versioned files consumed
 by the OpenROAD/PDNSim adapters.
 """
 

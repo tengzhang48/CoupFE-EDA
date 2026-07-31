@@ -92,14 +92,14 @@ def fig_tsv_stress():
     # Lamé radial stress shape (schematic)
     r = np.linspace(0.5, 1.0, 50)
     sigma_r = 10 * (1 - 1 / r ** 2)  # shape only
-    ax.plot(r, sigma_r, "k-", label="CoupFE")
-    ax.plot(r, sigma_r, "r--", label="Choi et al. (Materials 2021)")
-    ax.set_title("gate_tsv_lame — radial stress")
+    ax.plot(r, sigma_r, "k-", label="model shape (schematic)")
+    ax.plot(r, sigma_r, "r--", label="Lamé reference shape")
+    ax.set_title("gate_tsv_lame — comparison concept")
     ax.set_xlabel("$r$")
     ax.set_ylabel("$\\sigma_r$ (MPa)")
     ax.legend()
 
-    fig.suptitle("TSV thermoelastic stress vs published Lamé benchmark", fontsize=14, y=1.02)
+    fig.suptitle("TSV thermoelastic reference geometry (schematic)", fontsize=14, y=1.02)
     save(fig, "tsv_stress.png")
 
 
@@ -113,7 +113,7 @@ def fig_anand_materials():
     eps = np.linspace(0, 0.05, 100)
     # saturation + transient shape
     sig = 40 * (1 - np.exp(-200 * eps)) + 5 * eps
-    ax.plot(eps * 100, sig, "k-", label="Anand integrator")
+    ax.plot(eps * 100, sig, "k-", label="transient shape (schematic)")
     ax.plot(eps * 100, 42 * np.ones_like(eps), "r--", label="closed-form $\\sigma_{sat}$")
     ax.set_title("gate_anand_saturation / gate_solder_return_map")
     ax.set_xlabel("strain (%)")
@@ -126,15 +126,15 @@ def fig_anand_materials():
     sat_pub = np.array([40.5, 33.5, 24.0, 21.5])
     x = np.arange(len(T))
     w = 0.35
-    ax.bar(x - w / 2, sat_fe, w, label="CoupFE (closed form)")
-    ax.bar(x + w / 2, sat_pub, w, label="Motalab et al. Fig 3.10(a)")
+    ax.bar(x - w / 2, sat_fe, w, label="model values (illustrative)")
+    ax.bar(x + w / 2, sat_pub, w, label="literature values (illustrative)")
     ax.set_xticks(x)
     ax.set_xticklabels([f"{t}°C" for t in T])
     ax.set_title("gate_anand_sac305_benchmark")
     ax.set_ylabel("$\\sigma_{sat}$ (MPa)")
     ax.legend()
 
-    fig.suptitle("Anand viscoplasticity: integrator vs closed form / literature", fontsize=14, y=1.02)
+    fig.suptitle("Anand evidence relationships (schematic)", fontsize=14, y=1.02)
     save(fig, "anand_materials.png")
 
 
@@ -198,7 +198,7 @@ def fig_thermomech():
     ax = axes[1]
     r = np.linspace(0.5, 1.0, 50)
     hoop = 100 * (1 + 0.5 ** 2 / r ** 2)  # shape only
-    ax.plot(r, hoop, "k-", label="CoupFE")
+    ax.plot(r, hoop, "k-", label="model shape (schematic)")
     ax.plot(r, hoop, "r--", label="Timoshenko–Goodier")
     ax.set_title("gate_thermal_gradient_cylinder")
     ax.set_xlabel("$r$")
@@ -208,14 +208,14 @@ def fig_thermomech():
     ax = axes[2]
     r = np.linspace(0.5, 1.0, 50)
     lame = 50 * (1 + 1 / r ** 2)
-    ax.plot(r, lame, "k-", label="CoupFE")
+    ax.plot(r, lame, "k-", label="model shape (schematic)")
     ax.plot(r, lame, "r--", label="Lamé closed form")
     ax.set_title("gate_lame_cylinder")
     ax.set_xlabel("$r$")
     ax.set_ylabel("$\\sigma_\\theta$ (MPa)")
     ax.legend()
 
-    fig.suptitle("Thermomechanics gates: analytic / literature oracles", fontsize=14, y=1.02)
+    fig.suptitle("Thermomechanics reference relationships (schematic)", fontsize=14, y=1.02)
     save(fig, "thermomech.png")
 
 
@@ -289,7 +289,7 @@ def fig_etv_solver():
     x = np.linspace(0, 1, 50)
     # current crowding at corner
     j = 1 + 9 * np.exp(-5 * x)
-    ax.plot(x, j, "k-", label="current density (Dandu 2010)")
+    ax.plot(x, j, "k-", label="current-density shape (schematic)")
     ax.set_title("gate_etv_crowding")
     ax.set_xlabel("distance from corner")
     ax.set_ylabel("$|J|$")
@@ -309,7 +309,7 @@ def fig_capstone():
     ax.axis("off")
 
     boxes = [
-        (0.5, 0.7, "OpenROAD\nPDNSim"),
+        (0.5, 0.7, "placement /\nPDN input"),
         (2.5, 0.7, "PDN graph"),
         (4.5, 0.7, "Electrothermal"),
         (6.5, 0.7, "TSV stress"),
@@ -324,7 +324,7 @@ def fig_capstone():
                     xytext=(boxes[i][0] + 1.35, boxes[i][1] + 0.35),
                     arrowprops=dict(arrowstyle="->", lw=1.5))
 
-    ax.set_title("gate_capstone_pipeline — design → reliability scorecard", fontsize=12)
+    ax.set_title("gate_capstone_pipeline — synthetic integration flow", fontsize=12)
     save(fig, "capstone_pipeline.png")
 
 

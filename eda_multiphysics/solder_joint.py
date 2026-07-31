@@ -1,18 +1,17 @@
-"""3D-style solder-joint viscoplastic FE with volume-averaged Darveaux life.
+"""Plane-strain Anand material and elastic finite-element checks.
 
-Builds on the validated Anand constitutive law (`anand.py`, 0.07% vs closed-form
-saturation) by putting it into a plane-strain finite-element solder joint under
-JEDEC thermal cycling, and computing the **volume-averaged inelastic strain-energy
-density per cycle** (Darveaux's mesh-objective damage metric) -> crack
-initiation/growth -> cycles-to-failure.
+This module checks the tensor return map against the same closed-form saturation
+relation used by :mod:`eda_multiphysics.anand`, then checks the surrounding Quad4
+assembly with an elastic affine patch test.
 
 Evidence chain (claim boundary stated per stage):
-  1. Anand material point vs closed-form saturation stress      (anand.py, 0.07%)
-  2. plane-strain J2 RETURN MAP vs the same closed form, in a   (this file, Stage 1)
-     multiaxial (pure-shear) state -> validates the tensor radial return
-  3. FE elastic PATCH TEST (affine field reproduced exactly)    (this file, Stage 2)
-  4. solder joint -> volume-averaged dW per cycle -> calibration-specific
-     Darveaux N_f demonstration                              (this file, Stage 3)
+  1. Anand material point vs closed-form saturation stress      (anand.py)
+  2. plane-strain J2 return map vs the same relation in shear   (this file)
+  3. FE elastic patch test for an affine displacement field     (this file)
+
+The earlier nonlinear multi-element thermal-cycle driver is intentionally not
+part of the public example surface: its modified-Newton solve did not meet the
+stated convergence tolerance.  Git history retains it for future research.
 
 Run:  python -m eda_multiphysics.solder_joint
 """
@@ -23,6 +22,7 @@ import numpy as np
 from scipy.optimize import brentq
 
 from .anand import SNPB, sat_stress
+from .anand_3d import _resistance_update_exact
 
 SNPB = dict(SNPB, nu=0.40)   # solder Poisson ratio (near-incompressible)
 
@@ -52,16 +52,9 @@ def anand_return_map(eps2d, epp_n, s_n, T, dt, p):
         return sig, epp_n, s_n, 0.0
 
     def s_of(dg):                                      # resistance at this dgamma
-        s = s_n
         epdot = max(dg / dt, 1e-300)
         sstar = p["shat"] * ((epdot / p["A"]) * np.exp(p["QR"] / T)) ** p["n"]
-        for _ in range(40):
-            phi = 1.0 - s / sstar
-            s_new = s_n + p["h0"] * np.sign(phi) * abs(phi) ** p["a"] * dg
-            if abs(s_new - s) < 1e-10:
-                return max(s_new, 1e-9)
-            s = s_new
-        return max(s, 1e-9)
+        return _resistance_update_exact(s_n, sstar, dg, p)
 
     def g(dg):
         q = qtr - 3 * G * dg
@@ -250,79 +243,8 @@ def patch_test():
     return err < 1e-9
 
 
-def solder_joint_cycle(*, nx=8, ny=6, Tlo=-40.0, Thi=125.0, dalpha=20e-6,
-                       ldnp_over_h=6.0, ncyc=4, steps_per_cyc=24):
-    """Stage 3: a plane-strain solder block bonded to rigid pads, sheared by the
-    CTE-mismatch thermal cycle. Volume-averaged inelastic strain-energy density per
-    cycle over the crack-prone top element layer -> Darveaux life."""
-    from .fe import StructuredQuadMesh
-    p = SNPB
-    H = 0.1e-3                                  # joint height 100 um (square-ish)
-    m = StructuredQuadMesh(nx, ny, H, H)
-    op = AnandPlaneStrain(m, p)
-    TloK, ThiK = Tlo + 273.15, Thi + 273.15
-    Tref = 0.5 * (TloK + ThiK)
-    top = np.where(np.isclose(m.coords[:, 1], H))[0]
-    bot = np.where(np.isclose(m.coords[:, 1], 0.0))[0]
-    top_elems = [e for e, c in enumerate(m.elems)
-                 if m.coords[c][:, 1].max() > H - 1e-9]
-    # one full cycle of (T, time) as a triangular wave with the period below
-    period = 1600.0
-    dt = period / steps_per_cyc
-    U = np.zeros(op.ndof)
-    Wc = [0.0]
-    Wacc = 0.0
-    for cyc in range(ncyc):
-        for k in range(steps_per_cyc):
-            frac = k / steps_per_cyc
-            tri = 1 - abs(2 * frac - 1) * 2 + 1           # 0->1->0 triangle in [-?]
-            tri = 1.0 - abs(2.0 * (frac) - 1.0)           # 0..1..0
-            T = TloK + (ThiK - TloK) * tri
-            # joint shear strain: CTE mismatch amplified by distance-to-neutral-point
-            gamma = dalpha * (T - Tref) * ldnp_over_h
-            op.T = T
-            op.dt = dt
-            bc = {}
-            for n in bot:
-                bc[2 * n] = 0.0; bc[2 * n + 1] = 0.0
-            for n in top:
-                bc[2 * n] = gamma * H; bc[2 * n + 1] = 0.0
-            U, _, _ = newton_solve([op], U, None, op.ndof, bc, dt=dt, maxit=40)
-            op.commit(U, None, 0.0, dt)
-            Wacc += op.dW[top_elems].mean()              # volume-avg over top layer
-        Wc.append(Wacc)
-    dW_cyc = [Wc[k] - Wc[k - 1] for k in range(1, ncyc + 1)]
-    gamma_range = dalpha * (ThiK - TloK) * ldnp_over_h
-    return dict(dW_cyc=dW_cyc, dW_stab=dW_cyc[-1], gamma_range=gamma_range)
-
-
-def stage3():
-    r = solder_joint_cycle()
-    print("\nStage 3 -- plane-strain solder joint, JEDEC -40<->125 C, Darveaux:")
-    print(f"  shear strain range ~{r['gamma_range']*100:.2f}% (CTE mismatch x L_dnp/h=6)")
-    print(f"  volume-averaged inelastic dW per cycle: "
-          f"{', '.join(f'{w:.4f}' for w in r['dW_cyc'])} MJ/m^3")
-    dWs = r["dW_stab"]                                   # MJ/m^3 == MPa
-    print(f"  -> stabilized volume-averaged dW = {dWs:.4f} MJ/m^3 "
-          f"(mesh-objective Darveaux damage metric; not signoff here)")
-    # Darveaux (2000) energy-based eutectic-SnPb constants -- NATIVE UNITS: dW in psi,
-    # crack length in inches, da/dN in in/cycle (the constants are unit/mesh-calibrated).
-    dW_psi = dWs * 145.038
-    K1, K2, K3, K4 = 22400.0, -1.52, 5.86e-7, 0.99
-    a_in = 0.1e-3 / 0.0254                                # 100 um joint -> inches
-    N0 = K1 * dW_psi ** K2
-    dadN = K3 * dW_psi ** K4
-    Nf = N0 + a_in / dadN
-    print(f"  -> Darveaux (dW={dW_psi:.2f} psi): N0(init)={N0:,.0f} + growth "
-          f"{a_in/dadN:,.0f} = N_f ~ {Nf:,.0f} cycles")
-    print("  NOTE: dW (MJ/m^3) is the rigorous mesh-objective output; the Darveaux")
-    print("  constants are unit/mesh-calibrated (Darveaux 2000, psi/inch) -> N_f is")
-    print("  order-of-magnitude. Validated machinery: return map 0.04%, patch test 4e-16.")
-
-
 if __name__ == "__main__":
     import sys
     ok = validate_return_map()
     ok &= patch_test()
-    stage3()
     sys.exit(0 if ok else 1)

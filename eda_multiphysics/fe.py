@@ -15,8 +15,8 @@ Weak form (one field phi, per-element coefficient c, per-element source s):
 
     R_i = integral( c grad(phi).grad(N_i) ) - integral( s N_i )
 
-This is experimental EDA-multiphysics prototype code; see
-`open_source_eda_multiphysics_integration_plan.md` (Phases 3-5).
+This is experimental EDA-multiphysics code. See ``docs/theory.md`` for the
+equations and ``docs/api.md`` for the callable boundary.
 """
 
 from __future__ import annotations
@@ -153,8 +153,28 @@ def solve_field(mesh, coeff_elem, source_elem, dirichlet, node_source=None,
                 reaction_elem=None, **newton_kw):
     """Solve one steady diffusion field through CoupFE's `newton_solve`."""
     op = ScalarDiffusion(mesh, coeff_elem, source_elem, node_source, reaction_elem)
+    residual_rtol = float(newton_kw.pop("residual_rtol", 1e-9))
+    residual_atol = float(newton_kw.pop("residual_atol", 1e-11))
+    constrained = np.array(sorted(dirichlet), dtype=int)
+    free = np.ones(mesh.nnode, dtype=bool)
+    free[constrained] = False
     U0 = np.zeros(mesh.nnode)
+    for dof, value in dirichlet.items():
+        U0[int(dof)] = float(value)
+    initial_values = np.asarray(op.residual(U0, None, 1.0, 1.0).values)
+    initial_norm = (
+        float(np.max(np.abs(initial_values[free]))) if np.any(free) else 0.0
+    )
     U, _, nit = newton_solve([op], U0, None, mesh.nnode, dirichlet, **newton_kw)
+    final_values = np.asarray(op.residual(U, None, 1.0, 1.0).values)
+    final_norm = float(np.max(np.abs(final_values[free]))) if np.any(free) else 0.0
+    residual_limit = max(residual_atol, residual_rtol * max(1.0, initial_norm))
+    if not np.all(np.isfinite(U)) or not np.isfinite(final_norm) or final_norm > residual_limit:
+        raise RuntimeError(
+            "scalar diffusion solve did not satisfy the final residual check: "
+            f"iterations={nit}, residual_norm={final_norm:.6e}, "
+            f"residual_limit={residual_limit:.6e}"
+        )
     return U, op, nit
 
 

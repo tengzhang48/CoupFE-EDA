@@ -79,7 +79,7 @@ def load_benchmark_manifest(path):
 
 
 def stamp_evidence(manifest, *, results, code_revision, mesh_revision, material_revision):
-    """Create a result evidence record carrying every release-required revision/hash."""
+    """Create a result record carrying the declared revision and manifest hashes."""
     validate_benchmark_manifest(manifest)
     revisions = {
         "code_revision": str(code_revision).strip(),
@@ -98,7 +98,7 @@ def stamp_evidence(manifest, *, results, code_revision, mesh_revision, material_
 
 
 def evaluate_release_scorecard(scorecard):
-    """Return the only defensible release label from the ten mandatory categories."""
+    """Summarize the ten declared evidence categories without inferring maturity."""
     if not isinstance(scorecard, dict) or scorecard.get("schema_version") != SCHEMA_VERSION:
         raise ValueError(f"scorecard schema_version must be {SCHEMA_VERSION}")
     categories = scorecard.get("categories")
@@ -112,22 +112,22 @@ def evaluate_release_scorecard(scorecard):
             raise ValueError(f"categories.{name}.status must be one of {sorted(_STATES)}")
         states[name] = item["status"]
     if all(state == "passed" for state in states.values()):
-        label = "v0.1_validated_research_workflow"
-        allowed_claim = "validated multilevel TSV thermomechanics and device-impact screening"
+        label = "declared_tsv_evidence_complete"
+        allowed_claim = "all declared TSV evidence categories passed for the recorded scope"
     elif states["global_experiment"] == "failed" or states["local_experiment"] == "failed":
-        label = "release_blocked"
-        allowed_claim = "no validated TSV release claim"
+        label = "declared_tsv_evidence_failed"
+        allowed_claim = "the declared experimental evidence check failed"
     else:
-        label = "alpha_numerical_prototype"
-        allowed_claim = "TSV numerical/device-screening prototype; experimental validation pending"
+        label = "declared_tsv_evidence_incomplete"
+        allowed_claim = "TSV numerical/device-screening demonstration; experimental evidence incomplete"
     return {
-        "release_label": label,
+        "evidence_status": label,
         "allowed_claim": allowed_claim,
         "passed": sum(state == "passed" for state in states.values()),
         "blocked": sum(state == "blocked" for state in states.values()),
         "failed": sum(state == "failed" for state in states.values()),
         "not_started": sum(state == "not_started" for state in states.values()),
-        "release_ready": label == "v0.1_validated_research_workflow",
+        "evidence_complete": label == "declared_tsv_evidence_complete",
     }
 
 

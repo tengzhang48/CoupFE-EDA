@@ -4,11 +4,10 @@ The lattice metadata, translated-node matching, and periodic graph construction
 belong to the mesh-aware EDA layer.  The solver core supplies only the generic
 ``ConstraintRelation`` primitive consumed by ``periodic_relations``.
 
-The matching and graph algorithms are adapted from ``coupfe/mesh/periodic.py`` and
-``coupfe/constraints/periodic.py`` at CoupFE commit
-``70ea06355ecf55cecb5ae01c55a377c03879470b`` (Apache-2.0).  Keeping that
-source revision here makes the ownership move and numerical provenance
-explicit; public input validation is hardened in this EDA-owned adapter.
+The matching and graph algorithms were adapted during project development from
+earlier Apache-2.0 CoupFE periodic utilities. The mesh semantics now live in
+this EDA-owned adapter; the public implementation and its regression tests are
+the inspectable source of truth for this release.
 """
 
 from __future__ import annotations

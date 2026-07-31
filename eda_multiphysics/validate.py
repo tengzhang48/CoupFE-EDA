@@ -1,8 +1,8 @@
-"""Validation ladder for the electrothermal prototype (plan Phases 3-5).
+"""Electrothermal reference-comparison ladder.
 
 Each case compares CoupFE against an oracle the code did NOT produce
 (closed-form, or an independent scipy BVP solve), and ships a BROKEN CONTROL that
-must fail — per `skills/testing.md` (independent oracle + broken control).
+must fail. See ``docs/VALIDATION_GUIDE.md`` for the evidence classes and scope.
 
 Run:  python -m eda_multiphysics.validate
 """
@@ -116,7 +116,8 @@ def _bvp_reference(sigma0, alpha, k, V0, L, Tsink, Tref):
                     np.zeros_like(x),
                     V0 * x / L])
     sol = solve_bvp(ode, bc, x, y0, p=[1.0], tol=1e-8, max_nodes=20000)
-    assert sol.success, sol.message
+    if not sol.success:
+        raise RuntimeError(f"electrothermal BVP reference failed: {sol.message}")
     xc = np.linspace(0, L, 401)
     Tprof = sol.sol(xc)[0]
     return float(Tprof.max()), float(sol.p[0])  # peakT, J

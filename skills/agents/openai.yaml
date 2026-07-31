@@ -1,4 +1,4 @@
 interface:
   display_name: "Develop CoupFE-EDA"
-  short_description: "Build validation-first EDA multiphysics"
-  default_prompt: "Use $develop-coupfe-eda to extend an EDA-aware interconnect or package-reliability workflow with an independent oracle, stable semantics, regression gates, and honest non-signoff claims."
+  short_description: "Extend EDA-linked multiphysics examples"
+  default_prompt: "Use $develop-coupfe-eda to extend an EDA-linked interconnect or package-reliability example with a named reference, stable semantics, regression checks, and a bounded non-signoff claim."

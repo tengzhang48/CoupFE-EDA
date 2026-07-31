@@ -1,25 +1,24 @@
-"""Electro-thermo-viscoplastic solder analysis -- Phase 1: the electro-thermal core.
+"""Electro-thermo-viscoplastic material-point and electrothermal examples.
 
-The first stage of the strongly-coupled study (see
-docs/electro_thermo_viscoplastic_coupling_plan.md): a coupled electro-thermal solve of a
-current-carrying solder bump, reproducing the published current-crowding benchmark.
+The electrothermal portion solves a simplified current-carrying solder-bump
+geometry. A fixed-mesh crowding ratio is compared qualitatively with the range
+reported by Dandu et al.; it is not a geometry-matched reproduction.
 
 Physics (steady, the two Laplacians fe.py already provides):
   electrical:  -div( sigma(T) grad phi ) = 0     (current J = -sigma grad phi)
   thermal:     -div( k grad T ) = Q,  Q = sigma |grad phi|^2   (Joule self-heating)
 coupled through sigma(T) = sigma0 / (1 + alpha (T - T0))  (the thermal->electrical loop).
-Solved by a staggered Picard iteration on sigma(T) -- the standard one-way+feedback scheme
-that Phase 3 will contrast against a monolithic complex-step-tangent solve.
+The steady fields are solved by a staggered Picard iteration on ``sigma(T)``.
 
-TWO validations:
-  (1) RIGOROUS (exact analytic oracle): the 1D Joule self-heating limit. A slab of
+Two checks are provided:
+  (1) an exact analytic oracle: the 1D Joule self-heating limit. A slab of
       thickness L with phi: 0->V0 across it and both faces held cold dissipates Q=sigma(V0/L)^2
       uniformly; the centre temperature rise is exactly  dT_peak = sigma V0^2 / (8 k).
-  (2) BENCHMARK (Dandu et al. 2010, Microelectron. Reliab. 50(4):547, 10.1016/j.microrel.
+  (2) literature context (Dandu et al. 2010, Microelectron. Reliab. 50(4):547, 10.1016/j.microrel.
       2009.12.003): current crowding at a solder-bump corner is "approximately one order of
       magnitude higher than the average current density"; the risky bump peaks at
       0.139e9 A/m^2 = 1.39e4 A/cm^2 for the 1.7 A daisy-chain current. We reproduce the
-      ~10x corner-crowding factor and the peak-vs-average relation.
+      fixed-mesh crowding factor is of similar order for the simplified geometry.
 
 Run:  python -m eda_multiphysics.etv_solder
 """
@@ -29,10 +28,16 @@ from __future__ import annotations
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from .anand import SAC305, thermal_cycle, plastic_strain_rate, _cycle_T
+from .anand import (
+    SAC305,
+    _cycle_T,
+    _require_complete_ivp,
+    plastic_strain_rate,
+    thermal_cycle,
+)
 from .fe import (StructuredQuadMesh, solve_field, electrode_current, elem_gradients)
 
-# --- Dandu 2010 verified inputs ---
+# --- Parameters reported by Dandu 2010 ---
 I_CHAIN = 1.7          # A, applied through the daisy chain
 T_AMB_C = 50.0         # ambient (convection) temperature, deg C
 H_CONV = 20.0          # convective film coefficient, W/m^2 K
@@ -56,6 +61,8 @@ def solve_et(mesh, V_bc, *, sigma0, alpha_sig=0.0, k=1.0, T0=0.0, T_bc=None,
     T_bc = T_bc or {}
     dT = np.zeros(mesh.nnode)          # T - T0 field (so sigma uses absolute T)
     Vlast = None
+    last_v_change = last_t_change = float("inf")
+    converged = False
     for it in range(1, maxit + 1):
         Tabs_elem = T0 + dT[mesh.elems].mean(axis=1)
         sig_elem = sigma0 / (1.0 + alpha_sig * (Tabs_elem - T0))
@@ -66,15 +73,36 @@ def solve_et(mesh, V_bc, *, sigma0, alpha_sig=0.0, k=1.0, T0=0.0, T_bc=None,
         src = Q + (h_vol * T_amb if h_vol else 0.0)
         rxn = np.full(ne, h_vol) if h_vol else None
         Tnew, opT, _ = solve_field(mesh, np.full(ne, k), src, T_bc, reaction_elem=rxn)
-        dT = (1 - relax) * dT + relax * Tnew if it > 1 else Tnew
-        if Vlast is not None and np.max(np.abs(V - Vlast)) < tol * max(1, np.max(np.abs(V))):
+        dT_next = (1 - relax) * dT + relax * Tnew if it > 1 else Tnew
+        if not (
+            np.all(np.isfinite(V))
+            and np.all(np.isfinite(dT_next))
+            and np.all(np.isfinite(Q))
+        ):
+            raise RuntimeError("electrothermal Picard iteration produced non-finite values")
+        last_t_change = float(
+            np.max(np.abs(dT_next - dT)) / max(1.0, np.max(np.abs(dT_next)))
+        )
+        if Vlast is not None:
+            last_v_change = float(
+                np.max(np.abs(V - Vlast)) / max(1.0, np.max(np.abs(V)))
+            )
+        dT = dT_next
+        if Vlast is not None and max(last_v_change, last_t_change) < tol:
+            converged = True
             break
         Vlast = V
+    if not converged:
+        raise RuntimeError(
+            "electrothermal Picard iteration did not converge: "
+            f"iterations={maxit}, voltage_change={last_v_change:.6e}, "
+            f"temperature_change={last_t_change:.6e}, tolerance={tol:.6e}"
+        )
     return dict(V=V, T=dT, Jmag=Jmag, Q=Q, opE=opE, sig=sig_elem, iters=it, mesh=mesh)
 
 
 # ---------------------------------------------------------------------------
-# (1) RIGOROUS: 1D Joule self-heating limit  dT_peak = sigma V0^2 / (8 k)
+# (1) Analytic 1D Joule self-heating limit  dT_peak = sigma V0^2 / (8 k)
 # ---------------------------------------------------------------------------
 def verify_selfheating(sigma0=3.0, V0=2.0, k=1.5, L=1.0, n=64):
     """Slab phi:0->V0, both faces cold -> peak dT = sigma V0^2 / 8k (exact)."""
@@ -113,7 +141,7 @@ def crowding_factor(*, n=32, post_frac=1.0, pad_frac=0.15, sigma0=1.0):
 
 
 def dandu_bump():
-    """Reproduce the Dandu 2010 corner-crowding: factor ~10x and peak ~1.39e4 A/cm^2.
+    """Evaluate a Dandu-context corner-crowding case at a fixed mesh.
 
     NOTE the corner current density is a SINGULARITY (Fan 2011, ECTC; Dandu discuss mesh
     dependency) -- the factor grows with refinement, so it is reported at a fixed mesh.
@@ -198,6 +226,7 @@ def etv_cycle(*, coupled, q_joule=0.0, g_th=8.0e6, dT_cyc=75.0, dalpha=18e-6,
     y0 = [0.0, p["s0"], 0.0, 0.0, TloK + T_joule_ss]
     sol = solve_ivp(rhs, [0, tmax], y0, method="BDF", t_eval=te,
                     rtol=1e-8, atol=1e-11, max_step=ramp / 4)
+    _require_complete_ivp(sol, tmax, "electro-thermo-viscoplastic cycle integration")
     t, W = sol.t, sol.y[2]
     Wc = [float(np.interp(k * P, t, W)) for k in range(ncyc + 1)]
     dW = [Wc[k] - Wc[k - 1] for k in range(1, ncyc + 1)]
@@ -206,11 +235,11 @@ def etv_cycle(*, coupled, q_joule=0.0, g_th=8.0e6, dT_cyc=75.0, dalpha=18e-6,
 
 
 def coupling_effect(*, q_joule=None, g_th=8.0e6, ramp=200.0, ncyc=5):
-    """Phase 4 kernel: monolithic vs staggered stabilized dW for the SAME loading.
+    """Compare monolithic and staggered material-point dW for one loading model.
 
     The difference is the strong-coupling (Joule + inelastic self-heating) effect on the
-    inelastic strain-energy density per cycle -- the paper's quantity. Returns both dW and
-    the relative delta. q_joule defaults to the real value from the Phase-1 current density.
+    inelastic strain-energy density per cycle. Returns both dW and the relative
+    delta. ``q_joule`` defaults to the value from the simplified crowding case.
     """
     if q_joule is None:
         q_joule = joule_density(dandu_bump()["j_avg"])
@@ -223,43 +252,41 @@ def coupling_effect(*, q_joule=None, g_th=8.0e6, ramp=200.0, ncyc=5):
 
 def main():
     peak, exact, err = verify_selfheating()
-    print("Phase 1 -- electro-thermal core (electro-thermo-viscoplastic study)")
-    print(f"  (1) RIGOROUS self-heating  peak dT = {peak:.5f} vs sigma V0^2/8k = {exact:.5f}"
+    print("Electrothermal and material-point coupling examples")
+    print(f"  (1) analytic self-heating  peak dT = {peak:.5f} vs sigma V0^2/8k = {exact:.5f}"
           f"  err {err:.1e}  {'PASS' if err < 2e-3 else 'CHECK'}")
     f0, _, _ = crowding_factor(post_frac=1.0, pad_frac=1.0)   # full entry+exit -> uniform J
     print(f"  broken control: full entry+exit (uniform current) -> factor {f0:.3f} (must be ~1)")
     d = dandu_bump()
-    print(f"  (2) BENCHMARK (Dandu 2010): corner crowding factor = {d['factor']:.1f}x "
+    print(f"  (2) Dandu-context fixed-mesh case: crowding factor = {d['factor']:.1f}x "
           f"(paper: ~10x, 'one order of magnitude') [fixed mesh; corner J is singular]")
     print(f"      peak J = {d['j_peak']:.2e} A/cm^2 vs Dandu 1.39e4 A/cm^2 "
           f"(1.7 A, ~{d['D_um']:.0f} um bump, avg {d['j_avg']:.2e}; order-of-magnitude)")
-    print("  NOTE: self-heating is the rigorous mesh-converged oracle; the crowding factor is")
+    print("  NOTE: self-heating has an analytic oracle; the crowding factor is")
     print("  mesh-dependent (corner singularity, Fan 2011) -> reported at a fixed mesh.")
     # Phase 2: staggered viscoplastic baseline
     q = joule_density(d["j_avg"])
     s = staggered_baseline()
-    print("\nPhase 2 -- STAGGERED viscoplastic baseline (one-way: T prescribed -> mechanics)")
+    print("\nMaterial-point staggered baseline (one-way: T prescribed -> mechanics)")
     print(f"  Joule heat density at avg j: q = rho j^2 = {q:.2e} W/m^3")
     print(f"  SAC305 power cycle {T_AMB_C:.0f}..{T_AMB_C+s['dT_cyc']:.0f} C: dW/cycle = "
           f"{', '.join(f'{w:.4f}' for w in s['dW_cyc'])} MJ/m^3")
     print(f"  -> stabilized staggered dW = {s['dW_stag']:.4f} MJ/m^3 "
-          f"(plastic strain range {s['dep']*100:.3f}%) -- the Phase-3 comparison baseline")
-    # Phase 3: monolithic coupling + the finding
+          f"(plastic strain range {s['dep']*100:.3f}%)")
+    # Compare the monolithic and staggered material-point formulations.
     cs = etv_cycle(coupled=False, q_joule=0.0, ncyc=4)["dW_stab"]
     cm = etv_cycle(coupled=True, q_joule=0.0, g_th=1e10, ncyc=4)["dW_stab"]
-    print("\nPhase 3 -- MONOLITHIC electro-thermo-viscoplastic coupling (vs the staggered baseline)")
+    print("\nMonolithic material-point coupling compared with the staggered baseline")
     print(f"  consistency: monolithic(no internal heating) = {cm:.5f} vs staggered {cs:.5f} "
           f"(rel {abs(cm-cs)/cs:.1e}) -> reduces to staggered")
-    print("  coupling effect = (dW_monolithic - dW_staggered)/dW_staggered, real Joule q, vs rate:")
+    print("  coupling effect = (dW_monolithic - dW_staggered)/dW_staggered, tested Joule q, vs rate:")
     for ramp in (200.0, 2.0, 0.1):
         r = coupling_effect(q_joule=q, g_th=8e6, ramp=ramp, ncyc=4)
         print(f"    ramp={ramp:6.1f}s  tau/period={r['tau_over_ramp']:.1e}  "
               f"dW {r['dW_stag']:.4f}->{r['dW_mono']:.4f}  delta={r['delta']*100:+.2f}%")
-    print("  FINDING: the strong-coupling effect on dW/cycle is NEGLIGIBLE (<0.1%) for quasi-")
-    print("  static thermal cycling -> the standard staggered scheme is quantitatively justified;")
-    print("  it grows to ~4% as the loading period approaches the thermal time constant (pulsed")
-    print("  current stressing), set by the dimensionless tau/period. (Material-point; the FE")
-    print("  monolithic solve with the complex-step consistent tangent is the next refinement.)")
+    print("  For this parameterization, the relative dW difference is below 0.1% for the")
+    print("  slow ramp and increases as the loading scale approaches the thermal time scale.")
+    print("  This is a material-point sensitivity result, not a general coupling criterion.")
 
 
 if __name__ == "__main__":

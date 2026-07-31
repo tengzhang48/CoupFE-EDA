@@ -34,7 +34,7 @@ _GEOMETRY_FIDELITY = {"proxy", "design_export", "calibrated", "qualified"}
 
 @dataclass(frozen=True)
 class JointMap:
-    """Validated joint locations and optional dimensions in the die frame, in microns."""
+    """Joint locations and optional dimensions in the die frame, in microns."""
 
     ids: tuple[str, ...]
     xyz_um: np.ndarray

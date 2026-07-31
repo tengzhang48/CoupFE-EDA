@@ -1,14 +1,14 @@
 """3D electro-thermal solve on a generated cylindrical TSV-like geometry.
 
-`etv_3d` validated the Hex8 coupled kernel on a unit *cube* with a slab self-heating BC -- a
+`etv_3d` checks the Hex8 coupled kernel on a unit cube with a slab self-heating BC -- a
 solver-capability demo on a synthetic box. This applies the same compiled Hex8
-electro-thermal element to a canonical, generated 3D-IC structure -- a **cylindrical copper via** carrying
+electro-thermal element to a generated reference 3D-IC structure -- a **cylindrical copper via** carrying
 axial current, self-heating by Joule, cooled through its silicon-side wall.
 
-The mesh is produced by **gmsh** (`mesh3d.via_cylinder`), the standard open-source mesher -- its
+The mesh is produced by **gmsh** (`mesh3d.via_cylinder`). Its
 OpenCASCADE kernel builds the solid and its subdivision algorithm produces an all-hexahedral mesh
-(we do NOT hand-roll a generator). The gmsh node order is verified compatible with our Hex8
-element (signed Jacobian > 0, `min_signed_jacobian`).
+(we do not hand-roll a generator). A signed-Jacobian check covers the gmsh-to-Hex8 node order
+(`min_signed_jacobian`).
 
 Oracle: a long cylinder with uniform volumetric heat
 generation q and its wall held at T_w has the exact steady profile
@@ -38,24 +38,31 @@ from .mesh3d import layer_stack, min_signed_jacobian, via_annulus, via_cylinder
 def _newton_fieldsplit(groups, ndof, drows, dvals, maxit=8):
     """Full-load Newton loop (FieldSplit/GAMG per step) for a list of ElementGroups (>1 = multi-
     material; the assembler sums them). Returns (U, last_iters)."""
-    from coupfe import assemble_residual, assemble_tangent
-    U = np.zeros(ndof); its = 0
-    for _ in range(maxit):
-        U[drows] = dvals
-        Rr, _ = assemble_residual(groups, U, None, 1.0, 1.0, ndof); Rr[drows] = 0.0
-        K = assemble_tangent(groups, U, None, 1.0, 1.0, ndof).tocsr()
+    from ._coupled_solve import coupled_newton
+
+    dirichlet = {int(row): float(value) for row, value in zip(drows, dvals)}
+
+    def backend(K, R, constrained_rows):
         A = PETSc.Mat().createAIJ(size=K.shape, comm=PETSc.COMM_SELF,
                                   csr=(K.indptr.astype(PETSc.IntType),
                                        K.indices.astype(PETSc.IntType), K.data))
         A.assemble()
-        b = PETSc.Vec().createWithArray(-np.asarray(Rr), comm=PETSc.COMM_SELF)
-        xbc = b.duplicate(); xbc.set(0.0)
-        A.zeroRowsColumns(drows.astype(PETSc.IntType), diag=1.0, x=xbc, b=b)
-        dU, its = _fieldsplit_solve(A, b, ndof)
-        U = U + dU
-        if np.max(np.abs(dU)) < 1e-11:
-            break
-    return U, its
+        b = PETSc.Vec().createWithArray(-np.asarray(R), comm=PETSc.COMM_SELF)
+        xbc = b.duplicate()
+        xbc.set(0.0)
+        A.zeroRowsColumns(
+            constrained_rows.astype(PETSc.IntType), diag=1.0, x=xbc, b=b
+        )
+        try:
+            dU, its = _fieldsplit_solve(A, b, ndof)
+        finally:
+            A.destroy()
+        return dU, {"ksp_its": its}
+
+    U, _n, info = coupled_newton(
+        groups, ndof, dirichlet, backend, maxit=maxit, tol=1e-11
+    )
+    return U, info.get("ksp_its", 0)
 
 
 def solve_via(h=0.15, *, R=1.0, L=1.0, sigma0=3.0, k=1.5, V=2.0, workdir=None, maxit=8):
@@ -200,7 +207,7 @@ def _run_cylinder(h):
     print(f"  peak dT(axis) = {peak:.5f} vs sigma0 V^2 R^2 / 4kL^2 = {peak_ref:.5f}  "
           f"(rel {abs(peak - peak_ref) / peak_ref:.2e})")
     print(f"  radial profile T(r)=(q/4k)(R^2-r^2): RMS {rms:.2e}")
-    print("  => Hex8 coupled element on generated canonical via geometry; closed-form profile check passed.")
+    print("  => Generated via geometry; comparison metrics shown above (no acceptance threshold applied).")
 
 
 def _run_annular(h):
@@ -222,7 +229,7 @@ def _run_annular(h):
     print(f"  peak dT(axis) = {peak:.5f} vs composite oracle q a^2/4k_core + q(b^2-a^2)/4k_ann = "
           f"{peak_ref:.5f}  (rel {abs(peak - peak_ref) / peak_ref:.2e})")
     print(f"  two-region profile (parabola_core matched to parabola_annulus): RMS {rms:.2e}")
-    print("  => one ElementGroup per material (no core change), composite-cylinder oracle, validated.")
+    print("  one ElementGroup per material; checked against the composite-cylinder oracle.")
 
 
 def _run_stack(h):
@@ -247,7 +254,7 @@ def _run_stack(h):
     print(f"  series-resistance profile T(z)=T_top*R(z)/R_tot: max|err| {maxabs:.2e}, RMS {rms:.2e}")
     for zb, tfe, tref in iface:
         print(f"    interface z={zb:.2f}: T_fe={tfe:.5f} vs oracle {tref:.5f} (err {abs(tfe-tref):.1e})")
-    print("  => one ElementGroup per layer, 1D series-resistance oracle, validated.")
+    print("  one ElementGroup per layer; checked against the 1D series-resistance oracle.")
 
 
 def main():

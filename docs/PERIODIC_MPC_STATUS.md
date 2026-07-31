@@ -1,104 +1,83 @@
-# Periodic TSV and MPC status
+# Periodic TSV and affine-constraint status
 
-**As of:** 31 July 2026
-**Scope:** matching-node translated periodicity for the Jiang 40 × 50 µm Cu/oxide-cup/Si cell.
-**Current candidate dependency:** CoupFE
-`933e497301ee3ddb23391b787726674f70b480c5`
-(`main`), the qualified and anonymously reachable Core release root.
+The current dependency target is public Core revision
+`454f73ce2de284262b214a2b37bd676c6aca3c0a`. CoupFE-EDA owns periodic geometry,
+surface-node matching, edge/corner equivalence construction, macroscopic
+gradient semantics, and TSV-specific checks. Core owns mesh-agnostic affine
+relations and reduced residual/tangent algebra.
 
-The release architecture now keeps `PeriodicBox`, translated-node matching,
-and periodic relation construction in `eda_multiphysics.periodic`. Core supplies
-only mesh-agnostic affine constraint/reduction primitives. The legacy feature
-branch is evidence and port provenance, not the desired public ownership split.
+## Current status
 
-> **Evidence boundary:** against public Core `933e497`, the current EDA
-> candidate passes the standalone 53-gate harness, the 94-test default tier,
-> and the separate 19-test gmsh/PETSc/MPI/gfortran tier. The 53 gates overlap
-> wrappers in the default tier. The detailed cell and legacy-Core MPI numbers
-> below remain historical observations; they are not promoted into current
-> performance or distributed-TSV claims. Publication uses the clean
-> committed-root recorder in `RELEASE_EVIDENCE.md`.
-
-## Status at a glance
-
-| Layer | Status | What is qualified |
+| Item | Status | Evidence boundary |
 |---|---|---|
-| Periodic cell geometry | Implemented; current toolchain gate passed | full 40/50 µm box, `[110]/[-110]/[001]` frame, oxide cup, and zero direct Cu/Si contact pass in the paired toolchain tier |
-| Opposite-face correspondence | Implemented; current toolchain gate passed | Gmsh periodic surfaces plus the EDA-owned strict bijection pass in the paired toolchain tier |
-| Generic affine MPC | Implemented against the public pin | Core owns only `ConstraintRelation` and exact `U=Pq+U0`, `P.T R`, `P.T K P`; EDA owns edge/corner periodic equivalence construction and the representative anchor policy |
-| EDA serial TSV consumer | Implementation gates passed at the tested case | explicit `macro_gradient`; homogeneous free-expansion and fixed-box controls; heterogeneous equilibrium |
-| Core MPI reference | Legacy research prototype, not current public API | the private feature branch carried a bulk/history-free `solve_distributed_affine`; fresh qualification is required if reintroduced |
-| Distributed TSV consumer | Open | the anisotropic Cu/oxide/Si TSV has not been run serial-versus-N-rank |
-| Production memory locality | Open | core MPI reference replicates transform setup and final lift |
-| Jiang model qualification | Open | source-equivalent macro/bottom boundary semantics and corrected-scene convergence are not frozen/passed |
-| Experimental/device validation | Open | held Raman curves, uncertainty contract, transistor validation, and signoff evidence remain absent |
+| Rectangular TSV cell geometry | Implemented | generated Cu/oxide-cup/Si cell with declared axes, dimensions, regions, and no direct Cu/Si contact |
+| Opposite-face matching | Implemented | Gmsh correspondence plus EDA strict translated-node bijection and pair metadata |
+| Affine relation construction | Implemented | face/edge/corner equivalence classes, explicit offsets, representative anchor, and fail-closed inconsistency checks |
+| Core reduction | Consumed from pinned Core | `U=Pq+U0`, `P.T R`, and `P.T K P` through generic constraint primitives |
+| Serial local-TSV consumer | Implemented at selected cases | homogeneous free-expansion and fixed-box controls plus a heterogeneous equilibrium case |
+| Distributed local-TSV consumer | Open | no current public MPI periodic-TSV consumer checkpoint |
+| Source-equivalent model selection | Open | macroscopic and bottom-boundary semantics have not been selected by comparison with the cited experimental setup |
+| Mesh/domain/recovery convergence | Open | corrected oxide-cup periodic scene needs a retained convergence study |
+| Raman/device comparison | Open | measured curves, uncertainty contract, and transistor comparison are absent |
 
-## Historical toolchain evidence and current focused evidence
+The current serial acceptance is defined by the periodic-adapter and
+local-TSV tests. Release evidence must record their actual result against the
+pinned Core revision; this status page does not replace a test log.
 
-The historical scaled periodic TSV gate contained 2,863 nodes and 13,809 Tet4 elements. It checked matching
-periodic faces, material topology, SI units, and exact constraint satisfaction.
+## Mechanics contract
 
-- Homogeneous cubic-Si free expansion with `H=alpha*dT*I`:
-  - reduced residual `4.94e-14`;
-  - maximum displacement error `3.72e-23 m`;
-  - maximum stress below `1e-11 MPa`;
-  - zero MPC error.
-- Deliberately wrong zero-jump box:
-  - approximately `29.09 MPa` maximum stress, proving that zero jump suppresses free expansion.
-- Heterogeneous Cu/oxide/anisotropic-Si cell:
-  - reduced residual `1.72e-14`;
-  - zero node-pair mismatch and zero MPC error;
-  - finite recovered stresses in every material.
-- Legacy Core parallel prototype:
-  - analytic scalar periodic gradient passes at 1/2/4 MPI ranks;
-  - maximum field error `<3.5e-17`, reduced residual `<7e-16`, zero MPC error.
+For matched points separated by lattice vector `a`, the adapter creates
 
-Paired execution on 31 July 2026 against public Core `933e497` produced
-**53/53 standalone gates passed**, **94/94 default EDA tests passed** with the
-19 optional toolchain tests deselected, and **19/19 toolchain tests passed**
-with the 94 default tests deselected. The standalone gates overlap the default
-wrappers. This includes the EDA-owned adapter, Gmsh, PETSc/MPI, native Tet4,
-and Fortran paths. The clean committed-root evidence recorder remains the
-publication authority for this same tree.
+```text
+u_plus - u_minus = Hbar a.
+```
 
-Historical execution on 13 July 2026: 82/82 EDA fast tests passed in 63.45 s; the real Gmsh periodic-TSV
-consumer gate passed in 22.61 s; 20/20 focused core tests and all three core MPI rank cases passed;
-both wheels built and wheel-only imports passed. The complete 19-test EDA toolchain suite was last run on
-12 July 2026 and passed. These are implementation/model-verification results, not experimental TSV
-validation.
+`Hbar` is required. Setting it silently to zero would impose a fixed periodic
+box, which is not equivalent to free thermal expansion. The adapter merges
+face, edge, and corner constraints into consistent equivalence classes before
+calling Core. A representative node is anchored to remove rigid translation.
 
-## Current public dependency path
+Opposite-face traction anti-periodicity follows from reduced weak equilibrium
+for the accepted displacement. It is evaluated as a diagnostic and is not
+added as a second displacement constraint.
 
-1. Build the matching cell with `mesh3d.tsv_periodic_cell(...)`.
-2. Require `periodic_pairing_status == "matching_nodes_verified"`.
-3. Call `tsv_local_3d.solve_local_tsv(...,
-   boundary_condition="periodic_macro_gradient", macro_gradient=H)` with an explicit, sourced 3×3
-   macroscopic displacement gradient.
-4. Check the reduced residual, constraint error, pair mismatch, material/mesh hashes, frame, and
-   boundary label before interpreting stress.
+## Status labels
 
-There is intentionally no hidden zero-gradient default. `periodic_mechanics_status="not_solved"`
-on a mesh means only that geometry/pairing is ready; mechanics status belongs to a solve result.
+Geometry and mechanics use separate labels:
 
-## What the current result does not establish
+- `periodic_pairing_status="matching_nodes_verified"` means the generated face
+  meshes met the translated-node correspondence criterion for that result.
+- `periodic_mechanics_status="not_solved"` means no mechanics result has been
+  attached yet.
+- a mechanics result must additionally record the macro gradient, boundary
+  label, Core identity, reduced residual, constraint error, and input hashes.
 
-- It does not prove that the selected `H` and bottom boundary reproduce Jiang's quarter-array
-  experiment.
-- It does not replace corrected-scene mesh/domain/recovery convergence or Raman spot averaging.
-- It does not qualify nonmatching mortar, cyclic/Bloch, finite-strain box evolution, unknown
-  zero-average-stress box strain, contact, dynamics, or path-dependent material state.
-- It does not make CoupFE-EDA a universal multiphysics package. The niche remains traceable
-  EDA-to-local thermo-mechanical/reliability analysis with physics-aware setup and executable
-  validation controls.
+An isolated-cylinder result cannot be relabeled as a periodic-cell result.
 
-## Next status-changing work
+## Use sequence
 
-1. Freeze the Jiang source-equivalent lateral macro mode and bottom/symmetry boundary contract.
-2. Run corrected periodic-scene mesh, domain, recovery, and measurement-averaging convergence.
-3. Add force/moment and opposite-face traction-resultant diagnostics to the heterogeneous gate.
-4. Only then run the actual TSV consumer through serial-versus-2/4-rank MPC and assess memory.
-5. Compare held specimen C/D Raman curves and propagate uncertainty before advancing the release
-   scorecard.
+1. Generate `tsv_periodic_cell(...)` and check region/topology metadata.
+2. Require the recorded matching status and inspect maximum pair mismatch.
+3. Supply a declared `macro_gradient` to
+   `solve_local_tsv(..., boundary_condition="periodic_macro_gradient")`.
+4. Record the Core revision/import path and EDA revision.
+5. Check reduced residual, affine-constraint error, stress recovery choice, and
+   mesh/material hashes.
+6. Keep the result at numerical/model-check scope until convergence and
+   experimental comparisons are complete.
 
-The detailed design and rollout remain in `PERIODIC_BOUNDARY_CONDITION_PLAN.md`; the physics defect
-ledger and release effect remain in `TSV_PHYSICS_AUDIT.md`.
+## Next evidence-producing work
+
+- Define the macroscopic and bottom boundary conditions corresponding to the
+  cited Jiang setup and retain the mapping rationale.
+- Repeat domain, local mesh, and recovery studies on the corrected oxide-cup
+  periodic scene.
+- Add an MPI consumer only after the serial contract and acceptance values are
+  frozen.
+- Compare Raman line/spot observables with permitted measured data and record
+  uncertainty and alignment choices.
+- Propagate a checked field to ID-preserving device observables and compare with
+  real device measurements before making a device-prediction claim.
+
+See [Theory](theory.md), [Geometry](GEOMETRY.md), and
+[Roadmap](roadmap.md).

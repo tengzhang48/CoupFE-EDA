@@ -1,4 +1,4 @@
-"""Solver-neutral placement case -> CoupFE thermal map.
+"""Versioned placement case -> CoupFE thermal map.
 
 Consumes ``instances.csv`` and ``manifest.json`` from the bundled project-authored
 synthetic case or a caller-supplied EDA export. The default case also provides
@@ -203,7 +203,7 @@ def run(case_dir, total_power_W=None, *, output_path=None, power_provenance=None
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Solve a placement case thermal map.")
     parser.add_argument("case_dir", nargs="?", default=DEFAULT_CASE,
-                        help="solver-neutral case directory (default: bundled synthetic case)")
+                        help="versioned case directory (default: bundled synthetic case)")
     parser.add_argument("total_power_W", nargs="?", type=float,
                         help="optional scenario total power in W; otherwise use instance_power.csv")
     parser.add_argument("-o", "--output", help="optional back-annotation CSV output path")

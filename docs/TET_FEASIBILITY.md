@@ -1,49 +1,60 @@
-# Tet4 element — consumer qualification
+# Native Tet4 consumer status
 
-**Task:** qualify a 4-node linear tetrahedron so gmsh can mesh arbitrary CAD; the all-hex
-subdivision path is limited to selected shapes.
+CoupFE-EDA uses native Tet4 support from Core for generated curved and
+multi-region examples. The pinned dependency is
+`454f73ce2de284262b214a2b37bd676c6aca3c0a`.
 
-## Ownership decision
+## Ownership
 
-Tet4 is a general finite-element/code-generation primitive, so `tet4` and `tet4r` belong in
-CoupFE core next to the other element definitions. CoupFE-EDA consumes the native core
-`ElementConfig`; it does not ship a duplicate shape/quadrature template or modify core's
-template resolver.
+- Core owns the generic Tet4 element configuration, assembly, operator
+  contract, and affine-constraint primitives.
+- CoupFE-EDA owns Gmsh generation, region/boundary identity, material mapping,
+  local-TSV semantics, and problem-specific evidence.
 
-This is a fail-closed dependency. The EDA release is pinned to publicly reachable Core
-`933e497301ee3ddb23391b787726674f70b480c5`, which contains native `tet4` support. The current
-toolchain tier passes the Tet4 patch and self-heating gates against that exact dependency.
+`eda_multiphysics.tet_element.tet4_config()` fails if the imported Core does not
+provide the required native configuration. The setup scripts verify the exact
+Core source rather than accepting an unrelated name-matched installation.
 
-Periodic mesh metadata, face/node matching, and box construction are EDA-owned adapters. They must
-not be restored to core merely to create a combined pin. If periodic support remains in scope, the
-final core may expose only the generic affine-relation/compiler primitives consumed by EDA's local
-periodic adapter.
+## Public checks
 
-## Current qualification gates
+The optional toolchain tier contains:
 
-The values below are encoded as regression targets in `tests/test_toolchain.py`
-(`test_tet4_patch_test`, `test_tet4_self_heating`) and the gates pass on the selected public
-Core pin. They qualify generated box/cylinder meshes at the checked resolutions, not a general
-imported-CAD workflow.
+- an affine Tet4 patch case; and
+- a coupled self-heating case on generated box/cylinder geometry.
 
-| gate | oracle | result |
-|---|---|---|
-| **Patch test** (linear T, irregular tet mesh) | linear-complete → machine precision | `max|err| = 4.4e-16` |
-| **Self-heating, tet box** | `σV₀²/8k` (the exact oracle etv_3d's Hex8 hits) | peak 1.021 vs 1.000, **2.1%**, → 1.0% at half h |
-| **Self-heating, tet cylinder** (curved CAD) | `σV₀²/8k` (1-D through the height) | peak 1.020 vs 1.000, **2.0%**, all signed vols > 0 |
+Other tests exercise Tet4 region/topology and affine-strain behavior in the
+generated solder-package and blind-TSV models. These cases define acceptance at
+their selected geometries, sizes, materials, and tolerances. Release evidence
+must record the actual command result and environment.
 
-The patch test is the rigorous correctness gate (a wrong element gives O(1e-1), not 1e-16); the
-self-heating error is linear-tet discretization of the parabolic profile and **converges** with
-refinement (2.1%→1.0% as h halves) — confirming it's discretization, not a bug. The **cylinder** is
-the payoff: a curved shape the all-hex path handles poorly, meshed natively as tets, validated.
+## Scope
 
-## Files
-- `eda_multiphysics/tet_element.py` — fail-closed lookup of core's native `tet4` configuration.
-- `eda_multiphysics/mesh3d.py` — `tet_box`, `tet_cylinder`, `min_signed_tet_volume`, `_orient_tets`.
-- `eda_multiphysics/tet_3d.py` — build + solve + `patch_test` / `solve_selfheat` / `oracle_selfheat`.
-- `eda_multiphysics/etv_kernel.py` — `build_et_kernel(..., element="Tet4")` routes to the tet config.
+The current path supports generated Tet4 boxes, cylinders, conformal package
+regions, and blind/periodic TSV regions used by this repository. It does not
+establish:
 
-## Reuse for other physics
-`build_et_kernel(element="Tet4")` is the pattern: any codegen weak form (including the
-thermo-mechanical `u+T` element) can target core's native tet configuration. The mesh side is
-`mesh3d.tet_box` / `tet_cylinder`; a named imported-CAD adapter remains future work.
+- arbitrary STEP/BREP import;
+- named-region recovery from an external CAD hierarchy;
+- broad element-quality or mesh-convergence behavior;
+- stateful Anand fatigue on an imported local mesh;
+- distributed periodic-TSV consumption; or
+- process/device prediction accuracy.
+
+Adding an external mesh reader requires more than connectivity conversion. It
+must preserve units, coordinate frame, material regions, boundary sets, stable
+source-object identifiers, and mesh provenance. The corresponding physics
+workflow also needs a named oracle, comparison, invariant, or measured dataset.
+
+## Relevant files
+
+- `eda_multiphysics/tet_element.py` — native Core Tet4 lookup.
+- `eda_multiphysics/tet_3d.py` — generated patch and self-heating cases.
+- `eda_multiphysics/mesh3d.py` — Tet4 geometry and region construction.
+- `eda_multiphysics/tsv_local_3d.py` — anisotropic local mechanics and field
+  recovery.
+- `eda_multiphysics/reliability_3d.py` — stateless elastic generated-package
+  handoff.
+- `tests/test_toolchain.py` and `tests/test_tsv_local_3d.py` — public
+  acceptance definitions.
+
+See [Geometry](GEOMETRY.md) and [Roadmap](roadmap.md).

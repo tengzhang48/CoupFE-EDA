@@ -1,7 +1,7 @@
-"""Monolithic coupled FE element on the CoupFE operator contract (ETV study, FE refinement).
+"""Monolithic electrothermal FE element on the CoupFE operator contract.
 
-The material-point study (`etv_solder.py`, Phases 1-4) found the coupling effect; this lifts
-the coupling onto a genuine spatially-resolved finite element built the CoupFE way: ONE
+The material-point study (``etv_solder.py``) supplies a reduced comparison for
+this spatially resolved finite element: one
 residual carrying multiple fields, the cross-field tangent obtained by COMPLEX STEP (not hand-
 coded), solved with `coupfe.newton_solve`. No separate FE library -- the same operator contract
 as `fe.py`, extended to a coupled multi-DOF element.
@@ -15,11 +15,13 @@ sigma(T) = sigma0/(1 + alpha (T)) makes the phi-block depend on T (thermal->elec
 the Joule term sigma|grad phi|^2 makes the T-block depend on phi (electrical->thermal). A
 staggered scheme splits these into two solves; here they are one block system.
 
-Validated against the exact 1D self-heating limit dT = sigma V0^2/8k and against the
-staggered Picard solve (`etv_solder.solve_et`). DOFs interleaved per node: [phi, T].
+The checked examples compare this implementation with the exact 1D self-heating
+limit ``dT = sigma V0^2/8k`` and with the staggered Picard implementation in
+``etv_solder.solve_et``. DOFs are interleaved per node: ``[phi, T]``.
 
-Stage B (next): add the displacement field u + the Anand viscoplastic state -> the full
-phi-T-u element that reproduces the tau/period finding on a mesh.
+An earlier transient thermo-viscoplastic mesh extension is not included because
+its modified-Newton increments did not meet the stated convergence tolerance.
+The material-point coupling study remains in :mod:`eda_multiphysics.etv_solder`.
 """
 
 from __future__ import annotations
@@ -98,8 +100,37 @@ class CoupledET:
 def solve_coupled_et(mesh, *, sigma0, alpha_sig=0.0, k=1.0, h_vol=0.0, dirichlet,
                      **newton_kw):
     """Solve the monolithic electro-thermal block system; returns (phi, Trise, n_iters)."""
+    from coupfe import assemble_residual
+
     op = CoupledET(mesh, sigma0=sigma0, alpha_sig=alpha_sig, k=k, h_vol=h_vol)
-    U, _, nit = newton_solve([op], np.zeros(op.ndof), None, op.ndof, dirichlet, **newton_kw)
+    residual_rtol = float(newton_kw.pop("residual_rtol", 1e-8))
+    residual_atol = float(newton_kw.pop("residual_atol", 1e-10))
+    constrained = np.array(sorted(dirichlet), dtype=int)
+    free = np.ones(op.ndof, dtype=bool)
+    free[constrained] = False
+
+    initial = np.zeros(op.ndof)
+    for dof, value in dirichlet.items():
+        initial[int(dof)] = float(value)
+    initial_residual, _ = assemble_residual(
+        [op], initial, None, 1.0, 1.0, op.ndof
+    )
+    initial_norm = (
+        float(np.max(np.abs(initial_residual[free]))) if np.any(free) else 0.0
+    )
+
+    U, _, nit = newton_solve(
+        [op], np.zeros(op.ndof), None, op.ndof, dirichlet, **newton_kw
+    )
+    final_residual, _ = assemble_residual([op], U, None, 1.0, 1.0, op.ndof)
+    final_norm = float(np.max(np.abs(final_residual[free]))) if np.any(free) else 0.0
+    residual_limit = max(residual_atol, residual_rtol * max(1.0, initial_norm))
+    if not np.all(np.isfinite(U)) or not np.isfinite(final_norm) or final_norm > residual_limit:
+        raise RuntimeError(
+            "monolithic electrothermal solve did not satisfy the final residual check: "
+            f"iterations={nit}, residual_norm={final_norm:.6e}, "
+            f"residual_limit={residual_limit:.6e}"
+        )
     return U[0::NF], U[1::NF], nit
 
 
@@ -119,7 +150,7 @@ def verify_selfheating_fe(sigma0=3.0, V0=2.0, k=1.5, L=1.0, n=48):
 
 def consistency_vs_staggered(sigma0=3.0, V0=2.0, alpha_sig=0.05, k=1.5, L=1.0, n=32):
     """Monolithic (one Newton block) == staggered Picard (two alternating solves), with the
-    sigma(T) feedback on -> validates the coupled element against the existing solver."""
+    sigma(T) feedback on -> compares the two implementations at the selected case."""
     from .etv_solder import solve_et
     m = StructuredQuadMesh(n, 4, L, 0.2 * L)
     d = {}
@@ -136,88 +167,6 @@ def consistency_vs_staggered(sigma0=3.0, V0=2.0, alpha_sig=0.05, k=1.5, L=1.0, n
     return T_mono.max(), T_stag.max(), rel, nit
 
 
-# ---------------------------------------------------------------------------
-# Stage B: monolithic transient thermo-viscoplastic solve on a mesh
-# ---------------------------------------------------------------------------
-# Reuses the VALIDATED Anand plane-strain FE element (solder_joint.AnandPlaneStrain --
-# gated by the return-map 0.04% + patch-test 4e-16 oracles) for spatially-resolved mechanics
-# (volume-averaged dW), coupled to a lumped transient thermal model. The lumped (uniform-T)
-# thermal model is physically justified here -- Dandu 2010 report the thermal gradient in the
-# solder is small -- so the FE adds the MECHANICAL spatial resolution (the dW volume average),
-# while the temperature evolves as one transient state. The viscoplastic block uses the
-# elastic (modified-Newton) tangent, as the project's solder element does (the return map is
-# not complex-analytic); the complex-step tangent is the electro-thermal coupling (above).
-
-def etv_fe_cycle(*, monolithic, q_joule=0.0, g_th=8.0e6, Tlo_C=-40.0, Thi_C=125.0,
-                 dalpha=20e-6, ldnp_over_h=6.0, nx=4, ny=3, ncyc=3, steps_per_cyc=24,
-                 period=1600.0, p=None):
-    """Coupled transient thermo-viscoplastic cycle on a solder mesh.
-
-    monolithic=True: the local temperature is a transient state evolving with internal
-      heating (Joule q_joule + inelastic dissipation dW/dt) and coupling g_th to the global
-      power cycle T_ext(t);
-    monolithic=False (staggered): T tracks the global cycle quasi-statically (T = T_ext +
-      q_joule/g_th), no inelastic feedback.
-    Mechanics: the CTE-mismatch shear gamma(T) is imposed on the validated Anand plane-strain
-    joint; the volume-averaged inelastic strain-energy density per cycle is returned.
-    """
-    from .etv_solder import T_AMB_C, RHOC_SOLDER
-    from .solder_joint import AnandPlaneStrain, SNPB
-
-    p = p if p is not None else SNPB        # robust validated alloy for the FE return map
-    H = 0.1e-3
-    m = StructuredQuadMesh(nx, ny, H, H)
-    op = AnandPlaneStrain(m, p)
-    top = np.where(np.isclose(m.coords[:, 1], H))[0]
-    bot = np.where(np.isclose(m.coords[:, 1], 0.0))[0]
-    top_el = [e for e, c in enumerate(m.elems) if m.coords[c][:, 1].max() > H - 1e-9]
-    TloK, ThiK = Tlo_C + 273.15, Thi_C + 273.15     # JEDEC chamber cycle
-    Tref = 0.5 * (TloK + ThiK)                      # stress-free at mid-cycle
-    dt = period / steps_per_cyc
-    Tj_ss = q_joule / g_th                          # Joule self-heating offset on top
-    Tl = TloK + Tj_ss
-    U = np.zeros(op.ndof)
-    Wc = [0.0]
-    Wacc = 0.0
-    inel_rate = 0.0
-    for cyc in range(ncyc):
-        for k in range(steps_per_cyc):
-            frac = k / steps_per_cyc
-            Text = TloK + (ThiK - TloK) * (1.0 - abs(2.0 * frac - 1.0))  # triangular, no dwell
-            if monolithic:                          # transient local temperature (backward
-                # Euler -> unconditionally stable: rho c (T-Tn)/dt = q + inel - g(T-Text))
-                a = RHOC_SOLDER / dt
-                Tl = (a * Tl + q_joule + inel_rate + g_th * Text) / (a + g_th)
-            else:                                   # quasi-steady (staggered)
-                Tl = Text + Tj_ss
-            gamma = dalpha * (Tl - Tref) * ldnp_over_h
-            op.T = Tl
-            op.dt = dt
-            bc = {}
-            for n in bot:
-                bc[2 * int(n)] = 0.0; bc[2 * int(n) + 1] = 0.0
-            for n in top:
-                bc[2 * int(n)] = gamma * H; bc[2 * int(n) + 1] = 0.0
-            U, _, _ = newton_solve([op], U, None, op.ndof, bc, dt=dt, maxit=12)
-            op.commit(U, None, 0.0, dt)
-            dW_step = float(op.dW[top_el].mean())
-            Wacc += dW_step
-            inel_rate = dW_step / dt
-        Wc.append(Wacc)
-    dW_cyc = [Wc[i] - Wc[i - 1] for i in range(1, ncyc + 1)]
-    return dict(dW_stab=dW_cyc[-1], dW_cyc=dW_cyc, Tl_peak=Tl - 273.15)
-
-
-def fe_coupling_effect(*, q_joule, g_th=8.0e6, period=1600.0, ncyc=3, nx=4, ny=3):
-    """Monolithic vs staggered volume-averaged dW on the FE mesh (the finding, on a mesh)."""
-    stag = etv_fe_cycle(monolithic=False, q_joule=q_joule, g_th=g_th, period=period,
-                        ncyc=ncyc, nx=nx, ny=ny)
-    mono = etv_fe_cycle(monolithic=True, q_joule=q_joule, g_th=g_th, period=period,
-                        ncyc=ncyc, nx=nx, ny=ny)
-    d = (mono["dW_stab"] - stag["dW_stab"]) / stag["dW_stab"]
-    return dict(dW_stag=stag["dW_stab"], dW_mono=mono["dW_stab"], delta=d)
-
-
 def main():
     peak, exact, err, nit = verify_selfheating_fe()
     print("Monolithic coupled electro-thermal FE element (CoupFE contract)")
@@ -226,24 +175,8 @@ def main():
     tm, ts, rel, nit2 = consistency_vs_staggered()
     print(f"  monolithic == staggered Picard (sigma(T) on): peak {tm:.4f} vs {ts:.4f}  "
           f"rel {rel:.1e}  (monolithic took {nit2} Newton iters)")
-    print("  => one block Newton system with the cross-field coupling captured by the")
-    print("     complex-step tangent -- no hand-coded Jacobian, no field-splitting.")
-    # Stage B: monolithic transient thermo-viscoplastic on a mesh -> reproduce the finding
-    import warnings
-    warnings.filterwarnings("ignore")
-    from .etv_solder import joule_density, dandu_bump
-    q = joule_density(dandu_bump()["j_avg"])
-    sc = etv_fe_cycle(monolithic=False, q_joule=0.0, ncyc=2)["dW_stab"]
-    mc = etv_fe_cycle(monolithic=True, q_joule=0.0, g_th=1e10, ncyc=2)["dW_stab"]
-    qs = fe_coupling_effect(q_joule=q, period=1600.0, ncyc=2)
-    fa = fe_coupling_effect(q_joule=q, period=1.0, ncyc=2)
-    print("\nStage B -- monolithic transient thermo-viscoplastic on a solder MESH (JEDEC + current)")
-    print(f"  consistency: monolithic(no internal heat) = {mc:.5f} vs staggered {sc:.5f} "
-          f"(rel {abs(mc-sc)/sc:.1e}) -> reduces to staggered")
-    print(f"  coupling (dW_mono - dW_stag)/dW_stag:  quasi-static {qs['delta']*100:+.2f}%   "
-          f"fast {fa['delta']*100:+.1f}%")
-    print("  => the tau/period finding reproduced on the FE mesh; at fast/pulsed loading the")
-    print("     staggered scheme OVER-predicts fatigue (the joint can't thermally follow the cycle).")
+    print("  one block Newton system with cross-field terms supplied by the")
+    print("  complex-step tangent.")
 
 
 if __name__ == "__main__":

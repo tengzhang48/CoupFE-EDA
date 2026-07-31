@@ -24,10 +24,7 @@ docker run --rm -it coupfe-eda
 | OpenROAD | `v2.0-17598-ga008522d8` (2024-12-14) | URL and SHA-256 pinned |
 | yosys, PETSc, mpi4py, gmsh | conda-forge solve | Record resolved versions for each release |
 | volare | rolling pip dependency | Open-PDK manager |
-| CoupFE | `933e497301ee3ddb23391b787726674f70b480c5` | Must be reachable from public `main` |
-
-A previous local image was approximately 2.4 GB; the rolling dependency solve
-can change the final size.
+| CoupFE | `454f73ce2de284262b214a2b37bd676c6aca3c0a` | Must be reachable from public `main` |
 
 Inspect a built image:
 
@@ -58,11 +55,11 @@ git ls-remote https://github.com/tengzhang48/CoupFE.git \
 
 1. checks that the public branch is reachable;
 2. passes the source URL, branch, and exact commit into Docker;
-3. lets the Dockerfile prove that the commit is reachable from the branch and
+3. lets the Dockerfile check that the commit is reachable from the branch and
    check it out detached;
 4. verifies the pinned OpenROAD download digest; and
-5. runs the standalone 53-gate harness, then the default pytest tier; that tier includes
-   wrappers for the same 53 gates plus 41 additional tests.
+5. runs the standalone component/reference harness and then the default pytest
+   tier. Those tiers overlap because pytest wraps the standalone gates.
 
 ### Build settings
 
@@ -70,11 +67,11 @@ git ls-remote https://github.com/tengzhang48/CoupFE.git \
 |---|---|---|
 | `COUPFE_URL` | `https://github.com/tengzhang48/CoupFE.git` | Public core source |
 | `COUPFE_BRANCH` | `main` | Branch required to contain the pin |
-| `COUPFE_REF` | `933e497301ee3ddb23391b787726674f70b480c5` | Exact audited core commit |
+| `COUPFE_REF` | `454f73ce2de284262b214a2b37bd676c6aca3c0a` | Exact qualified core commit |
 | `TAG` | `coupfe-eda` | Image tag |
-| `OPENROAD_DEB_URL` | pinned 2024-12-14 asset | Override only with its digest |
+| `OPENROAD_DEB_URL` | pinned 2024-12-14 asset | Override together with its digest |
 | `OPENROAD_DEB_SHA256` | pinned SHA-256 | Digest for the OpenROAD asset |
-| `RUN_TOOLCHAIN_TESTS` | `0` | Set to `1` for the 19-case compiled/MPI tier |
+| `RUN_TOOLCHAIN_TESTS` | `0` | Set to `1` for the compiled/mesh/MPI tier |
 
 Examples:
 
@@ -111,40 +108,34 @@ MPICH does not accept the OpenMPI-only `--oversubscribe` or
 ### Exact public CoupFE source
 
 The periodic mechanics path depends on generic affine MPC and native Tet4 in
-the qualified Core release root. The image clones public `main`, proves
-that exact commit `933e497301ee3ddb23391b787726674f70b480c5` is its ancestor,
+the qualified Core release root. The image clones public `main`, checks
+that exact commit `454f73ce2de284262b214a2b37bd676c6aca3c0a` is its ancestor,
 and checks out the commit detached. This avoids SSH aliases, credentials, mutable
 branch-tip installs, and accidental resolution of an unrelated `coupfe`
 package from PyPI.
 
 ### Pinned OpenROAD artifact
 
-The first recipe resolved an OpenROAD asset during the build. That made a build
-depend on GitHub API availability and allowed it to change over time. The
-current URL and SHA-256 select the tested Ubuntu 22.04
-`2.0-17598` asset dated 2024-12-14. A later `26Q1` tag exists but provides no
-binary asset. This is a compatibility baseline, not a claim of present-day
-freshness. Qualify a replacement, then override both URL and digest together.
+The URL and SHA-256 select the Ubuntu 22.04 `2.0-17598` asset dated
+2024-12-14. This is a compatibility baseline. Qualify a replacement, then
+override both URL and digest together.
 
 ### Scope of build-time verification
 
-The Dockerfile runs the standalone 53-gate trust suite and then the full default pytest tier. The
-default tier includes wrappers for those 53 gates plus 41 additional tests; the two reported
-counts therefore overlap.
-The 19-case gmsh/PETSc/MPI/Fortran tier is opt-in because it adds several
-minutes. Even the full test tier does not turn the blocked experimental TSV
-scorecard green or reproduce the large manual scaling runs.
+The Dockerfile runs the standalone component/reference harness and then the
+default pytest tier. The tiers overlap because pytest contains wrappers for the
+standalone gates. The gmsh/PETSc/MPI/Fortran tier is opt-in because it adds
+several minutes. Successful build-time checks retain the claim boundaries in
+the validation guide.
 
 ## Release verification
 
-The earlier image evidence predates this public-source recipe. Before
-publishing an image, rebuild it and record:
+Before publishing an image, build the selected recipe and record:
 
 - the image digest and `coupfe.ref` label;
 - `conda list --explicit` and all tool versions;
-- 53/53 standalone trust-gate output and 94/94 default-tier output (53 gate wrappers plus 41
-  additional tests in the latter);
-- 19/19 toolchain output with `RUN_TOOLCHAIN_TESTS=1`; and
+- standalone component/reference output and default-tier pytest output;
+- toolchain output with `RUN_TOOLCHAIN_TESTS=1`; and
 - distributed serial-versus-2/4-rank checks.
 
 See `docs/VALIDATION_GUIDE.md` for the checked claim boundaries and
@@ -154,7 +145,7 @@ See `docs/VALIDATION_GUIDE.md` for the checked claim boundaries and
 
 | Symptom | Cause / response |
 |---|---|
-| Public CoupFE branch is not found | Publish the core first and verify the HTTPS URL and branch without credentials |
+| Public CoupFE branch is not found | Verify that the core HTTPS URL and branch are public and reachable without credentials |
 | Audited core commit is not reachable | Do not change the pin silently; publish/merge the audited commit or qualify a new pin |
 | OpenROAD digest check fails | The asset and digest differ; set both override variables from a trusted release |
 | `curl: (6) Could not resolve host` | Retry after Docker bridge DNS recovers |

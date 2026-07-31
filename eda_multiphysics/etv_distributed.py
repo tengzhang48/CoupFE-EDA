@@ -1,6 +1,6 @@
-"""Large-scale DISTRIBUTED, NONLINEAR, COUPLED electro-thermal solve -- the CoupFE way.
+"""Distributed nonlinear coupled electrothermal research driver.
 
-The challenging simulation, done with CoupFE's real machinery (no Python assembly loop):
+The implementation uses:
   * the coupled electro-thermal element is a COMPILED f2py kernel generated from its weak
     form by `coupfe.codegen` (see `etv_kernel.py`) -- one batched call per assembly;
   * the global NONLINEAR (sigma(T) + Joule) solve is run distributed by
@@ -8,8 +8,10 @@ The challenging simulation, done with CoupFE's real machinery (no Python assembl
     elements, ghosts the U it needs via a PETSc VecScatter (no all-gather), assembles its
     rows of the distributed Mat/Vec, and a load-stepped Newton + KSP solves across ranks.
 
-2 DOF/node (phi, T). Validated against the 1-vs-N invariant (serial == N-rank) and, with
-alpha=0, the exact self-heating limit dT = sigma V0^2 / 8k.
+The formulation has 2 DOF/node (phi, T) and supports serial-versus-rank
+comparisons and the ``alpha=0`` self-heating oracle. Retained current-release
+multi-rank qualification is provided for ``etv_distributed_fs``; this module is
+kept as a research driver pending an equivalent retained rank test.
 
     OMP_NUM_THREADS=1 mpirun -n 4 python -m eda_multiphysics.etv_distributed [grid_n]
 """
@@ -75,15 +77,27 @@ def serial_solve(n, props=PROPS, V0=V0, workdir=None):
     d = _dirichlet_fn(nodes, V0)(1.0)
     drows = np.array(sorted(d)); dvals = np.array([d[i] for i in drows])
     U = np.zeros(ndof)
+    converged = False
+    last_update = float("inf")
     for _ in range(12):
         U[drows] = dvals
         R, _ = assemble_residual([group], U, None, 1.0, 1.0, ndof); R[drows] = 0.0
         K = assemble_tangent([group], U, None, 1.0, 1.0, ndof).tolil()
         for r in drows:
             K.rows[r] = [r]; K.data[r] = [1.0]
-        dU = spla.spsolve(K.tocsr(), -R); U = U + dU
-        if np.max(np.abs(dU)) < 1e-11:
+        dU = spla.spsolve(K.tocsr(), -R)
+        if not np.all(np.isfinite(dU)):
+            raise RuntimeError("serial electrothermal comparison produced a non-finite increment")
+        U = U + dU
+        last_update = float(np.max(np.abs(dU)))
+        if last_update < 1e-11:
+            converged = True
             break
+    if not converged:
+        raise RuntimeError(
+            "serial electrothermal comparison did not converge: "
+            f"iterations=12, last_update={last_update:.6e}, tolerance=1.0e-11"
+        )
     return U
 
 

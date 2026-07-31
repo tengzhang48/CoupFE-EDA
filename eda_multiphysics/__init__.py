@@ -1,7 +1,7 @@
-"""Experimental open-source EDA-multiphysics electrothermal prototype on CoupFE.
+"""Experimental CoupFE-based EDA multiphysics examples.
 
-Companion to `open_source_eda_multiphysics_integration_plan.md` (Phases 3-5: the
-solver core). Steady electrical + thermal conduction and their closed-loop
-electrothermal coupling, authored on the CoupFE operator contract and validated
-against analytical and independent (scipy BVP) oracles.
+The package contains steady electrical and thermal conduction, electrothermal
+coupling, TSV and package mechanics, provenance-preserving EDA adapters, and
+scoped numerical checks. Each public claim is bounded by the corresponding
+test, reference case, and documented model assumptions.
 """

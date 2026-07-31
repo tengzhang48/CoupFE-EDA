@@ -1,29 +1,57 @@
-include README.md
+include .dockerignore
+include .gitignore
 include CONTAINER.md
-include EXAMPLES.md
-include CoupFE_EDA_TSV_Device_Validation_Release_Plan.md
 include Dockerfile
+include EXAMPLES.md
+include LICENSE
+include NOTICE
+include README.md
+include THIRD_PARTY.md
 include build.sh
 include environment.yml
+include pyproject.toml
 include setup.sh
-recursive-include LICENSES *.txt
-recursive-include .github *.yml *.py
+
+include LICENSES/CC-BY-4.0.txt
+include LICENSES/OpenROAD-BSD-3-Clause.txt
+
+include .github/scripts/check_release_artifacts.py
+include .github/scripts/check_runtime_core.py
+include .github/scripts/record_release_evidence.py
+include .github/scripts/smoke_wheel.py
+include .github/workflows/fast-ci.yml
+
 recursive-include benchmarks *.json
-recursive-include docs *.md *.py *.png
-recursive-include eda_multiphysics *.py *.md *.csv *.json *.sp *.tcl *.f90
+
+include docs/COMPONENTS.md
+include docs/GEOMETRY.md
+include docs/LICENSE.md
+include docs/PERIODIC_MPC_STATUS.md
+include docs/README.md
+include docs/RELEASE_EVIDENCE.md
+include docs/TET_FEASIBILITY.md
+include docs/VALIDATION_GUIDE.md
+include docs/api.md
+include docs/capabilities.md
+include docs/lessons_learned.md
+include docs/roadmap.md
+include docs/theory.md
+include docs/validation_guide/generate_figures.py
+recursive-include docs/validation_guide/figures *.png
+
+recursive-include eda_multiphysics *.py *.md *.csv *.json *.sp *.tcl
+prune eda_multiphysics/_tm_*
+
 recursive-include examples *.py *.md *.csv *.json
 recursive-include skills *.md *.yaml
-prune tests
+
 include tests/conftest.py
 include tests/test_integration_regressions.py
 include tests/test_periodic_adapter.py
 include tests/test_toolchain.py
 include tests/test_tsv_device.py
 include tests/test_tsv_local_3d.py
-exclude docs/RELEASE_READINESS.md
-exclude tests/TRUST_NET_FINDINGS.md
-prune docs/presentation
-prune notes
-global-exclude __pycache__ *.py[cod] *.so *.o *.mod *.a *.lib *.dll *.dylib
+
+global-exclude __pycache__ *.py[cod] *.f90 *.so *.o *.mod *.a *.lib *.dll *.dylib
 global-exclude *.pdf *.tex *.whl *.zip *.tar *.tgz *.gz *.bz2 *.xz *.7z *.rar
 global-exclude .DS_Store

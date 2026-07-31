@@ -2,10 +2,10 @@
 
 We do NOT write our own mesh generator. gmsh (the standard open-source mesher) builds the
 geometry with its OpenCASCADE kernel and produces an **all-hexahedral** mesh via its subdivision
-algorithm (`Mesh.SubdivisionAlgorithm = 2`) for the canonical device solids defined here. Arbitrary
+algorithm (`Mesh.SubdivisionAlgorithm = 2`) for the generated device solids defined here. Arbitrary
 imported CAD should use the Tet4 path unless separately qualified. This module is only the thin
 glue: drive gmsh, pull (coords, hex-connectivity) in our Hex8
-node order (verified compatible -- signed Jacobian > 0, no remap), and classify boundary nodes by
+node order (checked by signed Jacobian > 0, no remap), and classify boundary nodes by
 the OCC surface they live on (for BCs). Multi-material solids tag volumes -> a per-element
 material id.
 
@@ -451,7 +451,7 @@ def _orient_tets(coords, tets):
 
 
 def tet_box(W=1.0, h=0.18):
-    """gmsh all-TET mesh of a WxWxW box (default Delaunay, NO recombine -> real tets -- the mesh
+    """gmsh all-Tet4 mesh of a WxWxW box (default Delaunay, no recombination -- the mesh
     gmsh grows for arbitrary solids). Returns (coords[nn,3], tets[ne,4]) with all signed vols > 0."""
     import gmsh
     gmsh.initialize()

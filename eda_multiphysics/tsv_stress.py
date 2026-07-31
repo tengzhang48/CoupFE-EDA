@@ -1,9 +1,11 @@
 """TSV thermomechanical stress: axisymmetric thermoelastic FE on the CoupFE contract.
 
-The "harder" case (electro-thermo-mechanical, the T->u half): CTE mismatch between
+The reference case covers the T-to-displacement part of a thermo-mechanical
+handoff. CTE mismatch between
 a Cu through-silicon-via and the Si substrate, on cooling from anneal, drives a
-stress field in the silicon. Validated against the PUBLISHED closed-form Lame
-benchmark of Choi et al., *Materials* 2021, 14(18):5226 (PMC8472814):
+stress field in the silicon. The selected output is compared with the published
+closed-form Lamé benchmark of Choi et al., *Materials* 2021, 14(18):5226
+(PMC8472814):
 
   sigma_r(r) = -[E_Cu (a_Cu - a_Si) dT] /
                [(1-2 nu_Cu) + (1+nu_Si)/(1+nu_Cu) (E_Cu/E_Si)] * (D_TSV/2r)^2
@@ -164,8 +166,12 @@ def main():
         err = abs(fe - an) / abs(an)
         rows.append(err)
         print(f"{D:>6.0f}{rq:>7.0f}{fe:>22.2f}{an:>12.2f}{err:>9.2%}")
-    print(f"\n  max rel err vs analytic = {max(rows):.2%}  "
-          f"{'PASS' if max(rows) < 0.03 else 'CHECK'}  (FE reproduces published Lame)")
+    max_error = max(rows)
+    within_threshold = max_error < 0.03
+    detail = "within" if within_threshold else "outside"
+    print(f"\n  max rel err vs analytic = {max_error:.2%}  "
+          f"{'PASS' if within_threshold else 'CHECK'}  "
+          f"({detail} the declared 3% analytic-comparison threshold)")
 
     # Honest probe of the paper's stated reason for analytic>FEA (the liner buffer)
     print("\nLiner sensitivity (30 um TSV, r=20 um) -- testing the paper's stated reason:")

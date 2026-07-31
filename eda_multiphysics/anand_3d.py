@@ -1,21 +1,22 @@
 """Small-strain 3D Hex8 Anand viscoplastic solder element.
 
-This is the deeper solder-fatigue refinement called out by ``reliability_3d``:
-instead of elastic 3D FE feeding a material-point Anand life model, the Anand
-state lives at the Hex8 Gauss points.  The implementation intentionally mirrors
-``solder_joint.py``:
+This module places Anand state at Hex8 Gauss points. The implementation mirrors
+the return-map and operator structure in ``solder_joint.py``:
 
 * J2 radial-return Anand update with the same closed-form saturation oracle.
 * A stateful CoupFE ``Operator`` with residual/tangent/commit.
 * Elastic modified-Newton tangent; the return map uses abs/sign/Brent and is not
   complex-analytic.
 
-Validation oracles:
+Checked comparisons and controls:
   1. 3D pure-shear return map saturates to ``anand.sat_stress``.
   2. 3D uniaxial-stress transient matches ``anand.integrate_uniaxial``.
   3. Hex8 elastic patch test reproduces an affine strain field exactly.
-  4. Driven one-Hex8 cycle returns a finite calibrated SAC305/Syed life; zero thermal
-     swing is the broken control.
+  4. A fully prescribed one-Hex8 constitutive cycle returns finite SAC305/Syed
+     screening output; zero thermal swing is the broken control.
+
+The earlier multi-element cyclic boundary-value driver is not included because
+its modified-Newton increments did not meet the stated convergence tolerance.
 
 Run:  python -m eda_multiphysics.anand_3d
 """
@@ -339,10 +340,10 @@ def validate_return_map_3d():
 
 
 def validate_return_map_transient_3d(eps_max=0.04, nsteps=120, p=None, oracle_p=None):
-    """3D map under uniaxial stress must match the validated 1D transient.
+    """Compare the 3D map under uniaxial stress with the checked 1D transient.
 
-    The saturation gate proves the asymptote. This check pins the hardening path
-    that drives hysteresis and fatigue: for each axial strain increment, solve
+    The saturation comparison checks the asymptotic response. This transient
+    comparison constrains the implemented hardening path: for each axial strain increment, solve
     the lateral strain that enforces ``sigma_yy = sigma_zz = 0``, then compare
     the full stress-strain curve to ``anand.integrate_uniaxial``.
     """
@@ -403,18 +404,17 @@ def patch_test_3d():
     return float(np.max(np.abs(eps - exact)))
 
 
-def solder_joint_cycle_3d(*, nx=1, ny=1, nz=1, Tlo=-40.0, Thi=125.0,
+def prescribed_hex8_cycle(*, Tlo=-40.0, Thi=125.0,
                           dalpha=14.4e-6, ldnp_over_h=6.0, ncyc=3,
                           steps_per_cyc=24, p=SAC305_3D):
-    """Driven Hex8 Anand cycle under JEDEC DNP shear; returns dW/cycle and Syed life.
+    """Fully prescribed one-Hex8 Anand constitutive cycle.
 
-    The default 1x1x1 mesh has every node on the boundary, so it is a material-
-    point-like constitutive drive through the FE operator/commit path. Use
-    ``nx, ny, nz > 1`` when a true boundary-value problem with free lateral
-    faces and nonuniform dW is needed.
+    Every node is on a prescribed face, so this checks the stateful material
+    update through the FE operator/commit path. It is not a multi-element
+    boundary-value solution or a predictive solder-joint life calculation.
     """
     H = 0.1e-3
-    m = StructuredHexMesh(nx, ny, nz, H, H, H)
+    m = StructuredHexMesh(1, 1, 1, H, H, H)
     op = AnandHex8(m, p)
     top, bot = m.top(), m.bottom()
     TloK, ThiK = Tlo + 273.15, Thi + 273.15
@@ -451,56 +451,6 @@ def solder_joint_cycle_3d(*, nx=1, ny=1, nz=1, Tlo=-40.0, Thi=125.0,
                 gamma_range=dalpha * (ThiK - TloK) * ldnp_over_h)
 
 
-def solder_joint_bvp_3d(*, nx=3, ny=3, nz=2, Tlo=-40.0, Thi=125.0, dalpha=14.4e-6,
-                        ldnp_over_h=6.0, ncyc=2, steps_per_cyc=12, p=SAC305_3D):
-    """A **real 3-D boundary-value problem** solder joint (multi-element, TRACTION-FREE lateral
-    faces) under the JEDEC DNP shear -- as opposed to the 1x1x1 driven material point.
-
-    The bottom face is fixed and the top face is a rigid platen sheared in x; the lateral faces
-    carry **no BC (traction-free)**, so the interior + free edges give a genuine stress gradient --
-    the plastic-dissipation ``dW`` concentrates at the constrained corners (the crack-initiation
-    site). Returns the per-element ``dW`` FIELD and a **peak-based** Syed life (the corner is where
-    the joint actually fails), plus the mean for contrast.
-    """
-    H = 0.1e-3
-    m = StructuredHexMesh(nx, ny, nz, H, H, H)
-    op = AnandHex8(m, p)
-    top, bot = m.top(), m.bottom()
-    TloK, ThiK = Tlo + 273.15, Thi + 273.15
-    Tref = 0.5 * (TloK + ThiK)
-    dt = 1600.0 / steps_per_cyc
-    U = np.zeros(op.ndof)
-    dW_elem = np.zeros(len(m.elems))                     # per-element dW over the last (stable) cycle
-    for _cyc in range(ncyc):
-        acc = np.zeros(len(m.elems))
-        for k in range(steps_per_cyc):
-            frac = k / steps_per_cyc
-            tri = 1.0 - abs(2.0 * frac - 1.0)
-            T = TloK + (ThiK - TloK) * tri
-            gamma = dalpha * (T - Tref) * ldnp_over_h
-            op.T = T
-            op.dt = dt
-            bc = {}
-            for n in bot:                                # substrate side: fixed
-                bc[3 * int(n)] = 0.0
-                bc[3 * int(n) + 1] = 0.0
-                bc[3 * int(n) + 2] = 0.0
-            for n in top:                                # die side: rigid platen sheared in x
-                bc[3 * int(n)] = gamma * H
-                bc[3 * int(n) + 1] = 0.0
-                bc[3 * int(n) + 2] = 0.0
-            U, _, _ = newton_solve([op], U, None, op.ndof, bc, dt=dt, maxit=30)
-            acc += op.dW.mean(axis=1)                     # per-element plastic-dissipation increment
-        dW_elem = acc                                    # stabilized ~ last cycle
-    dW_peak = float(dW_elem.max())
-    dW_mean = float(dW_elem.mean())
-    return dict(dW_elem=dW_elem, dW_peak=dW_peak, dW_mean=dW_mean,
-                gradient=dW_peak / max(dW_mean, 1e-30),
-                Nf_peak=1.0 / (SYED_W_SAC305 * max(dW_peak, 1e-30)),
-                Nf_mean=1.0 / (SYED_W_SAC305 * max(dW_mean, 1e-30)),
-                gamma_range=dalpha * (ThiK - TloK) * ldnp_over_h, n_elem=len(m.elems))
-
-
 def main():
     err = validate_return_map_3d()
     print("3D Anand Hex8 viscoplastic solder")
@@ -512,10 +462,10 @@ def main():
     perr = patch_test_3d()
     print(f"  Hex8 elastic patch test: max|err| {perr:.1e} "
           f"{'PASS' if perr < 1e-10 else 'CHECK'}")
-    r = solder_joint_cycle_3d()
-    print(f"  SAC305 3D solder cycle: dW={r['dW_stab']:.4f} MPa, "
+    r = prescribed_hex8_cycle()
+    print(f"  prescribed one-Hex8 SAC305 cycle: dW={r['dW_stab']:.4f} MPa, "
           f"Nf={r['Nf']:,.0f} cycles, gamma_range={r['gamma_range']*100:.2f}%")
-    z = solder_joint_cycle_3d(Tlo=25.0, Thi=25.0, ncyc=1)
+    z = prescribed_hex8_cycle(Tlo=25.0, Thi=25.0, ncyc=1)
     print(f"  broken control (no thermal swing): dW={z['dW_stab']:.1e}")
 
 

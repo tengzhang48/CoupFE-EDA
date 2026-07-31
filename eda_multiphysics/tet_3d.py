@@ -6,9 +6,9 @@ CoupFE Core revision, this module checks native Tet4 on generated box and cylind
 meshes against the same analytic oracles used by the Hex8 path. It does not by
 itself demonstrate imported package, TSV-array, or solder CAD.
 
-Validations (the prime directive -- real oracles):
+Checks:
   * ``patch_test``     -- a linear temperature field reproduced to MACHINE PRECISION (Tet4 is
-                          linear-complete): the rigorous element-correctness gate.
+                          linear-complete): the element-correctness gate.
   * ``solve_selfheat`` -- Joule self-heating peak ``dT = sigma V0^2 / 8k`` (the exact oracle
                           ``etv_3d``'s Hex8 hits), on a tet box AND a tet cylinder (curved CAD),
                           within tet discretization error and converging with refinement.

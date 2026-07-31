@@ -1,8 +1,9 @@
 """Anisotropic small-strain Tet4 foundation for a Cu/oxide/Si TSV local submodel.
 
-This module supplies the reusable constitutive, assembly, stress-recovery, and Raman-depth
-extraction pieces described in ``docs/TSV_ANISOTROPIC_3D_PLAN.md``.  It deliberately reports
-``release_validation=False``: numerical mechanics is not experimental Raman validation.
+This module supplies constitutive, assembly, stress-recovery, and Raman-depth
+extraction functions for the generated local model described in
+``docs/GEOMETRY.md``. It reports ``release_validation=False``: the numerical
+mechanics checks are not an experimental Raman comparison.
 """
 from __future__ import annotations
 

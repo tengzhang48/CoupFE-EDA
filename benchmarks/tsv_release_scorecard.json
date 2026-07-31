@@ -1,16 +1,64 @@
 {
   "schema_version": 1,
-  "release_plan": "CoupFE_EDA_TSV_Device_Validation_Release_Plan.md",
+  "evidence_guide": "docs/VALIDATION_GUIDE.md",
   "categories": {
-    "numerical_mechanics": {"status": "blocked", "evidence": ["existing isotropic TSV Lamé and compiled u-T gates", "cubic-tensor and Tet4 affine-strain gates", "corrected conformal blind Cu/oxide-cup/Si solve with zero direct Cu-Si contact and free residual below 1e-10", "coordinate/crystal frame plus material/mesh SHA-256 provenance", "40/50 um periodic geometry with exact translated face pairing and affine serial MPC", "homogeneous periodic free-expansion stress 9.76e-12 MPa; zero-jump broken control 29.09 MPa", "heterogeneous periodic reduced residual 1.72e-14 and MPC error zero under an explicitly assumed Si free-contraction macro gradient", "superseded-topology local-refinement/L2/spot sensitivity with failed 6.9-14.3% last-two-mesh difference", "superseded-topology domain study: depth 3.1%, radial changes 59%/15.4%/14.0%"], "blocking_reason": "Jiang-equivalent macro/bottom boundary semantics are not frozen; corrected-scene Raman mesh/domain/symmetry gates, independent Hex8, and MPI MPC gates have not passed"},
-    "global_experiment": {"status": "blocked", "evidence": ["tsv_curvature_ryu2012 definition manifest"], "blocking_reason": "stabilized curvature branches are not digitized or solved"},
-    "local_experiment": {"status": "blocked", "evidence": ["Raman observable API", "exact-depth anisotropic local-model extraction", "tsv_raman_jiang2013 definition manifest"], "blocking_reason": "specimen C/D curves, fixed masks, and mesh/domain-qualified local fields are incomplete"},
-    "multilevel_accuracy": {"status": "not_started", "evidence": [], "blocking_reason": "independent global/local meshes and full-array reference are absent"},
-    "conservation": {"status": "not_started", "evidence": [], "blocking_reason": "force, moment, and virtual-work transfer operators are absent"},
-    "performance": {"status": "not_started", "evidence": [], "blocking_reason": "matched-fidelity 20x20 full-versus-reduced timing has not run"},
-    "device_mapping": {"status": "blocked", "evidence": ["published coefficient, tensor-rotation, Raman, mobility, and KOZ APIs", "device-scale-dimension synthetic screening preview"], "blocking_reason": "published isolated and merged-array contours have not been reproduced from the accepted 3-D field"},
-    "eda_semantics": {"status": "blocked", "evidence": ["stable device/TSV screening IDs and coordinate outputs"], "blocking_reason": "no OpenDB/DEF round-trip example or coordinate-round-trip gate"},
-    "design_action": {"status": "blocked", "evidence": ["deterministic channel-orientation screening preview"], "blocking_reason": "no valid-placement OpenDB action or penalty accounting"},
-    "reproducibility": {"status": "blocked", "evidence": ["versioned manifests and schemas", "quick/toolchain test split", "public fast and release-artifact CI definitions", "exact CoupFE core pin and OpenROAD artifact digest"], "blocking_reason": "CI must pass after the core becomes publicly reachable; no clean-machine full toolchain run, full evidence report, lockfile-frozen environment, or final-revision release-artifact CI result exists"}
+    "numerical_mechanics": {
+      "status": "blocked",
+      "evidence": [
+        "Lamé and generated-geometry thermo-mechanical component checks",
+        "cubic-tensor, Tet4 affine-strain, conformal-region, and serial periodic-MPC checks",
+        "coordinate-frame and material/mesh provenance records"
+      ],
+      "blocking_reason": "near-surface Raman mesh/domain convergence, experiment-matched boundary conditions, an independent element comparison, and MPI MPC qualification remain open"
+    },
+    "global_experiment": {
+      "status": "blocked",
+      "evidence": ["tsv_curvature_ryu2012 definition manifest"],
+      "blocking_reason": "the comparison curves and uncertainty record are not bundled or reproduced"
+    },
+    "local_experiment": {
+      "status": "blocked",
+      "evidence": ["Raman observable API", "tsv_raman_jiang2013 definition manifest"],
+      "blocking_reason": "the measured curves, masks, spatial-resolution record, and mesh/domain-qualified local field are incomplete"
+    },
+    "multilevel_accuracy": {
+      "status": "not_started",
+      "evidence": [],
+      "blocking_reason": "independent global/local meshes and a full-array reference are absent"
+    },
+    "conservation": {
+      "status": "not_started",
+      "evidence": [],
+      "blocking_reason": "force, moment, and virtual-work transfer checks are absent"
+    },
+    "performance": {
+      "status": "not_started",
+      "evidence": [],
+      "blocking_reason": "no retained matched-fidelity full-versus-reduced timing record exists"
+    },
+    "device_mapping": {
+      "status": "blocked",
+      "evidence": ["tensor rotation, Raman observable, mobility mapping, and synthetic device-screening APIs"],
+      "blocking_reason": "published isolated and array contours have not been reproduced from an accepted 3-D field"
+    },
+    "eda_semantics": {
+      "status": "blocked",
+      "evidence": ["stable device/TSV identifiers and coordinate outputs"],
+      "blocking_reason": "no retained OpenDB/DEF round-trip case or coordinate round-trip check exists"
+    },
+    "design_action": {
+      "status": "blocked",
+      "evidence": ["deterministic channel-orientation screening demonstration"],
+      "blocking_reason": "no legal-placement OpenDB action or design-penalty accounting is demonstrated"
+    },
+    "reproducibility": {
+      "status": "blocked",
+      "evidence": [
+        "versioned manifests and schemas",
+        "default and optional toolchain test tiers",
+        "exact CoupFE pin, OpenROAD digest, and release-artifact guard"
+      ],
+      "blocking_reason": "the final commit's CI/artifact record and a lockfile-frozen environment have not yet been retained"
+    }
   }
 }

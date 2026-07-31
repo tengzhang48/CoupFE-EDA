@@ -7,7 +7,7 @@
 # rolling conda-forge packages, so this is not a byte-for-byte lock file.
 #
 #   docker build -t coupfe-eda .
-#   docker run --rm -it coupfe-eda                       # 53-gate harness plus default pytest tier
+#   docker run --rm -it coupfe-eda                       # component/reference harness plus default tier
 #   docker run --rm coupfe-eda mpirun -n 4 \
 #         python -m eda_multiphysics.pdn_distributed 400 --direct   # conda MPI is MPICH
 #
@@ -47,7 +47,7 @@ RUN echo "Installing OpenROAD: $OPENROAD_DEB_URL" && \
 # --- public CoupFE core (audited branch + exact commit) + CoupFE-EDA ---
 ARG COUPFE_URL=https://github.com/tengzhang48/CoupFE.git
 ARG COUPFE_BRANCH=main
-ARG COUPFE_REF=933e497301ee3ddb23391b787726674f70b480c5
+ARG COUPFE_REF=454f73ce2de284262b214a2b37bd676c6aca3c0a
 RUN git clone --branch "$COUPFE_BRANCH" --single-branch "$COUPFE_URL" /opt/CoupFE && \
     git -C /opt/CoupFE cat-file -e "$COUPFE_REF^{commit}" && \
     git -C /opt/CoupFE merge-base --is-ancestor "$COUPFE_REF" "origin/$COUPFE_BRANCH" && \
@@ -59,7 +59,7 @@ COPY . /opt/CoupFE-EDA
 RUN python -m pip install -e /opt/CoupFE-EDA
 
 WORKDIR /opt/CoupFE-EDA
-# Verify all default tests at build time. The 19-case compiled/MPI tier is opt-in because it
+# Verify all default tests at build time. The compiled/mesh/MPI tier is opt-in because it
 # adds several minutes and should also run in a dedicated release job.
 RUN python -m eda_multiphysics.run && python -m pytest -q
 ARG RUN_TOOLCHAIN_TESTS=0

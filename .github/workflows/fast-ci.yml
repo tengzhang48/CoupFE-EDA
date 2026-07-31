@@ -14,7 +14,7 @@ jobs:
     env:
       COUPFE_URL: https://github.com/tengzhang48/CoupFE.git
       COUPFE_BRANCH: main
-      COUPFE_REF: 933e497301ee3ddb23391b787726674f70b480c5
+      COUPFE_REF: 454f73ce2de284262b214a2b37bd676c6aca3c0a
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -26,9 +26,9 @@ jobs:
           python -m pip install --upgrade pip
           ./setup.sh
           python -m pip check
-      - name: Run standalone 53-gate trust harness
+      - name: Run the component/reference harness
         run: python -m eda_multiphysics.run
-      - name: Run default pytest tier (includes the 53 gate wrappers)
+      - name: Run default pytest tier (includes harness wrappers)
         run: python -m pytest -q
       - name: Build, smoke-install, and inspect public release artifacts
         run: |

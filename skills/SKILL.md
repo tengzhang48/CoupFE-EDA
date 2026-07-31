@@ -1,315 +1,219 @@
 ---
 name: develop-coupfe-eda
-description: Develop, extend, review, or validate CoupFE-EDA multiphysics models, EDA adapters, geometry, solvers, examples, documentation, and regression gates. Use for changes involving OpenROAD or PDNSim data, Gmsh Hex8/Tet4 geometry, electrothermal or thermomechanical coupling, solder/TSV reliability, PETSc/MPI scaling, validation oracles, capability claims, or project technical reports.
+description: Develop, review, and validate CoupFE-EDA adapters, multiphysics models, geometry, examples, documentation, and release evidence.
 ---
 
-# Develop CoupFE-EDA
+# CoupFE-EDA contributor guide
 
-Read this before adding a multiphysics example or a validation gate. This project's
-value is **trust through reproduction**: numerical components should be checked
-against independent published, analytic, or experimental evidence wherever
-available. Composed chains must distinguish those component checks from structural
-handoff tests and from end-to-end device validation. Codifying that distinction
-keeps the suite honest as it grows. Pair it with CoupFE core's `skills/SKILL.md`
-and `skills/testing.md` (the operator-contract + test discipline this builds on).
+CoupFE-EDA is experimental research software built on CoupFE. It demonstrates
+one way to connect EDA data with finite-element and reliability workflows. The
+repository is not a signoff tool, a universal multiphysics environment, or a
+complete package-CAD system. Claims should stay within the evidence retained in
+this repository.
 
-## The prime directive
+AI agents can accelerate code navigation, adapter scaffolding, test generation,
+and documentation review. Their output still requires engineering review and
+executable checks. An agent's analysis or a plausible-looking result is not
+validation evidence by itself.
 
-**Reproduce a real oracle. Never an invented problem.** Every example must reduce to — or be
-checked against — something whose answer is known *independently of this code*: a closed form,
-a published benchmark with actual numbers, a patch test, an energy balance, or an independent
-solver. "The number looks plausible" is how a wrong result ships. If you cannot find an oracle,
-you are not done finding one; you are not building the example yet.
+## Repository boundary
 
-## How to add a validated example + gate
+Keep broadly reusable numerical mechanisms in CoupFE Core. Keep EDA meaning and
+application policy in this repository.
 
-1. **Build the physics on the CoupFE contract, in this consumer layer.** Reuse `fe.py`
-   (scalar diffusion), the existing material dicts, and the existing elements. Put the whole
-   physics in a residual; derive the tangent by complex step. **Add nothing to CoupFE core** —
-   meshing, BCs, materials, elements, and gates are per-problem glue and live here. (The
-   spin-off proved the suite needs zero core changes; keep it that way.)
-2. **Find the oracle and pin its numbers.** A closed form (Lamé, Timoshenko, σV0²/8k, the
-   Anand saturation), or a published benchmark. **If it's a published parameter set or figure,
-   cross-check the numbers across ≥2 independent sources** — single-source transcription has
-   already bitten us (a dropped zero in an Anand `h0`). Record the source in the module
-   docstring and `RESULTS.md`.
-3. **Recompute it yourself before trusting it.** Don't bake a number a survey/agent handed you;
-   run the actual oracle function and confirm.
-4. **Write the gate (`gates.py`).** Return `_g(name, ok, detail)`. Reproduce the oracle to a
-   *stated* tolerance, and **ship a broken control**: reintroduce a bug (wrong constant, wrong
-   sign, `k=0`, `A×100`) inline and assert the oracle *rejects* it. A broken control must be a
-   structural change that cannot pass if the code is right — prefer a structural zero over a
-   scaling/proportionality check (backward-Euler bias broke one of those).
-5. **Separate rigorous from benchmark, and state the honest scope.** Distinguish
-   *self-consistency / closed-form exact* (e.g. integrator-vs-its-own-saturation, 0.02%) from
-   *matches-the-paper-within-tolerance* (e.g. closed-form vs a digitized figure, a few %). Never
-   call the second "exact." Put the honest scope in `RESULTS.md`.
-6. **Wire it in.** Append the gate(s) to `gates.GATES`. It then auto-joins `run.py`, the pytest
-   suite, and the container's build-time trust check — no other registration needed.
+CoupFE Core owns:
 
-## Recurring hazards (each has already cost us)
+- generic elements, operators, assembly, and solver interfaces;
+- mesh-independent affine-constraint algebra;
+- reusable code-generation and compiled-element interfaces; and
+- numerical utilities that have a clear cross-application contract.
 
-- **Units are correctness.** Darveaux life constants are psi/inch — MPa input gave N_f 1000×
-  wrong. Validate the rigorous quantity (ΔW); life remains calibration-specific and has only one
-  in-sample package anchor (±2×), not general qualification.
-- **The BC encodes the engineering scenario.** Fixed-voltage vs fixed-current flipped a PDN
-  verdict. Choose the BC that matches the real operating constraint, then say which you chose.
-- **Viscoplastic flow must be sign-safe + bracketed.** `(1−s/s*)^a` goes negative and `s*`→0;
-  use the sign-safe flow + stiff BDF / bracketed Brent return map (see `anand`, `solder_joint`).
-- **Know which constant feeds which oracle** before trusting a cross-check (e.g. `h0` affects
-  only the hardening transient, not the saturation closed form).
-- **Geometry metadata is physics input.** Carry units, coordinate frame, stable object ID, region,
-  boundary semantics, and provenance. Never infer DBU, power source, or material identity from file
-  existence or an unlabeled array.
+CoupFE-EDA owns:
 
-## Going fast / large: use CoupFE's compiled + distributed path — don't hand-roll
+- OpenROAD, PDN, layout, and package-data adapters;
+- design-object identity, units, coordinate frames, and provenance;
+- Gmsh construction, mesh adaptation, region and boundary semantics;
+- periodic-cell pairing and EDA-specific constraint construction;
+- electrical, thermal, mechanical, and reliability model composition;
+- material choices, loading scenarios, observables, and case-specific solvers;
+- examples, benchmark interpretation, and application validation records.
 
-**Read CoupFE core's `skills/performance.md` (the acceleration ladder) and `docs/capabilities.md`
-BEFORE writing your own assembly.** The ladder: vectorize numpy → numba → **f2py Fortran for the
-hot, regular element kernels** → Rust. A per-element Python loop (or even batched numpy) for the
-*element kernel* is the wrong rung at scale — CoupFE already generates a compiled kernel from the
-weak form. The lesson (learned the slow way): don't reinvent batch assembly; the compiled path is:
+Do not move mesh or design semantics into Core merely to share one EDA example.
+If a generic abstraction emerges, propose it separately with a small
+contract and Core-level tests, then qualify the EDA consumer against the chosen
+public Core revision. `setup.sh` is the source of truth for that revision.
 
-1. Write the element weak form once in Python (`coupfe.codegen`): a `Material` with named
-   `*_storage`/`*_flux` methods + a `WeakForm` with `transport_equation`/`species_transport_equation`
-   returning `(storage, flux)` → `∫ storage·N + flux·∇N`. Diffusion/conduction/electrical are all
-   this form (see `eda_multiphysics/etv_kernel.py`: φ flux = σ(T)∇φ, T flux = −k∇T, storage = Joule).
-   It MUST live in a real `.py` file (`inspect.getsource` can't read a heredoc).
-2. `generate_uel(problem, "x.for", element="Quad4")` → Fortran UEL with the **full coupled
-   complex-step tangent**; `build_element_kernel(for, mod, workdir)` f2py-compiles it.
-3. `CompiledElement(mod, props, dof_per_node, ...)` + `ElementGroup(...)` → a CoupFE Operator with
-   **one batched compiled call** (no Python loop). Validate it serially against an oracle first.
-4. Distributed: `element_partition(view, rank, size)` + `solve_distributed(..., elem.element_rk_batch,
-   dirichlet_fn, n_steps)` (PETSc/MPI, ghosted U). Validate **serial==N-rank** (see `etv_distributed.py`,
-   80k-DOF nonlinear coupled, 6e-12).
+Use `docs/COMPONENTS.md` and `docs/api.md` for component and API boundaries,
+`docs/GEOMETRY.md` for mesh contracts, `docs/capabilities.md` for current scope,
+and `docs/VALIDATION_GUIDE.md` and `docs/RELEASE_EVIDENCE.md` for evidence.
 
-Toolchain + gotchas (hard-won, 2026-06-27):
-- needs **gfortran + ninja + meson**; `pip install meson` and put the **venv `bin` on PATH** (f2py
-  invokes `meson` as a command, not `python -m`).
-- **GAMG mis-coarsens an interleaved multi-field (φ,T) block system** → use `pc="bjacobi"`+GMRES,
-  not the scalar-elliptic `gamg` default. (The core capability matrix lists distributed coupled
-  multi-field as ◐ "single-field today" — bjacobi makes it work here; FieldSplit is the cleaner fix.)
-- `superlu_dist` (machine-precision distributed direct) is **conda-only**; the pip-PETSc venv is
-  iterative-only.
+## Evidence and claims
 
-**FieldSplit strategy for a coupled (multi-field) scaling study.**
-ASM/block-Jacobi have no coarse grid, and GAMG can mis-coarsen the interleaved
-(φ,T) block. **PCFIELDSPLIT (GAMG per scalar field)** is the implementation to
-evaluate. Historical iteration and 1–48-rank records lack retained raw evidence;
-rerun them before claiming mesh/rank independence or scale. `solve_distributed`
-is single-field/ASM only, so the distributed FieldSplit is a custom driver
-(compiled batch assembly + your own KSP). Three traps that look like "won't converge":
-- **field index sets = each rank's LOCALLY-OWNED field DOFs** (`loc=arange(rs,re); loc[loc%2==0]`),
-  NOT the full global set (→ GMRES stagnation + wrong answer).
-- **a full-load Newton loop**, not load-stepping-with-one-solve — the Joule term is quadratic in φ,
-  so it needs real Newton iterations (peak ΔT wrong otherwise). `solve_distributed` does Newton for
-  you; a hand-rolled driver must. Always gate on **serial==N-rank** — KSP-converged ≠ correct.
-- **do NOT assemble with PETSc's `setValuesCOO` if you then solve more than once per process.** It
-  corrupts global state (a **confirmed upstream PETSc bug** — reproduced in ~30 lines of pure
-  petsc4py with a trivial Laplacian, `docs/petsc_coo_gamg_bug_repro.py`; **fails identically on
-  pip-wheel 3.25.2 AND conda-forge 3.24.2**, so it's not a venv artifact). The *first* solve after
-  a COO assembly works; *every subsequent* one fails — GAMG stagnates (reason −3), ILU/bjacobi
-  PC-setup fails (reason −11), `MatConvert` segfaults — so a Newton loop diverges at iter 1. It's
-  memory corruption, not a value bug (the matrix matches `setValues` to ~1e-15). Removing the
-  per-element `setValues` *stamp* loop (~50% of wall, grows with element count) is still right —
-  just do it the **owned-row-CSR** way: node-aligned row partition, evaluate elements touching owned
-  nodes (owned + 1 ghost layer) in one `element_rk_batch`, keep owned-row triplets, build a local
-  CSR with `scipy` (vectorized), `createAIJ(csr=...)` — plain AIJ, no off-process, no COO, no loop
-  (7× faster than the stamp loop, GAMG stays healthy). See `etv_distributed_fs.py` / lessons_learned.
-- **for a MECHANICS (displacement) FieldSplit block, seed GAMG with the rigid-body
-  near-null-space.** Historical runs showed hundreds versus tens of iterations;
-  retain a final-revision ablation before generalizing.
-  Attach them explicitly: `MatNullSpace.createRigidBody(coords_vec[bs=3])` → `Au.setNearNullSpace`
-  on the u sub-block (`ksp_u.getOperators()[0]`), after `setUp` / before solve. `PC.setCoordinates`
-  broke GAMG here; a fully-prescribed (Dirichlet) field's block is the identity → use `jacobi`, not
-  GAMG, for it. See `thermomech_tsv._fieldsplit_tm_solve`.
+Classify each result before describing it:
 
-## Device geometry: use mixed fidelity and Gmsh
+1. **Structural check**: schema, topology, conservation, or API behavior.
+2. **Analytic or manufactured verification**: comparison with a closed form,
+   patch test, invariant, or manufactured solution.
+3. **Independent numerical comparison**: two implementations or solvers agree
+   over a stated domain and tolerance.
+4. **Published benchmark comparison**: traceable parameters and observables.
+5. **Experimental comparison**: declared measurement, uncertainty, and role.
+6. **Composed-workflow check**: tested components preserve intended quantities,
+   identity, units, and frames across a handoff.
 
-Read `docs/GEOMETRY.md` before changing geometry. Preserve mixed dimensionality: PDN wires remain a
-1-D graph, die power remains a 2-D field, and only local shape-sensitive regions become 3-D. Use
-Gmsh (`pip install gmsh meshio`) rather than writing a mesh generator. Workflow:
+A component check does not validate the composed device workflow. Calibration
+is not held-out validation. A synthetic design checks software behavior but does
+not establish accuracy for a fabricated device. Label exploratory work as
+research or open when an independent reference is not yet available.
 
-1. **Build geometry with gmsh OCC** (`addCylinder`, `addBox`, `fragment` for conformal
-   multi-material interfaces; `addSpline` + `revolve` for a profiled joint). Two meshing routes:
-   **all-hex** via `Mesh.SubdivisionAlgorithm = 2` for qualified canonical solids, or **all-tet**
-   via Gmsh's native Delaunay output. `mesh3d.tet_box`/`tet_cylinder` validate the Tet4 element path;
-   a named STEP/BREP import adapter is still pending. The
-   codegen now has **Hex8/Hex20 AND Tet4** as first-class elements (`tet4`/`tet4r` were **promoted to
-   CoupFE core**; use `build_et_kernel(element="Tet4")`; see `docs/TET_FEASIBILITY.md`).
-2. **Extract + validate the mesh.** Build the FE node table from nodes referenced by volume
-   elements, not `getNodes()` alone. Full revolutions and boolean operations can leave orphan CAD
-   entities; including their nodes creates disconnected zero rows and a singular PETSc matrix.
-   Remove source construction surfaces when possible and assert that every returned node appears in
-   an element. Gmsh's hex node order is directly compatible with our element
-   (no remap) — but *prove* it: `mesh3d.min_signed_jacobian(coords, elems) > 0` on every mesh (run
-   it always; it is the validity gate). Restrict surface classification to the selected volume's
-   boundary entities. Pull boundary node sets from **OCC surfaces** (classify by
-   bounding box), not guessed coordinates — and mind the tolerance: OCC "planar" cap surfaces have a
-   ~1e-6 numerical z-extent, so use an L-relative tol (1e-4·L), or a tight test silently drops the
-   BC face (→ no drive, zero field).
-3. **Multi-material = one `ElementGroup` per physical region** (no core change — the assembler sums
-   a list of operators). Fragment/cut overlapping OCC solids into non-overlapping conformal volumes,
-   map resulting volume tags to explicit region names, and keep shared-interface node sets. Do not
-   rely on incidental entity ordering. Give each region its own properties and test that interfaces
-   share nodes.
-   Use `mesh3d.solder_package` as the reference: it returns six named Tet4 regions, external pad
-   boundaries, shared interface sets, and exact OCC volumes. Do not force subdivision Hex8 when a
-   boolean-rich underfill shell fails the signed-Jacobian gate; select Tet4 and keep the gate.
-4. **Validate against a real closed form** (prime directive). Curved geometry is discretization-
-   limited (~1e-3, converging) — report it as benchmark-within-discretization, not exact; flat/
-   axis-aligned 1D conduction is **nodally exact** (~1e-16). Oracles used: heat-generation cylinder
-   `σ₀V²R²/4kL²` (solid via), composite cylinder `qa²/4k_core+q(b²−a²)/4k_ann` (annular via — the
-   log term vanishes under uniform generation), 1D series resistance `T_top·R(z)/R_tot` (stack).
-5. **Chaining a 3D FE into a downstream validated model** (e.g. FE stress → solder fatigue,
-   `reliability_3d.py`): connect through the **quantity the downstream actually consumes** and reuse
-   the validated model — don't re-derive it. The Anand/Syed life is driven by `ε = dalpha·(T−T_ref)`,
-   so the bridge is the FE **equivalent-strain range** mapped to an effective `dalpha = ε_eq/dT`; feed
-   that to `anand.thermal_cycle`. Keep the project's split: dW is the **mesh-objective** output, N_f
-   is calibration-specific and anchored only to one in-sample package (±2×). And **match the
-   oracle's boundary conditions**:
-   a *free* assembly relieves CTE mismatch by bending, so its emergent solder shear is ~25× below the
-   textbook DNP `dalpha·dT·L_D/h` (which assumes *rigid* plates) — impose the DNP displacement on the
-   joint (the standard solder-joint FE BC) and the FE reproduces `du/h`. When an emergent FE disagrees
-   with a hand formula by a big factor, check the formula's constraint assumption before doubting the FE.
-   **Drive it from explicit geometry, not an assumed dimension:** prefer schema-v1 `joints.csv` +
-   `joints.meta.json` through `joint_map.load_joint_map` / `reliability_3d.design_joints`. Require
-   stable IDs, explicit coordinate and dimension units, a named coordinate frame, and the affine
-   transform into die microns; require `geometry_fidelity` (`proxy`, `design_export`, `calibrated`,
-   or `qualified`) and reject duplicates, singular transforms, and ambiguous metadata. If no map exists, PDNSim
-   `NET_x_y_layer` decoding is allowed only as the scorecard-labeled `pdn_node_proxy_fallback`.
-   The bundled map is an explicit project-authored synthetic proxy, not a package bump export.
-   Never turn that provenance improvement into a fidelity claim. For joint-shape studies use
-   `mesh3d.solder_bump` through `solve_solder_joint(joint_shape=, R_mid=)`. Keep the cylinder as the
-   frozen shear oracle; treat barrel/hourglass results as sensitivity until independently
-   qualified. The stateful Anand BVP still uses a regular cuboid and must be labeled separately.
+For every quantitative statement, retain or cite:
 
-6. **Update the claim surface with the code.** Update `docs/GEOMETRY.md`, `docs/api.md`,
-   `docs/capabilities.md`, `docs/lessons_learned.md`, and any technical report that states geometry
-   coverage. Say “device-shaped” or “parametric” unless imported package CAD and its object mapping
-   are actually present.
-   Maintain the twelve-family gap-closure scorecard at the top of `docs/capabilities.md`. Change a
-   status or mark a round advance only when the same change supplies executable evidence. Preserve
-   the fixed denominator and use exactly three project states: demonstrated for selected workflows,
-   partial, or open. Never translate a local demonstration into “the ecosystem gap is closed.”
-   Lead with the project's niche: EDA-aware, validation-first coupling and local interconnect/package
-   reliability. Do not describe CoupFE-EDA as universally strong across electromagnetics, CFD,
-   semiconductor devices, full package CAD, optimization, PDK qualification, or signoff.
+- source and dependency revisions, exact inputs, units, frames, and boundaries;
+- measured quantity, extraction method, tolerance, and rationale;
+- command, environment, and complete result; and
+- known exclusions or unresolved discrepancies.
 
-7. **For TSV-to-device work, enforce the release scorecard.** Read
-   `CoupFE_EDA_TSV_Device_Validation_Release_Plan.md` and
-   `docs/TSV_ANISOTROPIC_3D_PLAN.md`, `docs/TSV_PHYSICS_AUDIT.md`,
-   `docs/PERIODIC_BOUNDARY_CONDITION_PLAN.md`, and
-   `benchmarks/tsv_release_scorecard.json`. Preserve the
-   canonical all-Hex composite-cylinder oracle; use `mesh3d.tsv_device_submodel` and
-   `tsv_local_3d` for the thin-liner/free-surface Tet4 path. Keep curvature as calibration and specimen-C/D Raman
-   curves as held validation. Compute the measured stress sum at 0.2 µm depth; never substitute
-   von Mises or a surface contour. Preserve `release_validation=false` for the Lamé-driven device
-   preview. Only change a blocked category to passed when its exact metric, source manifest hash,
-   revisions, and regression evidence exist. Literature mobility equations are model verification,
-   not transistor validation.
-   For Raman convergence, declare `h_near_um`/`refine_extent_um`, stress recovery, and any
-   `spot_sigma_um`. The paper says sub-micron resolution but does not freeze an exact width; never
-   tune the Gaussian spot sensitivity to pass the mesh gate. Preserve failed refinement evidence.
-   Record `boundary_condition` too: `minimal_rigid` only removes null modes; it is not a far field.
-   Require a sidewall-plus-bottom oxide cup and zero direct Cu/Si interface nodes. Record the
-   right-handed coordinate frame, proper crystal-to-global rotation, and material/mesh SHA-256
-   identities with every accepted numerical artifact. A material-region label alone is not a
-   topology gate.
-   Use `silicon_free_expansion` for isolated-domain sensitivity until conservative global–local
-   displacement/traction transfer exists, and require the ≤3% domain-enlargement gate.
-   For Jiang specimen validation, do not force an isolated cylindrical far field to represent the
-   array: use the published 40/50 µm periodic cell and declared [110]/[1-10] boundary semantics.
-   `tsv_periodic_cell` must report `matching_nodes_verified` before mechanics. Use
-   `solve_local_tsv(..., boundary_condition="periodic_macro_gradient", macro_gradient=H)` only with
-   an explicit, sourced macro mode; preserve the separate geometry/mechanics statuses and record
-   constraint hash/error, pair mismatch, reduced DOFs, and `H`.
-   Put only exact, mesh-agnostic affine reduction (`U=Pq+U0`, `Rq=P.T@R`,
-   `Kq=P.T@K@P`) in CoupFE Core. Keep `PeriodicBox`, translated-node matching,
-   corner-equivalence relation construction, Gmsh pairing inputs, the TSV
-   macroscopic-strain mode, thermal history, Raman observable, and benchmark
-   semantics in CoupFE-EDA. Pin the exact clean-root Core revision for periodic
-   tests, and verify that it is publicly reachable before release. Never default the periodic jump
-   to zero for a thermally expanding cell. Require the homogeneous free-expansion and fixed-box
-   broken-control pair before heterogeneous mismatch. CoupFE's bulk/history-free
-   `solve_distributed_affine` reference passes an analytic 1/2/4-rank gate, but it replicates
-   constraint setup/final lifting. Do not claim scalable or TSV-parallel MPC until memory-local
-   equivalence-class ownership and a real TSV serial==N-rank gate pass.
-   Report periodic status with all seven fields: geometry pairing, serial mechanics, direct reduced
-   assembly, core MPI reference, production memory locality, state/contact/dynamics, and named
-   consumer validation. Use `docs/PERIODIC_MPC_STATUS.md` as the current evidence ledger.
-   When updating status, run the fast EDA tier and focused periodic consumer, then the core algebra
-   and MPI gates when available. State the last complete toolchain date separately from focused
-   reruns; never imply unexecuted tests passed.
-   Keep Jiang's periodic vehicle separate from Ryu's isolated 200 µm/no-oxide benchmark. Treat old
-   refinement/domain numbers from the sidewall-only geometry as superseded failed evidence and rerun
-   them on the corrected scene.
+Use words such as “passes this check,” “agrees within the stated tolerance,” or
+“demonstrated for this case.” Avoid turning one case into a general capability
+or performance claim.
 
-8. **Debug multiphysics in a physics-first order.** A passing solve or test suite is necessary but
-   never sufficient. Before changing implementation code, write and inspect the case contract in
-   this order:
-   - model/benchmark intent and fidelity;
-   - generated geometry, material topology, dimensions, interfaces, and coordinate origin;
-   - governing equations, constitutive assumptions, coupling direction, omitted mechanisms, and
-     reference state;
-   - unit and sign ledger from inputs through assembly to outputs;
-   - loads, physical boundaries, symmetry/periodicity, axes, and measurement definition;
-   - mesh quality/connectivity, conservation, residuals, convergence, recovery, and uncertainty;
-   - implementation, broken control, and permanent regression gate.
-   Do not equate algebraic constraints with physical boundary conditions: rigid pins remove null
-   modes but do not create an infinite or periodic medium. Inspect material adjacency directly; a
-   nonempty named region and positive volume do not prove the correct topology. When topology,
-   units, constitutive physics, reference state, loading, or BCs change, invalidate and rerun every
-   dependent convergence/validation result. Record a defect as `(symptom, physical consequence,
-   root cause, fix, executable guard, remaining limitation)` in `docs/TSV_PHYSICS_AUDIT.md` and add
-   the reusable reasoning to `docs/lessons_learned.md`.
+## Adding or changing a workflow
 
-## Two test tiers — and where a new model goes
-- **Fast (53 gates):** `python -m eda_multiphysics.run` (~30 s) / `pytest eda_multiphysics` — numpy/
-  scipy/coupfe only. A new *numpy/scipy* model adds a gate here (with a broken control).
-- **Fast integration/CLI (16 tests):** `pytest tests/test_integration_regressions.py`.
-- **TSV-device foundation (9 tests):** `pytest tests/test_tsv_device.py` — cubic crystal rotation,
-  Raman and mobility observables, stable-ID device screening and SVG back-annotation, manifest
-  hashes, and the fail-closed release scorecard. These are numerical/model-verification gates, not
-  experimental TSV validation.
-- **Local-TSV foundation (4 tests):** `pytest tests/test_tsv_local_3d.py` — cubic engineering-Voigt
-  stiffness, Tet4 affine strain and thermal-stress recovery, exact Raman-depth coordinates,
-  volume/L2 recovery, explicit Gaussian spot quadrature, and fail-closed field lookup. These do not
-  replace mesh convergence or experiment.
-- **Toolchain tier (19 tests):** `pytest -m toolchain` (`tests/test_toolchain.py`) — the compiled 3-D /
-  geometry / thermo-mechanical / reliability models (need gmsh + petsc4py + gfortran). A new *compiled/gmsh/
-  distributed* demo MUST add a test here: build the kernel once (a fixture, pass `mod=`), call the
-  **public** API, assert the closed-form oracle within tolerance, and **assert the mechanism not just
-  the result** (e.g. the FieldSplit `ksp_its` bound proves the rigid-body near-null-space, not mere
-  convergence). Keep the contract numbers in `docs/REFACTOR_CONTRACT.md`. A bare `pytest` excludes
-  toolchain by default (`addopts = "-m 'not toolchain'"`); opt in with `-m toolchain`.
-- **Current paired execution (31 July 2026):** against public Core `933e497`, the standalone
-  harness passed 53/53 gates, the default tier passed 94/94 tests with 19 toolchain cases
-  deselected, and the separate toolchain tier passed 19/19 with 94 default cases deselected. The
-  harness gates overlap the default wrappers; these are regression/model-verification results,
-  not experimental TSV validation.
-- **Historical execution (12–13 July 2026):** the earlier 82/82 fast and 19/19 toolchain run, real
-  Gmsh periodic-consumer run, and Core 1/2/4-rank reference remain dated implementation context,
-  not current release or performance evidence.
-- **Don't re-roll the Newton loop.** New 3-D coupled solves use `_coupled_solve.coupled_newton(groups,
-  ndof, dirichlet, linsolve)` with a local linear backend; multi-material = a list of `ElementGroup`s.
+Start with a short case contract:
 
-## Running and shipping
-- EDA integration + distributed demos: `RESULTS.md`, `DISTRIBUTED.md`. Toolchain/container: `CONTAINER.md`.
-- Component ownership/count rules: `docs/COMPONENTS.md`. The call surface: `docs/api.md`. Geometry
-  contract: `docs/GEOMETRY.md`. The math/oracles:
-  `docs/theory.md`. Why-we-did-it: `docs/lessons_learned.md`. Gap status and its fixed denominator:
-  the opening scorecard in `docs/capabilities.md`.
+1. State the engineering question and intended fidelity.
+2. Identify input sources, stable object IDs, units, and coordinate frames.
+3. Declare equations, constitutive assumptions, reference states, and omissions.
+4. Name loads, physical boundaries, symmetry or periodicity, and outputs.
+5. Select an evidence class and an independent comparison when available.
+6. Choose discretization, coupling, and solver settings appropriate to the case.
+7. Implement the smallest supported path and add risk-proportional tests.
+8. Record limitations next to the result and update the public claim surface.
 
-## What does NOT belong here
-General CoupFE solver/numerics lessons (complex-step safety, the coupled-convergence gate,
-distributed 1-vs-N invariant mechanics) belong in **CoupFE core** `skills/` — they help every
-downstream project, not just EDA. This repo holds only the EDA-multiphysics integration glue
-and its validation.
+## Units, frames, identity, and provenance
 
-**Solver setups:** the per-case KSP/PC details stay HERE (`etv_fieldsplit.py`,
-`DISTRIBUTED.md` — FieldSplit-per-field, CG+GAMG for the PDN, superlu_dist for 1-vs-N);
-the cross-project ladder + traps (when direct vs AMG vs FieldSplit, symmetric Dirichlet
-for CG, the two 1-vs-N tolerance regimes, rank-dependent-iterations = PC bug) are
-consolidated in CoupFE-core `skills/performance.md`, "The solver ladder". Read that before
-adding a new solver setup here.
+Treat metadata as part of the numerical input. A design adapter should carry:
+
+- stable design and object identifiers plus the declared source and tool version;
+- original units and explicit conversion into solver units;
+- a named, right-handed frame and source-to-mesh-to-report transforms;
+- region, material, layer, and boundary meanings;
+- extraction settings and relevant file or record digests; and
+- a fidelity label: synthetic proxy, design export, calibrated, or qualified.
+
+Reject ambiguous units, singular transforms, duplicate IDs, and incomplete
+required metadata at the adapter boundary. Avoid inferring DBU, material,
+power-source meaning, or geometry fidelity from a filename or array shape.
+
+Maintain a unit ledger through every handoff. Include electrical power sign,
+temperature reference, stress and strain conventions, time units, and any
+empirical constants. Boundary conditions should name the physical scenario;
+for example, fixed current and fixed voltage are different models.
+
+Project-authored synthetic fixtures are useful for deterministic tests. Label
+them as synthetic and cite related published applications without implying that
+the fixture is redistributed experimental or design data.
+
+## Geometry and topology
+
+Generated or imported geometry needs checks beyond successful meshing:
+
+- build the FE node table from referenced volume elements and reject orphans;
+- check connectivity and signed Jacobians using the chosen ordering;
+- verify dimensions, material volumes, and material adjacency;
+- verify conformal interfaces or the declared nonconformal transfer;
+- derive boundary sets from geometry entities or explicit tags, then check
+  coverage and normals; and
+- retain stable mappings from design objects to regions and outputs.
+
+Use mixed fidelity when it matches the question: graph or 2-D representations
+can remain appropriate globally while a shape-sensitive region is modeled in
+3-D. Gmsh is an optional application dependency for generated Hex8 or Tet4
+meshes. Mesh construction and topology checks remain in CoupFE-EDA.
+
+For periodic cells, separate four questions: geometry pairing, affine relation
+construction, serial mechanics, and distributed execution. Record the lattice,
+face pairing tolerance, corner/edge equivalence policy, anchor policy, macro
+gradient, and constraint residual. Algebraic removal of rigid modes is not a
+physical far-field boundary condition.
+
+## Physics, coupling, and derivatives
+
+Connect models through the quantity the downstream model actually consumes.
+Preserve IDs, units, frames, interpolation rules, and conservation across the
+handoff. Test each component separately, then test the composed exchange.
+
+Choose a tangent method that fits the implementation: analytic derivatives,
+automatic differentiation, complex step, or carefully controlled finite
+differences may all be appropriate. Complex step requires a complex-safe code
+path and does not apply universally. Compare the selected tangent with an
+independent directional derivative on representative states.
+
+State convergence criteria for residuals, increments, and conserved quantities.
+A linear or nonlinear solver reporting convergence is necessary numerical
+information, but it does not establish correct geometry, physics, or observable
+extraction.
+
+Life and degradation models require particular care. Separate mesh-dependent
+fields, recovered local quantities, calibrated life relations, and experimental
+comparisons. Report whether a parameter set is in-sample, transferred, or
+held-out.
+
+## Solver and performance work
+
+Use the supported CoupFE operator and compiled-element interfaces before adding
+a parallel application driver. Validate the serial formulation first and then
+compare solver or rank variants on the same case and observable.
+
+Keep KSP, preconditioner, load-stepping, and field-splitting choices with the EDA
+case unless they form a tested generic Core contract. Select them from the
+matrix structure and available PETSc build rather than from a universal recipe.
+
+Performance statements require a retained benchmark script, hardware and
+software environment, problem size, rank/thread settings, warm-up policy,
+timings, and accuracy comparison. Unretained timings may guide research but
+should not appear as current release claims.
+
+## Risk-proportional testing
+
+Match checks to the change:
+
+- documentation: links, commands, inventories, and claim/evidence consistency;
+- adapters: schemas, units, transforms, round trips, invalid inputs, and IDs;
+- geometry: connectivity, Jacobians, volumes, adjacency, interfaces, and BC sets;
+- physics: analytic or manufactured checks, convergence, and sign/unit controls;
+- coupling: component checks plus handoff identity and conservation;
+- solver changes: residuals, observables, and reference-backend comparisons;
+- distributed changes: serial-versus-rank comparisons on a bounded case; and
+- releases: clean-source builds, installed-artifact smoke tests, and retained
+  evidence.
+
+A broken control is useful when it demonstrates that a gate detects the failure
+mode under discussion. Prefer a targeted sign, topology, boundary, or unit
+perturbation over an arbitrary scaling.
+
+## Current test commands
+
+Run from the repository root after `./setup.sh`:
+
+```bash
+# Standalone harness and fast physics wrappers
+python -m eda_multiphysics.run
+pytest eda_multiphysics
+# Focused default-tier groups
+pytest tests/test_integration_regressions.py
+pytest tests/test_tsv_device.py
+pytest tests/test_tsv_local_3d.py
+pytest tests/test_periodic_adapter.py
+# Complete default tier; toolchain tests are excluded by pyproject.toml
+pytest
+# Optional Gmsh/PETSc/gfortran toolchain tier
+pytest -m toolchain
+# Default and toolchain tests together
+pytest -o addopts=''
+```
+
+Review skips and environment-dependent backends rather than treating a zero exit
+code as proof that every optional path ran. For publication evidence, use the
+clean-root recorder documented in `docs/RELEASE_EVIDENCE.md`; it records commands,
+dependency identity, logs, artifacts, and checksums.

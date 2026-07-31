@@ -1,9 +1,8 @@
-"""Fast regression gates for the EDA-multiphysics suite -- the trust layer.
+"""Fast regression checks for the EDA-multiphysics suite.
 
 The suite combines published/analytic oracles, independent implementation
 comparisons, invariants, interface and structural checks, and broken controls.
-It is fast enough for CI (whole suite ~1 min, self-contained:
-numpy+scipy+coupfe, no OpenROAD data). Broken controls ensure selected
+The suite uses NumPy, SciPy, and CoupFE without OpenROAD data. Broken controls ensure selected
 acceptance tests reject a reintroduced bug. Consumed by both `tests/` and
 `run.py`.
 """
@@ -26,7 +25,7 @@ def _g(name, ok, detail):
     return dict(name=name, ok=bool(ok), detail=detail)
 
 
-# ---- electrothermal (Phases 3-5) ----
+# ---- scalar electrothermal checks ----
 def gate_thermal_patch():
     m = StructuredQuadMesh(16, 4, 1.0, 0.3)
     bc = {**{int(n): 0.0 for n in m.left()}, **{int(n): 1.0 for n in m.right()}}
@@ -73,9 +72,7 @@ def _h_convergence_order(const_source=False):
 
 
 def gate_h_convergence():
-    """Mesh refinement converges at the THEORETICAL 2nd order (L2, O(h^2)) for bilinear diffusion on
-    a manufactured solution. Proves the discretization is consistent -- not merely 'close at one
-    mesh' -- the h-convergence check the validation assessment flagged as missing."""
+    """Measure L2 refinement order for bilinear diffusion on a manufactured solution."""
     order, errs = _h_convergence_order()
     ok = 1.8 <= order <= 2.3
     return _g("h-convergence: bilinear diffusion 2nd-order O(h^2)", ok,
@@ -116,7 +113,7 @@ def gate_joule_broken_control():
 # ---- TSV thermomechanics (Lamé, PMC8472814) ----
 def gate_tsv_lame():
     dT = -400.0
-    _, rc, s_rr, _ = solve_tsv(30.0, dT)        # validated resolution (n=2400)
+    _, rc, s_rr, _ = solve_tsv(30.0, dT)        # selected checked resolution (n=2400)
     fe = sigma_at(rc, s_rr, 20.0) / 1e6
     an = lame_sigma_r(20.0, 30.0, dT) / 1e6
     err = abs(fe - an) / abs(an)
@@ -145,8 +142,7 @@ def gate_anand_broken_control():
 
 # ---- SAC305 (modern lead-free): reproduce published Motalab Fig 3.10 benchmark ----
 def gate_anand_sac305_saturation():
-    # integrator reproduces the SAC305 closed-form saturation (validates the solver
-    # on the modern alloy, not just SnPb)
+    # Compare the SAC305 integrator with its closed-form saturation relation.
     worst = 0.0
     for TC, ed in ((25.0, 1e-3), (125.0, 1e-3), (25.0, 1e-5)):
         T = TC + 273.15
@@ -230,41 +226,19 @@ def gate_anand_3d_patch():
               f"max|err|={err:.1e}")
 
 
-def gate_anand_3d_sac305_life():
-    from .anand_3d import solder_joint_cycle_3d
-    r = solder_joint_cycle_3d(ncyc=2, steps_per_cyc=18)
+def gate_anand_3d_sac305_cycle_smoke():
+    from .anand_3d import prescribed_hex8_cycle
+    r = prescribed_hex8_cycle(ncyc=2, steps_per_cyc=18)
     ok = r["dW_stab"] > 0.0 and np.isfinite(r["Nf"]) and r["Nf"] > 0.0
-    return _g("3D Anand Hex8 SAC305 life", ok,
-              f"dW={r['dW_stab']:.4f} MPa Nf={r['Nf']:,.0f}")
+    return _g("prescribed one-Hex8 SAC305 cycle smoke check", ok,
+              f"dW={r['dW_stab']:.4f} MPa; calibration output={r['Nf']:,.0f} cycles")
 
 
 def gate_anand_3d_broken_control():
-    from .anand_3d import solder_joint_cycle_3d
-    r = solder_joint_cycle_3d(Tlo=25.0, Thi=25.0, ncyc=1, steps_per_cyc=8)
+    from .anand_3d import prescribed_hex8_cycle
+    r = prescribed_hex8_cycle(Tlo=25.0, Thi=25.0, ncyc=1, steps_per_cyc=8)
     return _g("BROKEN-CONTROL: 3D Anand no swing -> no dW", abs(r["dW_stab"]) < 1e-12,
               f"dW={r['dW_stab']:.1e} (must be ~0)")
-
-
-def gate_anand_3d_bvp_gradient():
-    """A solved multi-element 3D BVP (traction-free lateral faces) produces a NONUNIFORM dW field --
-    the plastic dissipation concentrates at the constrained corners (crack-initiation site), so the
-    peak fails before the mean. This is the FE boundary-value problem, not a driven material point."""
-    from .anand_3d import solder_joint_bvp_3d
-    r = solder_joint_bvp_3d(nx=2, ny=2, nz=2, ncyc=1, steps_per_cyc=8)
-    ok = (r["gradient"] > 1.2 and np.isfinite(r["Nf_peak"]) and r["Nf_peak"] < r["Nf_mean"])
-    return _g("3D Anand BVP: corner dW gradient + peak life", ok,
-              f"dW peak/mean={r['gradient']:.2f} ({r['n_elem']} elems); "
-              f"Nf_peak={r['Nf_peak']:,.0f} < Nf_mean={r['Nf_mean']:,.0f}")
-
-
-def gate_anand_3d_bvp_uniform_control():
-    """BROKEN CONTROL: the 1x1x1 case has every node on the boundary (all DOFs prescribed) -> a
-    driven material point with a UNIFORM field (gradient ~ 1). Confirms the gradient above is genuine
-    boundary-value-problem physics (free lateral faces), not a numerical artifact of the metric."""
-    from .anand_3d import solder_joint_bvp_3d
-    r = solder_joint_bvp_3d(nx=1, ny=1, nz=1, ncyc=1, steps_per_cyc=8)
-    return _g("BROKEN-CONTROL: driven 1-element has no dW gradient", r["gradient"] < 1.05,
-              f"dW peak/mean={r['gradient']:.3f} (must be ~1 -- uniform driven point)")
 
 
 def gate_solder_life_experimental_anchor():
@@ -318,7 +292,7 @@ def gate_pdn_vs_scipy():
     return _g("PDN-graph solver vs scipy", err < 1e-10, f"max|dV|={err:.1e}")
 
 
-# ---- capstone: end-to-end pipeline on the project-authored synthetic fixture ----
+# ---- composed pipeline on the project-authored synthetic fixture ----
 def gate_capstone_pipeline():
     # Run the full chain and require the graph solve to reproduce the fixture's
     # independent closed-form voltage reference.
@@ -368,7 +342,7 @@ def gate_capstone_broken_control():
 
 # ---- electro-thermo-viscoplastic study, Phase 1: electro-thermal core ----
 def gate_etv_selfheating():
-    # RIGOROUS: coupled electro-thermal solver vs the exact 1D self-heating limit sigmaV0^2/8k
+    # Coupled electrothermal solver vs the exact 1D self-heating limit sigmaV0^2/8k.
     from .etv_solder import verify_selfheating
     peak, exact, err = verify_selfheating()
     return _g("ETV self-heating vs sigma*V0^2/8k", err < 2e-3,
@@ -376,11 +350,11 @@ def gate_etv_selfheating():
 
 
 def gate_etv_crowding():
-    # BENCHMARK: corner current-crowding ~ one order of magnitude (Dandu 2010), fixed mesh
+    # Qualitative literature-context check on a fixed simplified mesh.
     from .etv_solder import crowding_factor
     f, _, _ = crowding_factor(n=28)
-    return _g("ETV corner crowding ~10x (Dandu 2010)", 5.0 < f < 25.0,
-              f"factor={f:.1f}x (Dandu ~10x; corner singularity -> fixed mesh)")
+    return _g("ETV fixed-mesh crowding is in the Dandu-context range", 5.0 < f < 25.0,
+              f"factor={f:.1f}x on the tested simplified geometry (qualitative check)")
 
 
 def gate_etv_broken_control():
@@ -410,7 +384,7 @@ def gate_etv_staggered_broken_control():
 
 
 def gate_etv_monolithic_consistency():
-    # Phase 3 RIGOROUS: the monolithic solve reduces to staggered with no internal heating
+    # The monolithic material-point model reduces to staggered with no internal heating.
     from .etv_solder import etv_cycle
     stag = etv_cycle(coupled=False, q_joule=0.0, ncyc=3)["dW_stab"]
     mono = etv_cycle(coupled=True, q_joule=0.0, g_th=1e10, ncyc=3)["dW_stab"]
@@ -419,17 +393,17 @@ def gate_etv_monolithic_consistency():
 
 
 def gate_etv_coupling_quasistatic():
-    # Phase 4 finding (regression guard): the coupling effect is small for quasi-static cycling
+    # Regression for the tested material-point parameterization.
     from .etv_solder import coupling_effect, joule_density, dandu_bump
     q = joule_density(dandu_bump()["j_avg"])
     r = coupling_effect(q_joule=q, g_th=8e6, ramp=200.0, ncyc=3)
-    return _g("ETV coupling small for quasi-static cycling", abs(r["delta"]) < 0.01,
-              f"delta={r['delta']*100:+.2f}% (staggered justified; grows when tau~period)")
+    return _g("ETV tested slow-ramp material-point delta", abs(r["delta"]) < 0.01,
+              f"delta={r['delta']*100:+.2f}% for this parameterization")
 
 
 # ---- ETV FE refinement: monolithic coupled element on the CoupFE contract ----
 def gate_etv_fe_selfheating():
-    # RIGOROUS: the monolithic electro-thermal FE element reproduces dT = sigma V0^2/8k exactly
+    # The monolithic electrothermal FE element is checked against dT = sigma V0^2/8k.
     from .etv_fe import verify_selfheating_fe
     peak, exact, err, nit = verify_selfheating_fe(n=32)
     return _g("ETV monolithic FE element vs sigma*V0^2/8k", err < 2e-3,
@@ -437,7 +411,7 @@ def gate_etv_fe_selfheating():
 
 
 def gate_etv_fe_consistency():
-    # the monolithic block solve == staggered Picard with sigma(T) feedback (cross-validates)
+    # Compare the monolithic block solve with staggered Picard under sigma(T) feedback.
     from .etv_fe import consistency_vs_staggered
     tm, ts, rel, nit = consistency_vs_staggered(n=24)
     return _g("ETV monolithic FE == staggered Picard", rel < 1e-3,
@@ -459,19 +433,6 @@ def gate_etv_fe_broken_control():
               f"peakT={float(abs(T).max()):.1e} (must be ~0)")
 
 
-def gate_etv_fe_stageb_consistency():
-    # Stage B (FE mesh): the monolithic transient thermo-viscoplastic solve reduces to the
-    # staggered scheme with no internal heating (fast small config for CI)
-    import warnings
-    warnings.filterwarnings("ignore")
-    from .etv_fe import etv_fe_cycle
-    kw = dict(ncyc=1, nx=3, ny=2, steps_per_cyc=12)
-    s = etv_fe_cycle(monolithic=False, q_joule=0.0, **kw)["dW_stab"]
-    mm = etv_fe_cycle(monolithic=True, q_joule=0.0, g_th=1e10, **kw)["dW_stab"]
-    return _g("ETV Stage-B FE monolithic reduces to staggered", abs(mm - s) / abs(s) < 1e-4,
-              f"mono={mm:.5f} vs stag={s:.5f} (rel {abs(mm-s)/abs(s):.1e})")
-
-
 # reliability + classic-mechanics benchmark gates (each returns name/ok/detail)
 from .electromigration import (gate_black_acceleration, gate_blech_product,  # noqa: E402
                                gate_em_broken_control)
@@ -490,12 +451,10 @@ GATES = [
     gate_anand_sac305_saturation, gate_anand_sac305_benchmark,
     gate_anand_sac305_broken_control,
     gate_solder_return_map, gate_solder_patch, gate_pdn_vs_scipy,
-    # full 3D Hex8 Anand viscoplastic solder element + calibrated SAC305/Syed life
+    # 3D Hex8 Anand material/element checks plus a fully prescribed cycle smoke check
     gate_anand_3d_return_map, gate_anand_3d_transient,
     gate_anand_3d_transient_broken_control, gate_anand_3d_patch,
-    gate_anand_3d_sac305_life, gate_anand_3d_broken_control,
-    # 3D Anand nonuniform BVP (traction-free lateral faces -> corner dW gradient) + contrast control
-    gate_anand_3d_bvp_gradient, gate_anand_3d_bvp_uniform_control,
+    gate_anand_3d_sac305_cycle_smoke, gate_anand_3d_broken_control,
     # in-sample calibration reproduction: Darveaux/Motalab SAC305 4719-cycle case (+/-2x) + control
     gate_solder_life_experimental_anchor, gate_solder_life_experimental_broken_control,
     # electromigration (Black + Blech)
@@ -510,16 +469,14 @@ GATES = [
     gate_creep_rate, gate_creep_broken_control, gate_lame_cylinder,
     # capstone: the whole design->reliability chain on a project-authored fixture
     gate_capstone_pipeline, gate_capstone_broken_control,
-    # electro-thermo-viscoplastic study, Phase 1: electro-thermal core (Dandu 2010)
+    # electrothermal material/reduced-model checks (Dandu 2010 context)
     gate_etv_selfheating, gate_etv_crowding, gate_etv_broken_control,
-    # ETV Phase 2: staggered viscoplastic baseline (SAC305)
+    # staggered viscoplastic baseline (SAC305)
     gate_etv_staggered, gate_etv_staggered_broken_control,
-    # ETV Phase 3-4: monolithic coupling + the quantified coupling-effect finding
+    # monolithic material-point comparison and coupling sensitivity
     gate_etv_monolithic_consistency, gate_etv_coupling_quasistatic,
     # ETV FE refinement: monolithic coupled electro-thermal element on the CoupFE contract
     gate_etv_fe_selfheating, gate_etv_fe_consistency, gate_etv_fe_broken_control,
-    # ETV FE Stage B: monolithic transient thermo-viscoplastic on a mesh (finding reproduced)
-    gate_etv_fe_stageb_consistency,
 ]
 
 

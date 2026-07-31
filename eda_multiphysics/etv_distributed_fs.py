@@ -1,30 +1,21 @@
-"""Large distributed coupled solve with FieldSplit, intended for scaling studies.
+"""Distributed coupled electrothermal research driver using PETSc FieldSplit.
 
-`etv_distributed` solves the coupled system with ASM (the only PC `solve_distributed` offers
-for coupled fields), whose iteration count grows with size (no coarse grid) -> impractical at
-millions of DOF. This driver assembles the COMPILED coupled kernel into a distributed PETSc
-system and solves with **PCFIELDSPLIT (GAMG per scalar field)**. Checked-size
-correctness is tested; multi-million-DOF performance and mesh-independent
-iteration behavior require retained reruns on the final revisions.
+This driver assembles the compiled coupled kernel into a distributed PETSc
+system and solves with PCFIELDSPLIT and a GAMG sub-preconditioner for each
+scalar field. Public evidence is limited to the checked-size serial-versus-rank
+comparisons in ``tests/test_toolchain.py``.
 
-Assembly is **fully vectorized -- no Python per-element loop**:
-  * a **node-aligned** contiguous row partition (rank r owns nodes [na,nb) -> rows [2na,2nb));
-  * each rank evaluates the elements TOUCHING its owned nodes (owned + a one-layer ghost) in
-    ONE batched compiled call (`element_rk_batch`, the f2py kernel -- the "batch f2py");
-  * it keeps only the OWNED-ROW triplets and builds a local CSR with `scipy` (vectorized
-    `coo_matrix(...).tocsr()`), then `createAIJ(csr=...)` -- a plain AIJ block, no off-process
-    routing, no Python loop. The residual is summed with `np.bincount` (vectorized).
+The assembly path uses a node-aligned contiguous row partition. Each rank
+evaluates elements touching its owned nodes in a batched compiled call, keeps
+owned-row triplets, builds local CSR with SciPy, and creates a PETSc AIJ matrix.
+The current Newton update gathers a replicated solution vector, which bounds
+the interpretation of larger local experiments.
 
-Why not PETSc's `setValuesCOO` (the obvious vectorized stamp)? It works numerically, but
-assembling via the COO interface **corrupts global PETSc state** (a confirmed upstream bug --
-reproduced in ~30 lines of pure petsc4py, `docs/petsc_coo_gamg_bug_repro.py`, failing identically
-on pip-wheel 3.25.2 AND conda-forge 3.24.2): the FIRST solve in the process works, every
-SUBSEQUENT one fails (GAMG stagnates, ILU/bjacobi PC-setup fails, `MatConvert` segfaults) -- so a
-Newton loop diverges at iter 1. The owned-row CSR path above sidesteps the COO interface entirely
-(see `docs/lessons_learned.md`).
+Owned-row CSR is the implementation used by this driver; no claim about other
+PETSc insertion paths is part of the public evidence.
 
-    OMP_NUM_THREADS=1 mpirun -n 48 python -m eda_multiphysics.etv_distributed_fs 1580
-    # add --validate (serial scipy oracle; only feasible for small n)
+    OMP_NUM_THREADS=1 mpirun -n 2 \
+      python -m eda_multiphysics.etv_distributed_fs 24 --validate
 """
 from __future__ import annotations
 
@@ -85,7 +76,7 @@ def main():
     d = dfn(1.0)                                        # full load
     drows = np.array(sorted(d), dtype=PETSc.IntType)
     dvals = np.array([d[int(i)] for i in drows])
-    U = np.zeros(ndof)                                  # replicated (40 MB at 5M DOF)
+    U = np.zeros(ndof)                                  # replicated solution vector
 
     def assemble(U):
         Ug = U[my_gm]
@@ -105,6 +96,8 @@ def main():
 
     t0 = time.time()
     its = 0
+    converged = False
+    last_update = float("inf")
     for step in range(8):                               # Newton loop (quadratic Joule term)
         U[drows] = dvals
         A, Rv = assemble(U)
@@ -120,18 +113,40 @@ def main():
         ksp.setUp()
         for sub in pc.getFieldSplitSubKSP():
             sub.setType("preonly"); sub.getPC().setType("gamg")
-        x = A.createVecLeft(); ksp.solve(b, x); its = ksp.getIterationNumber()
+        x = A.createVecLeft()
+        ksp.solve(b, x)
+        its = ksp.getIterationNumber()
+        reason = int(ksp.getConvergedReason())
+        ksp_residual = float(ksp.getResidualNorm())
+        if reason <= 0:
+            A.destroy()
+            ksp.destroy()
+            raise RuntimeError(
+                "distributed FieldSplit linear solve failed: "
+                f"reason={reason}, iterations={its}, residual_norm={ksp_residual:.6e}"
+            )
         # gather increment to every rank, update the replicated U
         sc, seq = PETSc.Scatter.toAll(x)
         sc.scatter(x, seq, addv=PETSc.InsertMode.INSERT_VALUES, mode=PETSc.ScatterMode.FORWARD)
         dU = np.asarray(seq.getArray()).copy()
+        if not np.all(np.isfinite(dU)):
+            A.destroy()
+            ksp.destroy()
+            raise RuntimeError("distributed FieldSplit produced a non-finite increment")
         U = U + dU
+        last_update = float(np.max(np.abs(dU)))
         if rank == 0 and "--dbg" in sys.argv:
             print(f"  [iter {step}] ksp_its={its} reason={int(ksp.getConvergedReason())} "
                   f"max|dU|={np.max(np.abs(dU)):.3e} peakT={U[1::2].max():.4f}", flush=True)
         A.destroy(); ksp.destroy()
-        if np.max(np.abs(dU)) < 1e-11:                  # Newton converged
+        if last_update < 1e-11:                         # Newton converged
+            converged = True
             break
+    if not converged:
+        raise RuntimeError(
+            "distributed FieldSplit Newton solve did not converge: "
+            f"iterations=8, last_update={last_update:.6e}, tolerance=1.0e-11"
+        )
     comm.barrier(); dt = time.time() - t0
 
     if rank == 0:
@@ -143,7 +158,11 @@ def main():
             from .etv_distributed import serial_solve
             Us = serial_solve(n)
             err = float(np.max(np.abs(U - Us)) / max(1e-30, np.max(np.abs(Us))))
-            print(f"  serial==N-rank: max rel = {err:.2e}  {'PASS' if err < 1e-6 else 'CHECK'}")
+            print(f"  serial==N-rank: max rel = {err:.2e}  {'PASS' if err < 1e-6 else 'FAIL'}")
+            if not np.isfinite(err) or err >= 1e-6:
+                raise RuntimeError(
+                    f"distributed-versus-serial comparison failed: relative_error={err:.6e}"
+                )
         print(f"SCALEFS {ndof} {size} {dt:.4f} {its}")
 
 

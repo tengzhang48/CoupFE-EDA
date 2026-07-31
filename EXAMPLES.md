@@ -1,73 +1,119 @@
-# Examples — runnable demos
+# Examples
 
-Most demos are the `__main__` of an `eda_multiphysics` module; release-oriented composed cases live
-under `examples/` with reviewable inputs and expected evidence. This catalogs them by theme, with
-what each shows and what it needs. The per-entry-point provenance and public-claim status are in
-[`examples/REFERENCES.md`](examples/REFERENCES.md). **Setup:** create/activate `environment.yml`,
-run `./setup.sh`, and invoke commands from the repository root. No machine-specific `PYTHONPATH`
-is required.
+This catalog groups the runnable modules and composed examples by purpose. Run
+commands from the repository root after creating `environment.yml` and running
+`./setup.sh`. Input provenance and per-entry references are listed in
+[`examples/REFERENCES.md`](examples/REFERENCES.md).
 
-**Dependency tiers:** 🟢 numpy/scipy/coupfe only · 🟠 needs the compiled/mesh toolchain
-(`gmsh` + `petsc4py` + `gfortran`) · 🔴 needs the EDA toolchain (OpenROAD/PDNSim — easiest via the
-[container](CONTAINER.md)).
+Status labels:
 
-## Start here — the trust suite
-| Command | Shows | Tier |
-|---|---|---|
-| `python -m eda_multiphysics.run` | **53 fast gates** — published/analytic oracles, independent comparisons, invariants, and contracts, with broken controls where meaningful (~30 s historical local runtime) | 🟢 |
-| `pytest -m toolchain` | **19 toolchain tests** — compiled 3D, conformal geometry, anisotropic TSV, thermo-mechanical, reliability, and MPI paths (~5 min) | 🟠 |
-| `python -m eda_multiphysics.validate` | The 11-check electrothermal validation ladder | 🟢 |
+- **CHECKED** — exercised by a checked-in reference or invariant at the stated
+  model and resolution.
+- **DEMONSTRATION** — runnable integration without a direct oracle for the
+  composed result.
+- **RESEARCH** — available harness awaiting retained evidence on the release
+  revision.
+- **WITHHELD** — removed from the public example/API surface, or not presented
+  as supported, until its blocker is resolved.
 
-## Capstone & design integration
-| Command | Shows | Tier |
-|---|---|---|
-| `python -m eda_multiphysics.reliability_pipeline` | Capstone IR→ΔT→stress→life→EM chain on a bundled project-authored synthetic case; graph voltage checked against a closed-form reference | 🟢 |
-| `python -m eda_multiphysics.reliability_3d [design] [--shape cylinder\|barrel\|hourglass] [--package]` | Parametric joint or conformal solder/underfill/UBM/pad model → 3D-FE fatigue; bundled design mode uses a labeled nine-point synthetic proxy | 🟠 |
-| `python examples/tsv_00_device_screening/run.py` | Fixed 10 µm TSV → 32 synthetic stable device IDs → published n/p mobility proxy → KOZ flags and an orientation action; Lamé stress preview, explicitly not Raman validation | 🟢 |
-| `python -m eda_multiphysics.electrothermal_chip` / `.chip_vtu` | Coupled R(T) and full V–T–u chain on a caller-supplied, lawfully sourced case | 🔴 |
-| `python -m eda_multiphysics.case_thermal [-o output.csv]` / `.design_loop_demo` | Synthetic or caller-supplied placement case → thermal map with provenance-tagged back-annotation; the separate synthetic design-loop demo checks a same-current hotspot/IR improvement | 🟢 |
+Dependency tiers: 🟢 numpy/scipy/CoupFE · 🟠 compiled, mesh, or PETSc/MPI
+toolchain · 🔴 caller-installed OpenROAD/OpenDB/PDNSim tooling.
 
-The bundled case contains no third-party design data. The same case interface accepts
-caller-owned OpenROAD/OpenDB placement and PDNSim `write_pg_spice` exports; see
-[`THIRD_PARTY.md`](THIRD_PARTY.md).
+## Qualification commands
 
-## 3D FE on generated device-relevant geometry (gmsh-meshed)
-| Command | Shows | Tier |
-|---|---|---|
-| `python -m eda_multiphysics.tsv_3d` | Hex8 electro-thermal on a cylindrical TSV / annular via / layer stack (heat-gen + composite-cylinder oracles) | 🟠 |
-| `python -m eda_multiphysics.tet_3d` | Tet4 electro-thermal on generated all-tet box + cylinder; claim withheld until the final core pin contains both native Tet4 and MPC and is requalified | 🟠 |
-| `python -m eda_multiphysics.thermomech_3d` / `.thermomech_tsv` | Monolithic u+T Hex8; Cu/Si TSV thermal-mismatch stress vs composite-cylinder | 🟠 |
-| `python -m eda_multiphysics.etv_3d` | 3D Hex8 coupled electro-thermal (FieldSplit-solved) | 🟠 |
+| Command | Scope | Status | Tier |
+|---|---|---|---|
+| `python -m eda_multiphysics.run` | Component/reference gate harness | **CHECKED** | 🟢 |
+| `python -m pytest -q` | Default regression tier | **CHECKED** | 🟢 |
+| `python -m pytest -q -m toolchain` | Compiled, mesh, and PETSc/MPI tier | **CHECKED** after a clean release-revision run | 🟠 |
+| `python -m eda_multiphysics.validate` | Electrothermal comparison ladder | **CHECKED** | 🟢 |
 
-## Distributed / scaling (PETSc/MPI)
-| Command | Shows | Tier |
-|---|---|---|
-| `mpirun -n 4 python -m eda_multiphysics.pdn_distributed 1000` | Requests a synthetic **1M-node** PDN electrical solve; runtime/performance is machine-specific | 🟠 |
-| `mpirun -n 8 python -m eda_multiphysics.etv_distributed_fs 512 --validate` | Generates a new distributed FieldSplit solve and serial-versus-rank comparison | 🟠 |
-| `python -m eda_multiphysics.scaling_bench --n 1580 --ranks 4,8,16,32,48` | Generates a new machine-specific scaling table; the historical 5M-DOF timing claim is withheld until raw output and environment evidence are archived | 🟠 |
-| `python -m eda_multiphysics.etv_fieldsplit` / `.etv_distributed` | Serial FieldSplit and ASM distributed research drivers; performance requires a retained final-revision rerun | 🟠 |
+Test totals are recorded by each release qualification rather than fixed in
+this catalog.
 
-## Viscoplastic reliability
-| Command | Shows | Tier |
-|---|---|---|
-| `python -m eda_multiphysics.anand` / `.anand_3d` | Anand model vs closed-form saturation; the 3D Hex8 element (transient and BVP); in-sample reproduction of the measured 4719-cycle calibration case | 🟢 |
-| `python -m eda_multiphysics.solder_joint` | 2D plane-strain viscoplastic joint → volume-averaged damage and calibration-specific Darveaux life | 🟢 |
-| `python -m eda_multiphysics.etv_solder` | Electro-thermo-viscoplastic study (the τ/period coupling finding) | 🟢 |
-| `python -m eda_multiphysics.creep` / `.electromigration` | Stress-controlled creep; Black + Blech EM reliability | 🟢 |
+The toolchain pytest tier does not invoke OpenROAD/OpenDB or PDNSim. Entries
+marked 🔴 require caller-installed EDA tools and caller-qualified data.
 
-## Individual physics (each vs its oracle)
-`capacitance` (ε·A/d) · `thermal_runaway` (saddle-node) · `transient` ((π/L)²α) · `thermomech`
-(Timoshenko / T&G) · `tsv_stress` (Lamé) · `pdn_graph` (vs scipy) — all 🟢,
-`python -m eda_multiphysics.<name>`.
+## Design and data handoffs
 
-## Codegen internals (build a compiled element from a weak form)
-`etv_kernel` / `thermomech_kernel` (generate + f2py-compile the coupled element), `etv_fe`
-(monolithic FE element on the operator contract) — 🟠. See [`skills/SKILL.md`](skills/SKILL.md) for
-the authoring recipe.
+| Command | Scope | Status | Tier |
+|---|---|---|---|
+| `python -m eda_multiphysics.reliability_pipeline` | Synthetic PDN IR → temperature → TSV stress → solder/EM screening, with a closed-form fixture voltage field and component-level references | **DEMONSTRATION** | 🟢 |
+| `python examples/tsv_00_device_screening/run.py` | Synthetic device IDs → Lamé far-field stress proxy → cited mobility proxy → identity-preserving CSV/JSON/SVG output | **DEMONSTRATION** | 🟢 |
+| `python -m eda_multiphysics.case_thermal [-o output.csv]` | Synthetic or caller-supplied placement/power case → thermal map and provenance-tagged back-annotation | **DEMONSTRATION** | 🟢 |
+| `python -m eda_multiphysics.design_loop_demo` | Synthetic weak-strap case and a same-current before/after comparison | **DEMONSTRATION** | 🟢 |
+| `python -m eda_multiphysics.electrothermal_chip` | Coupled R(T) analysis on a caller-supplied, lawfully sourced case | **DEMONSTRATION** | 🔴 |
+| `python -m eda_multiphysics.chip_vtu` | Caller-supplied PDN/case data with a V–T–u handoff and Lamé link check | **DEMONSTRATION** | 🔴 |
+| `python -m eda_multiphysics.reliability_3d [design] [--shape cylinder\|barrel\|hourglass] [--package]` | Global parametric joint/package geometry, caller-supplied joint locations/provenance, and a calibration-specific global-local workflow; caller joint dimensions do not set the FE mesh | **DEMONSTRATION** | 🟠 |
 
----
-Core numerical claims are pinned by gates in `eda_multiphysics/gates.py` (fast) or
-`tests/test_toolchain.py` (toolchain). Integration/CLI and TSV-device behavior have additional coverage in
-`tests/test_integration_regressions.py` and `tests/test_tsv_device.py`; a green kernel gate does not imply that every line of CLI
-formatting is frozen. See [`docs/VALIDATION_GUIDE.md`](docs/VALIDATION_GUIDE.md) and the
-[reference/status map](examples/REFERENCES.md).
+The bundled case and device sites are project-authored synthetic data. The
+file-based case interface accepts caller-owned OpenROAD/OpenDB placement and
+PDNSim `write_pg_spice` exports; see [THIRD_PARTY.md](THIRD_PARTY.md).
+
+## Generated 3D geometry and finite elements
+
+| Command | Scope | Status | Tier |
+|---|---|---|---|
+| `python -m eda_multiphysics.tsv_3d` | Hex8 electrothermal cylinder, annulus, and layer-stack cases with idealized references | **CHECKED** at tested generated meshes | 🟠 |
+| `python -m eda_multiphysics.tet_3d` | Native Core Tet4 on generated box and cylinder, including patch/self-heating checks | **CHECKED** at tested generated meshes with Core `454f73c`; imported CAD and broader convergence remain open | 🟠 |
+| `python -m eda_multiphysics.thermomech_3d` | Monolithic u+T Hex8 free-expansion and constrained-block checks | **CHECKED** at tested generated meshes | 🟠 |
+| `python -m eda_multiphysics.thermomech_tsv` | Generated Cu/Si TSV mismatch case and composite-cylinder comparison | **CHECKED** at tested generated meshes | 🟠 |
+| `python -m eda_multiphysics.etv_3d` | Generated Hex8 electrothermal self-heating case | **CHECKED** at tested generated mesh | 🟠 |
+
+The Tet4 statement is limited to generated geometries and the checked conformal
+package case. A STEP/BREP import adapter and mesh/domain-convergence evidence are
+research work.
+
+## Solder and electro-thermo-viscoplastic examples
+
+| Command or path | Scope | Status | Tier |
+|---|---|---|---|
+| `python -m eda_multiphysics.anand` | Material-point Anand saturation and cited parameter comparisons | **CHECKED** for the named constitutive checks | 🟢 |
+| `python -m eda_multiphysics.anand_3d` | 3D return map, transient material update, affine patch, and fully prescribed `prescribed_hex8_cycle` smoke check | **CHECKED** for those checks | 🟢 |
+| `python -m eda_multiphysics.solder_joint` | Plane-strain return-map and elastic affine-patch checks | **CHECKED** for those checks | 🟢 |
+| `python -m eda_multiphysics.etv_solder` | Simplified material-point electro-thermal-viscoplastic study | **CHECKED** at the documented material-point scope | 🟢 |
+| `python -m eda_multiphysics.etv_fe` | Steady electrothermal Quad4 Stage A, compared with the analytic self-heating limit and staggered solve | **CHECKED** at the documented steady scope | 🟠 |
+| Stateful multi-element `solder_joint_cycle` | Nonlinear plane-strain thermal cycle | **WITHHELD** — removed because nonlinear increment convergence was not established | — |
+| ETV FE Stage B | Transient thermo-viscoplastic mesh cycle | **WITHHELD** — removed because nonlinear increment convergence was not established | — |
+| Multi-element 3D Anand BVP / `critical_joint_bvp_life` | Stateful BVP and design-chain life transfer | **WITHHELD** — removed because nonlinear increment convergence was not established; `prescribed_hex8_cycle` remains as a fully prescribed check | — |
+
+The 4719-cycle PBGA datum is used as an in-sample calibration anchor. It is not
+an independent lifetime validation.
+
+## Distributed and scaling harnesses
+
+| Command | Scope | Status | Tier |
+|---|---|---|---|
+| `mpirun -n 2 python -m eda_multiphysics.etv_distributed_fs 24 --validate` | Serial-versus-rank FieldSplit correctness at the retained test size | **CHECKED** for tested-output agreement at size 24 and 2/4 ranks; no performance claim | 🟠 |
+| `mpirun -n 2 python -m eda_multiphysics.pdn_distributed 400 --direct` | Distributed synthetic PDN solve | **RESEARCH** pending retained current-revision rank output | 🟠 |
+| `python -m eda_multiphysics.etv_fieldsplit` | Serial FieldSplit driver | **RESEARCH** pending retained current-revision solve record | 🟠 |
+| `mpirun -n 2 python -m eda_multiphysics.etv_distributed` | ASM distributed coupled driver | **RESEARCH** pending retained current-revision rank output | 🟠 |
+| `python -m eda_multiphysics.scaling_bench --n 1580 --ranks 2,4,8` | Machine-specific scaling measurements | **RESEARCH**; historical timing and large-size claims are excluded | 🟠 |
+
+## Individual component checks
+
+The following modules compare selected outputs with named equations or
+independent implementations:
+
+- `capacitance` — parallel-plate `C = εA/d`;
+- `transient` — fundamental heat-equation mode;
+- `thermal_runaway` — compact-model saddle-node condition;
+- `thermomech` — bimetal and cylinder closed forms;
+- `tsv_stress` — Lamé benchmark;
+- `pdn_graph` — independent SciPy assembly/solve;
+- `creep` — zero-stress, saturation, and relaxation identities; and
+- `electromigration` — Black and Blech screening equations.
+
+Run one with `python -m eda_multiphysics.<name>`. These are **CHECKED** at their
+documented idealized scope; they do not qualify a real device.
+
+## Code-generation examples
+
+`etv_kernel` and `thermomech_kernel` generate and compile element kernels from
+CoupFE weak forms. `etv_fe` uses the operator contract for the retained steady
+electrothermal stage. These are **CHECKED** on the qualified compiled toolchain at
+the checked cases. See [`skills/SKILL.md`](skills/SKILL.md) for the contributor
+workflow.
+
+The numerical reference, provenance, and public-claim boundary for every entry
+point are maintained in [examples/REFERENCES.md](examples/REFERENCES.md).

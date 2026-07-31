@@ -69,6 +69,7 @@ def solve_electrothermal(
     node_T = np.full(mesh.nnode, float(Tsink))
     history = []
     V = Q = grads = None
+    converged = False
     for it in range(1, maxit + 1):
         T_elem = node_T[mesh.elems].mean(axis=1)
         sig = scale * sigma_of_T(T_elem, sigma0, alpha, Tref)
@@ -81,12 +82,28 @@ def solve_electrothermal(
         T_relaxed = (1.0 - relax) * node_T + relax * T_new
 
         dT = float(np.max(np.abs(T_relaxed - node_T)))
+        if not (
+            np.isfinite(dT)
+            and np.all(np.isfinite(V))
+            and np.all(np.isfinite(T_relaxed))
+            and np.all(np.isfinite(Q))
+        ):
+            raise RuntimeError("electrothermal Picard iteration produced non-finite values")
         history.append(dT)
         node_T = T_relaxed
         if verbose:
             print(f"  it {it:3d}  max|dT| = {dT:.3e}  peakT = {node_T.max():.6f}")
         if dT < tol:
+            converged = True
             break
+
+    if not converged:
+        last_change = history[-1] if history else float("inf")
+        raise RuntimeError(
+            "electrothermal Picard iteration did not converge: "
+            f"iterations={maxit}, last_temperature_change={last_change:.6e}, "
+            f"tolerance={tol:.6e}"
+        )
 
     if I_inject is None:
         eop_final = ScalarDiffusion(

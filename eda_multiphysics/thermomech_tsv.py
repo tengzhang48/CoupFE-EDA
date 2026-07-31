@@ -1,10 +1,9 @@
 """TSV thermal-mismatch stress: the 3D thermo-mechanical Hex8 element on a gmsh Cu/Si via.
 
-Ties the two threads together -- generated gmsh canonical geometry (`mesh3d.via_annulus`) and the
-coupled thermo-mechanical element (`thermomech_kernel`) -- into a *reliability* result: the
-thermal stress from the Cu/Si CTE mismatch in a through-silicon via, validated against the exact
-**plane-strain composite-cylinder** closed form (the same Lame-family oracle the project trusts
-for TSV stress in 2D axisymmetric, here on a generated 3D mesh).
+This example combines generated Gmsh geometry (``mesh3d.via_annulus``) and the
+coupled thermo-mechanical element (``thermomech_kernel``). The selected radial
+displacement is compared with the plane-strain composite-cylinder closed form
+on a generated three-dimensional mesh.
 
 The neo-Hookean element at small strain reduces to linear thermo-elasticity with mu=G, lambda=K,
 thermal-stress coefficient beta=K*alpha -- so the composite-cylinder oracle uses those constants:
@@ -81,9 +80,8 @@ def _fieldsplit_tm_solve(K, R, drows, coords, comm=None):
     ksp.setUp()
     ksp_u, ksp_T = pc.getFieldSplitSubKSP()
     ksp_u.setType("preonly"); ksp_u.getPC().setType("gamg")
-    # seed the u-block GAMG with the 6 rigid-body modes (the elasticity near-null-space) -- WITHOUT
-    # Historical runs showed a large iteration reduction; retain an ablation on
-    # final revisions before making a mesh-independence claim.
+    # Seed the displacement-block GAMG with the six rigid-body near-null-space
+    # modes. Iteration effects require a separately retained ablation.
     Au = ksp_u.getOperators()[0]
     cvec = PETSc.Vec().createWithArray(np.ascontiguousarray(coords.ravel(), float), comm=comm)
     cvec.setBlockSize(3)
@@ -91,9 +89,19 @@ def _fieldsplit_tm_solve(K, R, drows, coords, comm=None):
     # T is fully prescribed here -> the T sub-block is the identity; GAMG can't coarsen it
     # ("max singular value zero"), so use a trivial PC. (A real conduction T-block would use gamg.)
     ksp_T.setType("preonly"); ksp_T.getPC().setType("jacobi")
-    x = A.createVecLeft(); ksp.solve(b, x)
-    dU = x.getArray().copy(); n = ksp.getIterationNumber()
-    A.destroy(); ksp.destroy()
+    x = A.createVecLeft()
+    ksp.solve(b, x)
+    reason = int(ksp.getConvergedReason())
+    residual_norm = float(ksp.getResidualNorm())
+    dU = x.getArray().copy()
+    n = ksp.getIterationNumber()
+    A.destroy()
+    ksp.destroy()
+    if reason <= 0 or not np.all(np.isfinite(dU)):
+        raise RuntimeError(
+            "thermo-mechanical FieldSplit solve failed: "
+            f"reason={reason}, iterations={n}, residual_norm={residual_norm:.6e}"
+        )
     return dU, n
 
 

@@ -34,11 +34,10 @@ validation.
 
 ## Caller-supplied designs and data
 
-The same solver-neutral interface can consume caller-supplied OpenROAD/OpenDB
-placement data and PDNSim SPICE/voltage exports. No ORFS GCD input deck,
-Nangate45 platform/generated design file, or raw tool output is bundled. Dated
-documents retain attributed numerical summaries as historical, non-release
-evidence. Users remain responsible for the licenses and permissions governing
+The same versioned, file-based interface can consume caller-supplied
+OpenROAD/OpenDB placement data and PDNSim SPICE/voltage exports. No ORFS GCD
+input deck, Nangate45 platform/generated design file, or raw tool output is
+bundled. Users remain responsible for the licenses and permissions governing
 their input designs, platforms, PDKs, and generated artifacts.
 
 As one external example, ORFS documents a small
@@ -49,7 +48,7 @@ relicense that design or its outputs.
 ## Published benchmark facts
 
 Source code and manifests transcribe equations, coefficients, and small factual
-values from the papers cited inline. The repository does not include publisher
-page images or digitized experimental curves. The curvature and Raman manifests
-remain `definition_only`, and the missing curves remain release-blocking for
-experimental-validation claims.
+values from papers cited inline. The repository does not include publisher page
+images or digitized experimental curves. The curvature and Raman manifests
+remain `definition_only`; no experimental-validation claim is made without the
+missing curves and a retained comparison record.

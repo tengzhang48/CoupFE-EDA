@@ -1,8 +1,9 @@
-"""Trust-net regression tier for the 3D / thermo-mechanical / reliability toolchain.
+"""Optional regression tier for the 3D, thermo-mechanical, and reliability toolchain.
 
-These tests exercise the public API frozen in docs/REFACTOR_CONTRACT.md. They are guarded by
-gmsh/petsc4py/gfortran availability and run via `pytest -m toolchain`, separate from the default
-fast numpy/scipy suite.
+These tests exercise the public interfaces described in ``docs/api.md`` and the
+scoped checks in ``docs/VALIDATION_GUIDE.md``. They are guarded by
+gmsh/petsc4py/gfortran availability and run via ``pytest -m toolchain``,
+separate from the default numpy/scipy suite.
 """
 from __future__ import annotations
 
@@ -242,8 +243,9 @@ def test_tsv_device_submodel_geometry_regions_and_interfaces():
     )
     assert max(np.max(np.abs(stress)) for stress in fixed_box.element_stress_mpa.values()) > 1.0
 
-    # Real heterogeneous Cu/oxide/anisotropic-Si integration smoke. This qualifies
-    # assembly/conservation only; it is not Raman validation or an accepted macro BC.
+    # Heterogeneous Cu/oxide/anisotropic-Si integration smoke. This checks
+    # assembly/conservation at this case; it is not a Raman comparison or an
+    # accepted macro boundary condition.
     periodic_result = solve_local_tsv(
         periodic, dT, boundary_condition="periodic_macro_gradient", macro_gradient=H_free,
     )
@@ -276,7 +278,8 @@ def test_thermomech_tsv_fieldsplit_vs_direct(tm_kernel_module):
     rel_agree = float(np.linalg.norm(Ud - Uf) / max(1e-30, np.linalg.norm(Ud)))
     assert rel_agree < 1e-6, f"direct/fieldsplit disagreement {rel_agree:.2e}"
 
-    # fieldsplit iteration count proves the near-null-space seeding
+    # Keep the FieldSplit iteration count within the checked bound when the
+    # displacement near-null-space is supplied.
     assert ksp_its < 40, f"fieldsplit KSP iterations {ksp_its} not < 40"
 
     # profile error vs composite-cylinder oracle
@@ -295,13 +298,10 @@ def test_thermomech_tsv_fieldsplit_vs_direct(tm_kernel_module):
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("nranks", [2, 4])
 def test_etv_distributed_fs_serial_matches_mpi(nranks):
-    """CI invariant: the distributed FieldSplit solve == the serial scipy oracle at N ranks (2 & 4).
+    """Compare the distributed FieldSplit solve with serial SciPy at 2 and 4 ranks.
 
-    Pins *correctness + partitioning* cheaply. The 4-rank case exercises real multi-rank ghost
-    exchange (interior ranks with neighbours on both sides) that a 2-rank split cannot. It is NOT the
-    scaling study. The historical 5M-DOF table in ``eda_multiphysics/DISTRIBUTED.md`` lacks
-    retained raw/environment evidence and is not asserted here. ``scaling_bench`` can generate a
-    new local measurement; these gates are only the regression-protected correctness slice.
+    The 4-rank case exercises interior ranks with neighbours on both sides. The
+    assertion checks output agreement at one size; it is not a scaling study.
     """
     pytest.importorskip("petsc4py")
     pytest.importorskip("mpi4py")
@@ -485,9 +485,7 @@ def test_reliability_3d_design_map(tm_kernel_module):
 # tet_3d -- native core linear tet (gmsh arbitrary-CAD meshing)
 # ---------------------------------------------------------------------------
 def test_tet4_patch_test(etv_workdir):
-    """Linear completeness: a linear T field reproduced to MACHINE PRECISION on an irregular gmsh
-    tet mesh -- the rigorous correctness gate for the ported element (a wrong element gives O(1e-1),
-    not 1e-16)."""
+    """Check linear completeness on the selected irregular Gmsh Tet4 mesh."""
     from eda_multiphysics.tet_3d import patch_test
 
     err = patch_test(workdir=etv_workdir)
@@ -495,9 +493,11 @@ def test_tet4_patch_test(etv_workdir):
 
 
 def test_tet4_self_heating(etv_workdir):
-    """The ported Tet4 reproduces the exact self-heating oracle sigma V0^2/8k on a gmsh tet box AND
-    a tet cylinder (curved CAD the all-hex subdivision path handles poorly), within tet
-    discretization error. Also asserts every tet has positive signed volume."""
+    """Compare Tet4 box/cylinder self-heating with ``sigma V0^2/8k``.
+
+    The comparison is bounded by the selected generated meshes and also checks
+    that every tetrahedron has positive signed volume.
+    """
     from eda_multiphysics.tet_3d import oracle_selfheat, solve_selfheat
 
     props = (3.0, 0.0, 1.5)

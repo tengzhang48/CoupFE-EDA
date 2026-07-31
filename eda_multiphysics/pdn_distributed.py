@@ -1,15 +1,12 @@
-"""Distributed PDN electrical solve on PETSc/MPI — scaling the EDA application.
+"""Distributed PDN electrical solve on PETSc/MPI.
 
-The serial `pdn_graph` solver (scipy) is fine for one chip; a flagship PDN is millions
-of nodes. This integrates the EDA-multiphysics electrical solve with CoupFE's
-distributed PETSc/MPI approach (cf. `coupfe/assembly/distributed.py`): the resistor-graph
-Laplacian is assembled into a distributed PETSc matrix (each rank stamps only the edges
-it owns; PETSc routes the off-process contributions), and a KSP (CG + GAMG algebraic
-multigrid) solves it across ranks.
+The resistor-graph Laplacian is assembled into a distributed PETSc matrix. Each
+rank stamps the edges it owns, PETSc routes off-process contributions, and KSP
+solves the resulting system with the selected options.
 
-The trust gate is the same 1-vs-N invariant CoupFE uses: the gathered N-rank solution
-must equal the serial scipy solve (to the KSP tolerance — this minimal PETSc build has no
-distributed-direct solver, so iterative + tight rtol, not machine-precision LU).
+The checked comparison gathers the distributed result and compares it with the
+serial SciPy solve at selected sizes and ranks. Direct-factor availability
+depends on the PETSc installation.
 
     mpirun -n 4 python -m eda_multiphysics.pdn_distributed [grid_n]
 """

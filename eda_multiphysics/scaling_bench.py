@@ -1,16 +1,11 @@
-"""Strong-scaling harness for the distributed FieldSplit coupled solve.
+"""Local rank-sweep harness for the distributed FieldSplit coupled solve.
 
-The historical strong-scaling table in ``DISTRIBUTED.md`` was transcribed from manual ``mpirun``
-runs without retaining raw stdout and a complete environment record. This script can generate a
-new table from the driver's machine-parseable
-``SCALEFS <ndof> <ranks> <wall> <iters>`` line, but printing a table alone is not archival evidence.
-Retain raw output, hardware/topology, MPI/PETSc versions, and a locked environment before making a
-public performance claim.
+This script collects the driver's machine-readable
+``SCALEFS <ndof> <ranks> <wall> <iters>`` line and formats a local table. The
+table is not release evidence without retained raw output, hardware/topology,
+MPI/PETSc versions, and environment metadata.
 
-    # generate a new 5M-DOF, 4->48-core measurement (needs >= 48 physical cores):
-    OMP_NUM_THREADS=1 python -m eda_multiphysics.scaling_bench --n 1580 --ranks 4,8,16,32,48
-
-    # a quick smoke anywhere (oversubscribes cores):
+    # Small local exercise (oversubscribes when requested):
     OMP_NUM_THREADS=1 python -m eda_multiphysics.scaling_bench --n 120 --ranks 1,2,4 --oversubscribe
 
 Each row is one ``mpirun -n R`` of :mod:`eda_multiphysics.etv_distributed_fs`; speedup is relative
@@ -51,7 +46,7 @@ def sweep(n, rank_list, oversubscribe=False, timeout=3600):
 
 
 def markdown_table(rows):
-    """Format sweep rows exactly like DISTRIBUTED.md's strong-scaling table."""
+    """Format rank-sweep rows as a Markdown table."""
     ndof = rows[0][0]
     base = rows[0][2]
     ranks = " | ".join(str(r[1]) for r in rows)
@@ -72,8 +67,8 @@ def markdown_table(rows):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Reproducible strong-scaling table for etv_distributed_fs.")
-    ap.add_argument("--n", type=int, default=1580, help="grid size n (n x n); n=1580 ~ 5M DOF")
+    ap = argparse.ArgumentParser(description="Local rank-sweep table for etv_distributed_fs.")
+    ap.add_argument("--n", type=int, default=1580, help="grid size n (n x n)")
     ap.add_argument("--ranks", default="4,8,16,32,48", help="comma-separated rank counts")
     ap.add_argument("--oversubscribe", action="store_true", help="pass --oversubscribe to mpirun")
     ap.add_argument("--timeout", type=int, default=3600, help="per-run timeout (s)")

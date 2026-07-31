@@ -61,6 +61,6 @@
       "use": "contour-level verification after matching the full stated model"
     }
   ],
-  "claim_boundary": "This reproduces a published piezoresistive model, not an independent transistor or delay experiment. The plan's unsupported 67.94% and 3.45% values are not release oracles.",
-  "manifest_sha256": "cebaa2dad5ce51422358711631dd43114c95a76eaf03b9e58553a070679ca322"
+  "claim_boundary": "This reproduces a published piezoresistive model; it is not an independent transistor, delay, or device validation.",
+  "manifest_sha256": "5e43fc43e418323a9c3e92904c399a0cd64971a3f9ca451e53fdd4d0e17a8002"
 }

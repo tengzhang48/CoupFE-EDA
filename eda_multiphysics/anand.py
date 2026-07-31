@@ -1,8 +1,7 @@
-"""Anand unified viscoplastic model -- the INDUSTRY-STANDARD solder constitutive law.
+"""Anand unified viscoplastic model for solder constitutive examples.
 
-The Anand model (Anand 1985; Brown, Kim, Anand 1989) is the de-facto industrial
-standard for solder/interconnect viscoplasticity, built into ANSYS, Abaqus, and
-Simcenter for electronic-packaging thermal-cycling reliability. Nine constants:
+The Anand model (Anand 1985; Brown, Kim, Anand 1989) is widely used for
+solder/interconnect viscoplasticity. The implemented form uses nine constants:
 A, Q/R, xi, m (flow) and s0, h0, s-hat, n, a (deformation-resistance evolution).
 
 Flow rule (equivalent plastic strain rate):
@@ -11,16 +10,16 @@ Deformation-resistance evolution:
     s_dot = h0 |1 - s/s*|^a sign(1 - s/s*) eps_p_dot,
     s* = s_hat [ (eps_p_dot / A) exp(Q/RT) ]^n
 
-TRUST GATE (exact analytic oracle, derived from the published model): at constant
+REFERENCE CHECK (analytic relation derived from the published model): at constant
 strain rate and temperature the response saturates (s->s*, eps_p_dot->eps_dot) to a
 steady-state flow stress with the CLOSED FORM
     z = (eps_dot/A) exp(Q/RT);  s* = s_hat z^n;  sigma_sat = (s*/xi) asinh(z^m).
-A correct integrator must reproduce sigma_sat. This is the standard verification for
-viscoplastic constitutive integrators -- the model's own analytic steady state.
+The checked comparison requires the integrator to reproduce ``sigma_sat`` at
+the selected rates and temperatures.
 
 Parameter set: 62Sn36Pb2Ag eutectic-class solder, Cheng, Wang, Chen, Wilde, Becker,
 "Viscoplastic Anand model for solder alloys and its application," Soldering &
-Surface Mount Technology 12(2), 2000 (the canonical, widely-reproduced set).
+Surface Mount Technology 12(2), 2000.
 
 Run:  python -m eda_multiphysics.anand
 """
@@ -34,7 +33,7 @@ from scipy.integrate import solve_ivp
 SNPB = dict(A=4.0e6, QR=9400.0, xi=1.5, m=0.303,
             s0=12.41, h0=1378.95, shat=13.79, n=0.07, a=1.3, E=3.0e4)
 
-# Anand constants (SAC305 = Sn-3.0Ag-0.5Cu, the modern lead-free industry standard).
+# Anand constants for SAC305 (Sn-3.0Ag-0.5Cu).
 # Motalab, Cai, Suhling, Lall, ITherm 2012 (DOI 10.1109/ITHERM.2012.6231522) /
 # Motalab PhD dissertation (Auburn 2013), Table 4.1, *non-aged stress-strain fit* --
 # cross-checked against arXiv:2204.05583 Table 2 and MDPI Materials 2023 16(14):4922.
@@ -49,6 +48,25 @@ SAC305 = dict(A=3501.0, QR=9320.0, xi=4.0, m=0.25,
 # stress MPa). Figure-digitized, so +-1-2 MPa (a few %).
 SAC305_FIG310 = [(25.0, 1e-3, 40.5), (50.0, 1e-3, 33.5), (100.0, 1e-3, 24.0),
                  (125.0, 1e-3, 21.5), (25.0, 1e-4, 35.5), (25.0, 1e-5, 29.5)]
+
+
+def _require_complete_ivp(sol, t_final, context):
+    """Reject failed or truncated SciPy integrations before consuming results."""
+    times = np.asarray(sol.t)
+    last_time = float(times[-1]) if times.size else None
+    complete = bool(times.size) and np.isclose(
+        last_time,
+        t_final,
+        rtol=1e-12,
+        atol=1e-12 * max(1.0, abs(float(t_final))),
+    )
+    if not bool(sol.success) or not complete:
+        message = str(getattr(sol, "message", "no solver message"))
+        raise RuntimeError(
+            f"{context} did not reach the requested final time: "
+            f"success={bool(sol.success)}, last_time={last_time}, "
+            f"requested={float(t_final)}, message={message}"
+        )
 
 
 def _z(eps_dot, T, p):
@@ -88,14 +106,14 @@ def _rhs(t, y, eps_dot, T, p):
 def integrate_uniaxial(eps_dot, T, p, eps_max=0.10):
     """Constant-strain-rate uniaxial integration (stiff BDF) -> stress/strain history.
 
-    Integrates the industry-standard Anand constitutive ODE (the law CoupFE's
-    viscoplastic codegen emits as a UMAT); a stiff integrator handles the
-    rate-stiffness robustly.
+    Integrates the Anand constitutive ODE used by CoupFE's viscoplastic codegen;
+    a BDF integrator handles the selected rate-stiff cases.
     """
     tmax = eps_max / eps_dot
     te = np.linspace(0, tmax, 400)
     sol = solve_ivp(_rhs, [0, tmax], [0.0, p["s0"]], method="BDF",
                     args=(eps_dot, T, p), t_eval=te, rtol=1e-9, atol=1e-9)
+    _require_complete_ivp(sol, tmax, "uniaxial Anand integration")
     return sol.t * eps_dot, sol.y[0], sol.y[1][-1]
 
 
@@ -127,7 +145,7 @@ def verify():
 def verify_sac305():
     """Reproduce a PUBLISHED SAC305 benchmark (Motalab Fig 3.10), two ways.
 
-    (1) integrator vs the model's closed-form saturation -> rigorous, exact;
+    (1) integrator vs the model's exact closed-form saturation relation;
     (2) closed-form vs the published figure readings -> external benchmark.
     """
     p = SAC305
@@ -199,6 +217,7 @@ def thermal_cycle(p, *, Tlo=-40.0, Thi=125.0, dalpha=20e-6, ramp=200.0, dwell=60
     te = np.linspace(0, tmax, ncyc * 600)
     sol = solve_ivp(rhs, [0, tmax], [0.0, p["s0"], 0.0, 0.0], method="BDF",
                     t_eval=te, rtol=1e-8, atol=1e-11, max_step=ramp / 4)
+    _require_complete_ivp(sol, tmax, "Anand thermal-cycle integration")
     t, W, epl = sol.t, sol.y[2], sol.y[3]
     Wc = [float(np.interp(k * P, t, W)) for k in range(ncyc + 1)]
     dW = [Wc[k] - Wc[k - 1] for k in range(1, ncyc + 1)]

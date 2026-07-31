@@ -1,101 +1,92 @@
-# Release evidence and transient-build policy
+# Release evidence policy
 
-Release claims must be reproducible from retained evidence, not reconstructed
-from a status note. A passing statement without its complete command output,
-source identity, environment summary, and artifact digest is a historical
-observation rather than current release evidence.
+A release statement should be traceable to a retained command log, immutable
+source identity, environment summary, and artifact digest. A status sentence
+without those records is not a release checkpoint.
 
-## Required checkpoint contents
+This policy records software/reproducibility evidence. It does not convert a
+synthetic or component check into real-device validation.
 
-Each reviewed checkpoint is a new, timestamped directory outside the Git
-worktree. Do not overwrite a prior checkpoint or use an unlabeled mutable name
-such as `current`. Keep the directory private (`0700`) and its files private
-(`0600`). It contains:
+## Checkpoint contents
 
-- `manifest.json`: mode, source branch and revision, dirty-state digest,
-  Python/platform/package versions, the imported Core Git identity and symbolic
-  location, exact commands, exit codes, and durations;
-- `source-status.txt`: the exact porcelain status (empty for a release run);
-- `logs/*.log`: complete combined standard output and error for every command;
-- `artifacts/`: the wheel and source distribution built by that run;
-- `SHA256SUMS`: SHA-256 sidecar for the wheel and source distribution;
-- `EVIDENCE_SHA256SUMS`: SHA-256 sidecar for the complete evidence record; and
-- `README.md`: a human-readable disposition, including whether the checkpoint
-  can support publication.
+Create each checkpoint as a new timestamped directory outside the Git
+worktree. Do not overwrite an earlier record. The recorder creates:
 
-Review both the logs and the manifest before relying on a checkpoint. The
-recorder removes credential-like environment variables and redacts recognizable
-tokens and local paths in command output. Never put a credential in a command
-argument, fixture, or release input.
+- `manifest.json`: mode, source branch/revision, dirty-state digest,
+  Python/platform/package versions, imported Core identity, commands, exit
+  codes, durations, and artifact digests;
+- `source-status.txt`: the exact source status at start;
+- `logs/*.log`: combined output for each command;
+- `artifacts/`: the wheel and source distribution retained by the run;
+- `SHA256SUMS`: release-artifact hashes;
+- `EVIDENCE_SHA256SUMS`: hashes for the complete checkpoint; and
+- `README.md`: human-readable disposition.
 
-## Standard command
+The directory and files are created with private permissions. Recognizable
+credentials and local paths are redacted, but credentials must never be placed
+in commands, fixtures, or release inputs.
 
-From the repository root, write to a new directory under the private evidence
-store:
+## Release mode
+
+From the repository root:
 
 ```bash
 python .github/scripts/record_release_evidence.py \
-  --output <private-evidence-root>/eda-<UTC-timestamp>-<short-commit>-release
+  --output <private-evidence-root>/eda-<UTC-time>-<short-commit>-release
 ```
 
-Release mode fails before testing if the worktree has tracked or untracked
-changes. Before the numerical gates, it proves that Python imports the clean
-`.deps/CoupFE` checkout at the declared full revision, that its origin and
-public branch are anonymously reachable, and that the packaging tools are
-installed. It records the Python and, when active, conda environments, then
-runs the standalone trust harness, the complete default test tier, a toolchain
-dependency preflight, the complete toolchain tier, an sdist build, a wheel
-build from that sdist, strict Twine checks, an installed-wheel/resource smoke
-from a disposable directory, and the release artifact guard without
-overrides. A pass is necessary release evidence; it does not turn
-synthetic/component validation into real-device validation.
+Release mode requires a clean tree. It records environment and Core provenance,
+runs the gate harness, default tests, optional toolchain preflight/tests,
+builds an sdist and a wheel from that sdist, runs strict Twine and installed-
+wheel checks, and applies the release-artifact guard. Execution stops at a
+failed command.
 
-During curation, a deliberately non-publishable checkpoint can be recorded:
+The expected Core revision is read from `setup.sh`; for this candidate it is
+`454f73ce2de284262b214a2b37bd676c6aca3c0a`. The recorder checks the imported
+root, Git revision, origin, and branch before treating the run as release mode.
+
+## Audit mode
+
+During curation, a non-publishable checkpoint can be recorded:
 
 ```bash
 python .github/scripts/record_release_evidence.py \
   --mode audit \
-  --output <private-evidence-root>/eda-<UTC-timestamp>-<short-commit>-audit
+  --output <private-evidence-root>/eda-<UTC-time>-<short-commit>-audit
 ```
 
-Audit mode runs the maintained dependency-compatible fast partition and passes
-only the explicitly named unapproved-Core-ref, untracked-required-file, and
-dirty-source audit overrides to the artifact guard. Its README and manifest always state
-`publishable: false`. It cannot substitute for the final clean-root run.
+Audit mode runs the maintained fast partition and uses explicitly named guard
+overrides for a dirty candidate, an unapproved Core reference, and untracked
+required inputs. Its manifest always reports `publishable: false`; it cannot
+replace the final clean release-mode run.
 
-## Build-directory boundary
+## Build boundary
 
-`dist/`, `build/`, `*.egg-info`, pytest caches, and Python bytecode inside the
-worktree are disposable products. They are ignored by Git and are never
-evidence. The recorder copies exactly the tracked plus non-ignored untracked
-release-input inventory to a temporary directory; this excludes ignored
-toolchain products without dropping an intentionally tracked source file that
-also matches a broad ignore rule. It builds there, copies the resulting wheel
-and sdist into the private checkpoint, and then removes the temporary tree.
+`dist/`, `build/`, `*.egg-info`, pytest caches, Python bytecode, and generated
+kernel products inside the worktree are disposable. They are not evidence.
 
-Fast CI uses a job-local `dist/` to validate builds and installed-wheel imports,
-but it does not retain a publication checkpoint. Only artifacts inside a
-passed release-mode checkpoint are publication candidates. If a future release
-workflow uploads evidence, it must retain the two artifacts, logs, manifest,
-README, and both checksum sidecars together; a wheel or sdist copied alone is
-an incomplete record.
+The recorder copies the tracked plus non-ignored untracked release inventory to
+a temporary source directory, builds there, retains the resulting wheel/sdist
+in the checkpoint, and removes the temporary tree. CI build products are useful
+checks but are not a publication checkpoint unless the complete record is
+retained together.
 
-## Final acceptance
+## Review checklist
 
 Before publication:
 
-1. use the final reachable public CoupFE revision consistently in every release
-   input;
-2. run release mode from the exact clean public root;
-3. require every recorded command to exit zero and review the toolchain log for
-   skips;
+1. confirm the candidate and Core revisions are reachable and immutable;
+2. run release mode from the exact clean root;
+3. require every recorded command to return zero and review skips separately;
 4. verify `sha256sum -c SHA256SUMS` and
-   `sha256sum -c EVIDENCE_SHA256SUMS` from the checkpoint directory;
-5. perform the final sensitive-data and private-path scan; and
-6. archive the new, non-overwritten checkpoint under the released tag and
-   commit in read-only or write-once storage, verifying both checksum sidecars
-   before and after transfer.
+   `sha256sum -c EVIDENCE_SHA256SUMS` in the checkpoint directory;
+5. inspect wheel and sdist inventory, license files, fixture provenance, and
+   installed-wheel resource access;
+6. scan the final source and artifacts for credentials, private paths, and
+   unintended files; and
+7. archive the checkpoint under the release tag/revision in protected storage
+   and verify both checksum files after transfer.
 
-The retained record supports statements about what was run and packaged. The
-scientific claim boundary remains the one documented in the validation guide
-and release plan.
+The scientific/model boundary is defined in
+[Capabilities](capabilities.md) and [Validation guide](VALIDATION_GUIDE.md),
+not by the recorder's `publishable` field alone.

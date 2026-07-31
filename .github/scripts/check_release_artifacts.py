@@ -24,7 +24,7 @@ PUBLIC_CORE_BRANCH = "main"
 # This exact Core release root is anonymously reachable from public ``main``.
 # Keep the release guard fail-closed for any other dependency revision.
 APPROVED_PUBLIC_CORE_REF: Optional[str] = (
-    "933e497301ee3ddb23391b787726674f70b480c5"
+    "454f73ce2de284262b214a2b37bd676c6aca3c0a"
 )
 CORE_RELEASE_INPUTS = (
     "setup.sh",
@@ -59,10 +59,60 @@ SCHEMA_ASSETS = {
         "validation_manifest.schema.json",
     }
 }
-PACKAGE_ASSETS = SCHEMA_ASSETS | SYNTHETIC_CASE_ASSETS | {
-    "eda_multiphysics/__init__.py",
+PUBLIC_PACKAGE_FILES = SCHEMA_ASSETS | SYNTHETIC_CASE_ASSETS | {
+    f"eda_multiphysics/{name}"
+    for name in {
+        "DISTRIBUTED.md",
+        "RESULTS.md",
+        "__init__.py",
+        "_coupled_solve.py",
+        "anand.py",
+        "anand_3d.py",
+        "capacitance.py",
+        "case_thermal.py",
+        "chip_vtu.py",
+        "creep.py",
+        "design_loop_demo.py",
+        "electromigration.py",
+        "electrothermal.py",
+        "electrothermal_chip.py",
+        "etv_3d.py",
+        "etv_distributed.py",
+        "etv_distributed_fs.py",
+        "etv_fe.py",
+        "etv_fieldsplit.py",
+        "etv_kernel.py",
+        "etv_solder.py",
+        "fe.py",
+        "gates.py",
+        "joint_map.py",
+        "mesh3d.py",
+        "pdn_distributed.py",
+        "pdn_graph.py",
+        "periodic.py",
+        "reliability_3d.py",
+        "reliability_pipeline.py",
+        "run.py",
+        "scaling_bench.py",
+        "solder_joint.py",
+        "tet_3d.py",
+        "tet_element.py",
+        "thermal_runaway.py",
+        "thermomech.py",
+        "thermomech_3d.py",
+        "thermomech_kernel.py",
+        "thermomech_tsv.py",
+        "transient.py",
+        "tsv_3d.py",
+        "tsv_device.py",
+        "tsv_local_3d.py",
+        "tsv_stress.py",
+        "tsv_validation.py",
+        "validate.py",
+    }
+} | {
     "eda_multiphysics/openroad/export_case.tcl",
-    "eda_multiphysics/periodic.py",
+    "eda_multiphysics/tests/test_gates.py",
 }
 PUBLIC_TEST_FILES = {
     "tests/conftest.py",
@@ -72,37 +122,70 @@ PUBLIC_TEST_FILES = {
     "tests/test_tsv_device.py",
     "tests/test_tsv_local_3d.py",
 }
-LICENSE_TEXTS = {
+PUBLIC_LICENSE_FILES = {
     f"LICENSES/{name}"
     for name in {
         "CC-BY-4.0.txt",
         "OpenROAD-BSD-3-Clause.txt",
     }
 }
-OPENROAD_LICENSE_SHA256 = (
-    "e4c62605dedc27267ba0b1b987f6f86355b4e20362ebdeb07a59a792a260d29b"
-)
-OPENROAD_COPYRIGHT_NOTICE = (
-    "Copyright (c) 2018-2023, The Regents of the University of California"
-)
-
-REQUIRED_SDIST_FILES = PACKAGE_ASSETS | LICENSE_TEXTS | PUBLIC_TEST_FILES | {
+PUBLIC_GITHUB_FILES = {
     ".github/scripts/check_release_artifacts.py",
     ".github/scripts/check_runtime_core.py",
     ".github/scripts/record_release_evidence.py",
     ".github/scripts/smoke_wheel.py",
     ".github/workflows/fast-ci.yml",
-    "Dockerfile",
-    "EXAMPLES.md",
-    "LICENSE",
-    "MANIFEST.in",
-    "NOTICE",
-    "README.md",
-    "THIRD_PARTY.md",
-    "docs/LICENSE.md",
-    "docs/RELEASE_EVIDENCE.md",
-    "docs/VALIDATION_GUIDE.md",
-    "eda_multiphysics/tests/test_gates.py",
+}
+PUBLIC_BENCHMARK_FILES = {
+    f"benchmarks/{name}/manifest.json"
+    for name in {
+        "tsv_curvature_ryu2012",
+        "tsv_mobility_koz_ryu2012",
+        "tsv_more_stress_2025",
+        "tsv_raman_jiang2013",
+    }
+} | {
+    "benchmarks/tsv_release_scorecard.json",
+}
+PUBLIC_DOC_FILES = {
+    f"docs/{name}"
+    for name in {
+        "COMPONENTS.md",
+        "GEOMETRY.md",
+        "LICENSE.md",
+        "PERIODIC_MPC_STATUS.md",
+        "README.md",
+        "RELEASE_EVIDENCE.md",
+        "TET_FEASIBILITY.md",
+        "VALIDATION_GUIDE.md",
+        "api.md",
+        "capabilities.md",
+        "lessons_learned.md",
+        "roadmap.md",
+        "theory.md",
+    }
+} | {
+    f"docs/validation_guide/figures/{name}.png"
+    for name in {
+        "anand_materials",
+        "capstone_pipeline",
+        "etv_solver",
+        "misc_gates",
+        "pdn_em",
+        "scalar_electrothermal",
+        "thermomech",
+        "toolchain_distributed",
+        "toolchain_etv_3d",
+        "toolchain_reliability",
+        "toolchain_thermomech_3d",
+        "toolchain_thermomech_tsv",
+        "toolchain_tsv_3d",
+        "tsv_stress",
+    }
+} | {
+    "docs/validation_guide/generate_figures.py",
+}
+PUBLIC_EXAMPLE_FILES = {
     "examples/REFERENCES.md",
     "examples/tsv_00_device_screening/README.md",
     "examples/tsv_00_device_screening/case.json",
@@ -110,9 +193,62 @@ REQUIRED_SDIST_FILES = PACKAGE_ASSETS | LICENSE_TEXTS | PUBLIC_TEST_FILES | {
     "examples/tsv_00_device_screening/expected_metrics.json",
     "examples/tsv_00_device_screening/materials.json",
     "examples/tsv_00_device_screening/run.py",
+}
+PUBLIC_SKILL_FILES = {
+    "skills/SKILL.md",
+    "skills/agents/openai.yaml",
+}
+PUBLIC_ROOT_FILES = {
+    ".dockerignore",
+    ".gitignore",
+    "CONTAINER.md",
+    "Dockerfile",
+    "EXAMPLES.md",
+    "LICENSE",
+    "MANIFEST.in",
+    "NOTICE",
+    "README.md",
+    "THIRD_PARTY.md",
+    "build.sh",
+    "environment.yml",
     "pyproject.toml",
     "setup.sh",
 }
+PUBLIC_SDIST_ROOT_FILES = PUBLIC_ROOT_FILES | {
+    "PKG-INFO",
+    "setup.cfg",
+}
+PUBLIC_SDIST_METADATA_FILES = {
+    f"coupfe_eda.egg-info/{name}"
+    for name in {
+        "PKG-INFO",
+        "SOURCES.txt",
+        "dependency_links.txt",
+        "requires.txt",
+        "top_level.txt",
+    }
+}
+PUBLIC_SOURCE_INVENTORIES = {
+    ".github": PUBLIC_GITHUB_FILES,
+    "LICENSES": PUBLIC_LICENSE_FILES,
+    "benchmarks": PUBLIC_BENCHMARK_FILES,
+    "docs": PUBLIC_DOC_FILES,
+    "eda_multiphysics": PUBLIC_PACKAGE_FILES,
+    "examples": PUBLIC_EXAMPLE_FILES,
+    "skills": PUBLIC_SKILL_FILES,
+    "tests": PUBLIC_TEST_FILES,
+}
+PUBLIC_RELEASE_FILES = PUBLIC_ROOT_FILES | set().union(
+    *PUBLIC_SOURCE_INVENTORIES.values()
+)
+OPENROAD_LICENSE_SHA256 = (
+    "e4c62605dedc27267ba0b1b987f6f86355b4e20362ebdeb07a59a792a260d29b"
+)
+OPENROAD_COPYRIGHT_NOTICE = (
+    "Copyright (c) 2018-2023, The Regents of the University of California"
+)
+
+REQUIRED_SDIST_FILES = PUBLIC_RELEASE_FILES
 
 FORBIDDEN_PARTS = {
     ".git",
@@ -123,19 +259,32 @@ FORBIDDEN_PARTS = {
     "gcd_nangate45",
     "notes",
     "presentation",
+    "reviews",
 }
 FORBIDDEN_NAMES = {
+    "CODE_EXAMPLES_REVIEW.md",
+    "COLLABORATION_BRIEF.md",
+    "CoupFE_EDA_TSV_Device_Validation_Release_Plan.md",
     "Gaps and Opportunities in Open-Source Multiphysics Simulation for Electronic Design Automation.pdf",
     "Nangate45-Apache-2.0.txt",
     "OpenROAD-flow-scripts-BSD-3-Clause.txt",
+    "PERIODIC_BOUNDARY_CONDITION_PLAN.md",
     "PyMTL-BSD-3-Clause.txt",
+    "REFACTOR_CONTRACT.md",
     "RELEASE_READINESS.md",
+    "TSV_ANISOTROPIC_3D_PLAN.md",
+    "TSV_PHYSICS_AUDIT.md",
     "TRUST_NET_FINDINGS.md",
+    "VALIDATION_ASSESSMENT.md",
     "claude_review_periodic_mpc.md",
+    "electro_thermo_viscoplastic_coupling_plan.md",
     "gpt_review_anand_3d.md",
     "kimi_task_tet4.md",
     "kimi_task_trust_net.md",
     "gcd_thermal.py",
+    "open_source_eda_multiphysics_integration_plan.md",
+    "open_source_eda_multiphysics_literature_survey.md",
+    "petsc_coo_gamg_bug_repro.py",
     "shape_tet4.for",
 }
 FORBIDDEN_NAME_PATTERNS = {
@@ -247,6 +396,7 @@ def _is_forbidden_path(name: str) -> bool:
             for pattern in FORBIDDEN_NAME_PATTERNS
         )
         or any(part.startswith("_etk") for part in parts)
+        or any(part.startswith("_tm_") for part in parts)
         or suffix in FORBIDDEN_SUFFIXES
         or (suffix in IMAGE_SUFFIXES and not _is_allowed_documentation_image(path))
     )
@@ -262,6 +412,73 @@ def _require_files(available: set[str], required: set[str], artifact: Path) -> N
     missing = sorted(required - available)
     if missing:
         raise SystemExit(f"{artifact.name} is missing required files: {missing}")
+
+
+def _validate_exact_subtree(
+    names: set[str], artifact: Path, prefix: str, expected: set[str]
+) -> None:
+    """Require one reviewed public subtree to match its static inventory."""
+
+    present = {
+        name
+        for name in names
+        if PurePosixPath(name).parts
+        and PurePosixPath(name).parts[0] == prefix
+    }
+    missing = sorted(expected - present)
+    unexpected = sorted(present - expected)
+    if missing or unexpected:
+        raise SystemExit(
+            f"{artifact.name} public {prefix} inventory mismatch: "
+            f"missing={missing}, unexpected={unexpected}"
+        )
+
+
+def _validate_exact_root_files(
+    names: set[str], artifact: Path, expected: set[str]
+) -> None:
+    """Require the reviewed top-level files and reject unreviewed additions."""
+
+    present = {
+        name for name in names if len(PurePosixPath(name).parts) == 1
+    }
+    missing = sorted(expected - present)
+    unexpected = sorted(present - expected)
+    if missing or unexpected:
+        raise SystemExit(
+            f"{artifact.name} public root inventory mismatch: "
+            f"missing={missing}, unexpected={unexpected}"
+        )
+
+
+def _validate_public_source_inventories(
+    names: set[str],
+    artifact: Path,
+    *,
+    root_files: set[str],
+    allowed_generated_subtrees: set[str] | None = None,
+) -> None:
+    """Validate every reviewed source subtree and its top-level boundary."""
+
+    _validate_exact_root_files(names, artifact, root_files)
+    for prefix, expected in PUBLIC_SOURCE_INVENTORIES.items():
+        _validate_exact_subtree(names, artifact, prefix, expected)
+
+    allowed_prefixes = set(PUBLIC_SOURCE_INVENTORIES)
+    allowed_prefixes.update(allowed_generated_subtrees or set())
+    unexpected_prefixes = sorted(
+        {
+            path.parts[0]
+            for name in names
+            if len((path := PurePosixPath(name)).parts) > 1
+            and path.parts[0] not in allowed_prefixes
+        }
+    )
+    if unexpected_prefixes:
+        raise SystemExit(
+            f"{artifact.name} contains unreviewed top-level subtrees: "
+            f"{unexpected_prefixes}"
+        )
 
 
 def _validate_public_tests(files: set[str], artifact: Path) -> None:
@@ -313,6 +530,12 @@ def _validate_entry_point_ledger(
             len(path.parts) == 3
             and path.parts[0] == "examples"
             and path.name == "run.py"
+        ):
+            entry = f"python {name}"
+        elif (
+            len(path.parts) >= 4
+            and path.parts[:2] == ("eda_multiphysics", "cases")
+            and path.name == "generate_case.py"
         ):
             entry = f"python {name}"
         if entry is None:
@@ -1232,6 +1455,11 @@ def _validate_source_tree(
             raise SystemExit(message)
         print(f"WARNING: {message} (audit override enabled)")
     _reject_forbidden_files(releasable, source_root)
+    _validate_public_source_inventories(
+        releasable,
+        source_root,
+        root_files=PUBLIC_ROOT_FILES,
+    )
     for name in sorted(releasable):
         path = source_root / PurePosixPath(name)
         if path.is_file():
@@ -1287,7 +1515,7 @@ def _validate_wheel(wheel: Path) -> int:
                 f"{wheel.name} must contain exactly one .dist-info/METADATA file"
             )
         dist_info = metadata_roots.pop()
-        required = PACKAGE_ASSETS | {
+        required = PUBLIC_PACKAGE_FILES | {
             f"{dist_info}/licenses/LICENSE",
             f"{dist_info}/licenses/LICENSES/CC-BY-4.0.txt",
             f"{dist_info}/licenses/LICENSES/OpenROAD-BSD-3-Clause.txt",
@@ -1297,6 +1525,12 @@ def _validate_wheel(wheel: Path) -> int:
         }
         _require_files(files, required, wheel)
         _reject_forbidden_files(files, wheel)
+        _validate_exact_subtree(
+            files,
+            wheel,
+            "eda_multiphysics",
+            PUBLIC_PACKAGE_FILES,
+        )
         for member in members:
             if not member.is_dir():
                 _validate_text(member.filename, archive.read(member), wheel)
@@ -1353,6 +1587,18 @@ def _validate_sdist(
         files = set(file_members)
         _require_files(files, REQUIRED_SDIST_FILES, sdist)
         _reject_forbidden_files(files, sdist)
+        _validate_public_source_inventories(
+            files,
+            sdist,
+            root_files=PUBLIC_SDIST_ROOT_FILES,
+            allowed_generated_subtrees={"coupfe_eda.egg-info"},
+        )
+        _validate_exact_subtree(
+            files,
+            sdist,
+            "coupfe_eda.egg-info",
+            PUBLIC_SDIST_METADATA_FILES,
+        )
         _validate_public_tests(files, sdist)
         for name, member in file_members.items():
             stream = archive.extractfile(member)
@@ -1421,7 +1667,7 @@ def validate(
         f"source tree ({source_count} files), " if source_count is not None else ""
     )
     print(
-        f"validated {source_summary}{wheels[0].name} ({wheel_count} files) and "
+        f"checked {source_summary}{wheels[0].name} ({wheel_count} files) and "
         f"{sdists[0].name} ({sdist_count} files)"
     )
 

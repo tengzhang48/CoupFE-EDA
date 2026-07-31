@@ -1,11 +1,12 @@
 """Creep & stress relaxation — the Anand model under STRESS control (vs strain control).
 
-The saturation gate (`anand.py`) validated strain-rate-controlled loading. This adds the
+The saturation gate in `anand.py` checks strain-rate-controlled loading. This adds the
 complementary STRESS-controlled mode:
 
   * Secondary (steady-state) creep: hold stress sigma0; the strain rate settles to the
     rate whose saturation stress equals sigma0 — i.e. invert sigma_sat(eps_dot,T)=sigma0.
-    Validates stress-controlled integration against that exact self-consistent rate.
+    The checked case compares stress-controlled integration with that
+    self-consistent rate.
   * Stress relaxation: hold total strain; stress decays as elastic strain converts to
     viscoplastic (dsigma/dt = -E eps_dot) — the JEDEC-dwell physics.
 
@@ -18,7 +19,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.optimize import brentq
 
-from .anand import SNPB, sat_stress
+from .anand import SNPB, _require_complete_ivp, sat_stress
 
 
 def analytic_creep_rate(sigma0, T, p=SNPB):
@@ -43,6 +44,7 @@ def integrate_creep(sigma0, T, p=SNPB, t_max=None):
     if t_max is None:
         t_max = 1.0 / max(analytic_creep_rate(sigma0, T, p), 1e-12)    # ~>50% strain to saturate s
     sol = solve_ivp(rhs, [0, t_max], [p["s0"]], method="BDF", rtol=1e-10, atol=1e-12)
+    _require_complete_ivp(sol, t_max, "stress-controlled creep integration")
     return epdot(sol.y[0, -1])
 
 

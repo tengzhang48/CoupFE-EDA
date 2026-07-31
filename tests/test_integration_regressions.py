@@ -10,6 +10,122 @@ import numpy as np
 import pytest
 
 
+def test_nonconverged_stateful_fe_workflows_are_not_public_examples():
+    """Do not restore historical false-green cycle/BVP drivers without a convergence gate."""
+    from eda_multiphysics import anand_3d, etv_fe, reliability_3d, solder_joint
+
+    assert not hasattr(solder_joint, "solder_joint_cycle")
+    assert not hasattr(etv_fe, "etv_fe_cycle")
+    assert not hasattr(etv_fe, "fe_coupling_effect")
+    assert not hasattr(anand_3d, "solder_joint_bvp_3d")
+    assert not hasattr(anand_3d, "solder_joint_cycle_3d")
+    assert hasattr(anand_3d, "prescribed_hex8_cycle")
+    assert not hasattr(reliability_3d, "critical_joint_bvp_life")
+
+
+def test_time_integrators_reject_failed_or_incomplete_solutions(monkeypatch):
+    """Do not consume partial SciPy histories as completed material-point results."""
+    from types import SimpleNamespace
+
+    from eda_multiphysics import anand, creep, etv_solder
+
+    def failed_solver(_rhs, interval, *_args, **_kwargs):
+        return SimpleNamespace(
+            success=False,
+            message="forced regression failure",
+            t=np.asarray(interval, dtype=float),
+            y=np.empty((0, 2)),
+        )
+
+    monkeypatch.setattr(anand, "solve_ivp", failed_solver)
+    with pytest.raises(RuntimeError, match="uniaxial Anand integration"):
+        anand.integrate_uniaxial(1e-3, 298.15, anand.SNPB)
+    with pytest.raises(RuntimeError, match="Anand thermal-cycle integration"):
+        anand.thermal_cycle(anand.SNPB, ncyc=1)
+
+    monkeypatch.setattr(etv_solder, "solve_ivp", failed_solver)
+    with pytest.raises(RuntimeError, match="electro-thermo-viscoplastic"):
+        etv_solder.etv_cycle(coupled=False, ncyc=1)
+
+    monkeypatch.setattr(creep, "solve_ivp", failed_solver)
+    with pytest.raises(RuntimeError, match="stress-controlled creep"):
+        creep.integrate_creep(0.0, 298.15, t_max=1.0)
+
+    truncated = SimpleNamespace(
+        success=True,
+        message="terminal event",
+        t=np.array([0.0, 0.5]),
+    )
+    with pytest.raises(RuntimeError, match="requested final time"):
+        anand._require_complete_ivp(truncated, 1.0, "truncated integration")
+    empty = SimpleNamespace(success=True, message="empty", t=np.array([]))
+    with pytest.raises(RuntimeError, match="last_time=None"):
+        anand._require_complete_ivp(empty, 1.0, "empty integration")
+
+
+def test_iterative_solvers_fail_closed_on_exhaustion(monkeypatch):
+    """Checked iterative wrappers must not return an unconverged last iterate."""
+    import scipy.sparse as sp
+    import coupfe
+
+    from eda_multiphysics._coupled_solve import coupled_newton
+    from eda_multiphysics.electrothermal import solve_electrothermal
+    from eda_multiphysics.etv_solder import solve_et
+    from eda_multiphysics.fe import StructuredQuadMesh
+
+    monkeypatch.setattr(
+        coupfe,
+        "assemble_residual",
+        lambda *_args, **_kwargs: (np.array([1.0]), None),
+    )
+    monkeypatch.setattr(
+        coupfe,
+        "assemble_tangent",
+        lambda *_args, **_kwargs: sp.eye(1, format="csr"),
+    )
+    with pytest.raises(RuntimeError, match="coupled Newton solve did not converge"):
+        coupled_newton(
+            [],
+            1,
+            {},
+            lambda _K, _R, _rows: (np.array([1.0]), {}),
+            maxit=1,
+        )
+
+    mesh = StructuredQuadMesh(2, 1, 1.0, 0.2)
+    with pytest.raises(RuntimeError, match="Picard iteration did not converge"):
+        solve_electrothermal(
+            mesh,
+            sigma0=1.0,
+            alpha=0.1,
+            k=1.0,
+            Tsink=0.0,
+            V0=1.0,
+            tol=0.0,
+            maxit=1,
+        )
+
+    voltage_bc = {
+        **{int(node): 0.0 for node in mesh.left()},
+        **{int(node): 1.0 for node in mesh.right()},
+    }
+    temperature_bc = {
+        **{int(node): 0.0 for node in mesh.left()},
+        **{int(node): 0.0 for node in mesh.right()},
+    }
+    with pytest.raises(RuntimeError, match="Picard iteration did not converge"):
+        solve_et(
+            mesh,
+            voltage_bc,
+            sigma0=1.0,
+            alpha_sig=0.1,
+            k=1.0,
+            T_bc=temperature_bc,
+            tol=0.0,
+            maxit=1,
+        )
+
+
 def _write_joint_map(tmp_path, rows, **metadata_overrides):
     csv_path = tmp_path / "joints.csv"
     csv_path.write_text(

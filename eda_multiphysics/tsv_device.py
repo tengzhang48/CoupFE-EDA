@@ -2,9 +2,10 @@
 
 This module is intentionally a device *proxy* layer, not TCAD. It converts a supplied silicon
 stress tensor into the (001) Raman observable and the Ryu et al. piezoresistive mobility proxy,
-then preserves stable device/TSV identities for EDA back-annotation. A Lamé far-field stress helper
-supports a realistic-dimension preview; it is explicitly not the release-blocking near-surface 3-D
-anisotropic FE field required by the TSV validation plan.
+then preserves stable device/TSV identities for EDA back-annotation. A Lamé
+far-field stress helper supplies the synthetic, dimensioned preview used by the
+public example; it is not the near-surface three-dimensional anisotropic field
+needed for a Raman or device comparison.
 
 Primary model source: Ryu et al., IEEE TDMR 12 (2012), 255-262,
 doi:10.1109/TDMR.2012.2194784. Raman conversion: Jiang et al., Microelectronics Reliability 53

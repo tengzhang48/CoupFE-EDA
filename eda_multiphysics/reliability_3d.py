@@ -1,23 +1,21 @@
-"""End-to-end 3D-FE solder thermal-fatigue: design -> 3D thermo-mechanical stress -> viscoplastic
-strain-energy/cycle -> cycles-to-failure.
+"""Global-local solder thermal-fatigue demonstration.
 
 The capstone (`reliability_pipeline`) drives the SAC305 Anand life from a *compact* thermal model +
 the Lame analytic stress. This exercises the stress link on **generated parametric 3D FE geometry**: a
 gmsh-meshed **solder joint** under a standard thermal-cycling boundary condition -- the die/substrate CTE
 mismatch imposes a distance-to-neutral-point (DNP) differential displacement du = dalpha*dT*L_D on
 the joint, which shears it. The 3D FE computes the solder strain field; its equivalent-strain range
-then drives the project's validated SAC305 **Anand** cycle -> strain-energy density per cycle dW ->
-**Syed** energy life N_f.
+then drives the checked SAC305 Anand material-point cycle and a Syed energy-life mapping.
 
 Evidence: the FE nominal shear reproduces the kinematic dgamma = du/h (the DNP shear). The FE's
 added value over the analytic is the strain *concentration*. The frozen oracle uses a cylinder;
 parametric barrel and hourglass profiles are available through ``joint_shape`` for geometry
 sensitivity studies.
-Honest scope: this module is a *global-local* chain (elastic 3D FE for the deformation +
-material-point viscoplastic for dW/life, the project's existing pattern). The full stateful 3D
-Anand Hex8 reference now lives in `anand_3d`; N_f is calibration-specific.
+Scope: this module is a global-local chain (elastic 3D FE for deformation plus a
+material-point viscoplastic mapping for dW/life). It does not solve a stateful
+multi-element viscoplastic boundary-value problem. N_f is calibration-specific.
 The measured-life gate is an in-sample calibration reproduction within +/-2x,
-not independent validation; dW is mesh-objective.
+not independent validation; the reported dW is not a mesh-convergence result.
 
     python -m eda_multiphysics.reliability_3d
 """
@@ -283,8 +281,9 @@ def from_design(spice_path=DEFAULT_SPICE, *, h_solder=50.0, R=25.0, dalpha=14.4e
     """Joint map -> 3D-FE -> fatigue map for a design.
 
     Explicit ``joints.csv`` geometry is preferred; otherwise the power-grid footprint is a labeled
-    proxy. The 3D FE solves the critical joint and the validated strain-vs-DNP relation gives a
-    per-joint Anand/Syed life. Returns a dict scorecard including IDs and source provenance.
+    proxy. The 3D FE solves a critical-joint elastic response; a documented
+    strain-versus-DNP mapping then gives calibration-dependent Anand/Syed output
+    per joint. Returns a dict including IDs and source provenance.
     """
     joints = design_joints(spice_path, joint_map_path=joint_map_path, dbu_per_um=dbu_per_um)
     xy, cen, dnp = joints["xy"], joints["center"], joints["dnp"]
@@ -341,26 +340,6 @@ def from_design(spice_path=DEFAULT_SPICE, *, h_solder=50.0, R=25.0, dalpha=14.4e
                 coordinate_frame=joints["coordinate_frame"], joint_map_path=joints["path"])
 
 
-def critical_joint_bvp_life(spice_path=DEFAULT_SPICE, *, h_solder=50.0, dalpha=14.4e-6,
-                            Tlo=-40.0, Thi=125.0, nx=3, ny=3, nz=2, ncyc=2,
-                            dbu_per_um=None, joint_map_path=None):
-    """The critical (max-DNP) joint solved as a stateful 3D Anand BVP (`anand_3d`).
-
-    This complementary reference uses a regular cuboid Hex8 mesh with traction-free lateral faces;
-    it is not yet the profiled gmsh bump used by ``solve_solder_joint``. The layout sets the DNP
-    shear ratio ``L_D/h``; the BVP gives a nonuniform corner ``dW`` field and peak-based Syed life.
-    Returns the BVP field dict plus the driving ``L_D``.
-    """
-    from .anand_3d import solder_joint_bvp_3d
-    joints = design_joints(spice_path, joint_map_path=joint_map_path, dbu_per_um=dbu_per_um)
-    dnp = joints["dnp"]
-    L_D = float(dnp.max())
-    r = solder_joint_bvp_3d(nx=nx, ny=ny, nz=nz, Tlo=Tlo, Thi=Thi, dalpha=dalpha,
-                            ldnp_over_h=L_D / h_solder, ncyc=ncyc)
-    return dict(L_D=L_D, ldnp_over_h=L_D / h_solder,
-                joint_source=joints["source"], joint_map_explicit=joints["explicit"], **r)
-
-
 def _run_design(joint_shape="cylinder", R_mid=None, include_package=False, joint_map_path=None):
     mod = package_mod = None
     if include_package:
@@ -373,7 +352,7 @@ def _run_design(joint_shape="cylinder", R_mid=None, include_package=False, joint
         )
     r = from_design(mod=mod, package_mod=package_mod, joint_shape=joint_shape, R_mid=R_mid,
                     include_package=include_package, joint_map_path=joint_map_path)
-    print("Joint map -> 3D-FE -> solder-fatigue map on a solver-neutral layout footprint")
+    print("Joint map -> 3D FE -> solder-fatigue map on a versioned layout footprint")
     print(f"  geometry source: {r['joint_source']} ({'explicit map' if r['joint_map_explicit'] else 'fallback'})")
     print(f"  geometry fidelity: {r['joint_geometry_fidelity']}")
     print(f"  design: {r['n_joints']} joints, footprint {r['extent'][0]:.0f}x{r['extent'][1]:.0f} um "
@@ -388,14 +367,6 @@ def _run_design(joint_shape="cylinder", R_mid=None, include_package=False, joint
     print("  => the 3D-FE reliability chain is driven by a versioned, provenance-labeled footprint,")
     print("     not an assumed L_D. The bundled coordinates are synthetic; caller-supplied")
     print("     package geometry and calibrated materials are required for predictive life.")
-    # Complementary stateful regular-block Anand BVP (nonuniform corner dW):
-    b = critical_joint_bvp_life(nx=2, ny=2, nz=2, ncyc=1, joint_map_path=joint_map_path)
-    print(f"  critical joint stateful Anand reference on a regular block "
-          f"({b['n_elem']} elems, traction-free lateral): "
-          f"corner dW peak/mean={b['gradient']:.2f} -> peak-based Nf={b['Nf_peak']:,.0f} cycles "
-          f"(vs uniform-proxy {Nf.min():,.0f}); the crack initiates at the corner.")
-
-
 def main(argv=None):
     import argparse
     parser = argparse.ArgumentParser(description="3D solder-joint geometry and fatigue analysis.")
@@ -441,13 +412,13 @@ def main(argv=None):
         element_name = "Hex8"
     gamma_fe = float(np.median(2.0 * np.abs(eps[:, 0, 2])))     # FE engineering shear (median)
     eps_eq = float(np.percentile(_equiv(eps), 95))             # near-peak equivalent strain
-    print("End-to-end 3D solder thermal-fatigue (gmsh joint -> 3D FE shear -> Anand -> Syed life)")
+    print("3D solder global-local screening demonstration (elastic FE -> material-point Anand -> Syed mapping)")
     print(f"  JEDEC dT={dT} K, dalpha={dalpha:.1e}, L_D={L_D}, "
           f"joint={M['shape']} R_pad={M['R_pad']} R_mid={M['R_mid']} h={h} | "
           f"{len(M['elems'])} {element_name}, min quality {mesh_quality:.1e}")
     print(f"  imposed DNP shift du={du:.4f} -> FE shear gamma={gamma_fe:.4f} vs du/h={gamma_dnp:.4f} "
           f"(rel {abs(gamma_fe-gamma_dnp)/gamma_dnp:.2e})")
-    # --- drive the validated SAC305 Anand cycle with the FE-resolved equivalent strain range ---
+    # Drive the checked SAC305 Anand material-point cycle with an FE-resolved strain range.
     dalpha_eff = eps_eq / dT                                    # equiv-strain range -> eff CTE
     cyc = thermal_cycle(SAC305, Tlo=-40.0, Thi=125.0, dalpha=dalpha_eff, ncyc=6)
     dW = cyc["dW_stab"]; Nf = 1.0 / (SYED_W * max(dW, 1e-30))
@@ -455,10 +426,10 @@ def main(argv=None):
     print(f"  Syed energy life N_f = 1/(W'*dW) = {Nf:,.0f} cycles  "
           f"(W'={SYED_W}/MPa; calibration-specific, one in-sample ±2x anchor)")
     if args.package:
-        print("  => conformal package geometry drives the validated Anand->Syed components; region")
+        print("  conformal package geometry drives the checked Anand->Syed component chain; region")
         print("     properties are representative sensitivity inputs, not a qualified package deck.")
     else:
-        print("  => a gmsh 3D solder joint drives the validated Anand->Syed component chain.")
+        print("  a gmsh 3D solder joint drives the checked Anand->Syed component chain.")
 
 
 if __name__ == "__main__":

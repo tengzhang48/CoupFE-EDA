@@ -212,6 +212,9 @@ def run(case_dir, spice, P_total, *, instance_power_W=None,
     p_inst_coupled = p_inst_iso.copy()
     pdn_joule_power = 0.0
     source_power = supply_power(V_iso, edges_iso)
+    converged = False
+    last_ir_change = float("inf")
+    last_temperature_change = float("inf")
     for it in range(1, maxit + 1):
         T_edge = np.where(edge_e >= 0, dT[mesh.elems[np.clip(edge_e, 0, ne - 1)]].mean(axis=1), 0.0)
         scale = 1.0 / (1.0 + alpha * T_edge)              # g_e(T)
@@ -233,14 +236,34 @@ def run(case_dir, spice, P_total, *, instance_power_W=None,
         s_pdn /= elem_area
         dT_new, _, _ = solve_field(mesh, c_elem, s_inst + s_pdn, {}, reaction_elem=rxn_elem)
         dT_relaxed = (1 - relax) * dT + relax * dT_new
+        last_temperature_change = float(
+            np.max(np.abs(dT_relaxed - dT)) / max(1.0, np.max(np.abs(dT_relaxed)))
+        )
         ir_new = float(Vsup - V[grid].min())
         d = abs(ir_new - ir_c) / max(ir_c, 1e-300)
+        last_ir_change = d
+        if not (
+            np.isfinite(d)
+            and np.isfinite(last_temperature_change)
+            and np.all(np.isfinite(V))
+            and np.all(np.isfinite(dT_relaxed))
+        ):
+            raise RuntimeError("chip electrothermal iteration produced non-finite values")
         dT = dT_relaxed
         ir_c = ir_new
         if verbose:
             print(f"  it{it:3d} peakdT={dT.max():.3f}K  IR={ir_c:.4e}V  dIR={d:.2e}")
-        if d < tol and it > 1:
+        if max(d, last_temperature_change) < tol and it > 1:
+            converged = True
             break
+
+    if not converged:
+        raise RuntimeError(
+            "chip electrothermal iteration did not converge: "
+            f"iterations={maxit}, relative_ir_change={last_ir_change:.6e}, "
+            f"relative_temperature_change={last_temperature_change:.6e}, "
+            f"tolerance={tol:.6e}"
+        )
 
     source_power = supply_power(V, edges)
     thermal_power = float(p_inst_coupled.sum() + pdn_joule_power)

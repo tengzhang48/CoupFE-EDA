@@ -191,7 +191,7 @@ def gate_thermal_gradient_cylinder():
 
 # ----------------------------------------------------------------------------
 # 2D axisymmetric (r-z) thermoelastic element (the element NAFEMS LE11 needs),
-# validated against the exact Lame pressurized thick-cylinder benchmark.
+# checked against the Lamé pressurized thick-cylinder reference.
 # ----------------------------------------------------------------------------
 from .fe import _shape as _q4_shape  # noqa: E402
 

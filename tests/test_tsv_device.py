@@ -127,11 +127,11 @@ def test_benchmark_manifests_hash_and_release_scorecard_fail_closed():
     }
     _raw, result = load_release_scorecard(ROOT / "benchmarks/tsv_release_scorecard.json")
     assert result == {
-        "release_label": "alpha_numerical_prototype",
-        "allowed_claim": "TSV numerical/device-screening prototype; experimental validation pending",
+        "evidence_status": "declared_tsv_evidence_incomplete",
+        "allowed_claim": "TSV numerical/device-screening demonstration; experimental evidence incomplete",
         "passed": 0,
         "blocked": 7,
         "failed": 0,
         "not_started": 3,
-        "release_ready": False,
+        "evidence_complete": False,
     }

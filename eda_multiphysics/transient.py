@@ -2,8 +2,8 @@
 
 1D slab, ends held at 0, initialized to the first thermal eigenmode sin(pi x/L): it
 decays purely exponentially with the EXACT rate lambda = (pi/L)^2 * (k/rho c) (single
-mode, no series truncation). Backward-Euler FE (consistent mass M + conduction K) must
-reproduce that decay rate -> validates transient conduction against an exact eigenvalue.
+mode, no series truncation). The checked comparison evaluates the backward-
+Euler FE result (consistent mass M + conduction K) against that eigenvalue.
 
 Run:  python -m eda_multiphysics.transient
 """

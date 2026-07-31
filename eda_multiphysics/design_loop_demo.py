@@ -1,11 +1,11 @@
-"""Phase 7 (solver-side proxy): hotspot -> reinforcement -> verified improvement.
+"""Synthetic design-loop example: hotspot -> reinforcement -> checked change.
 
-The full plan routes the modification back through OpenROAD (absent here), but the
-*decision and verification* are solver-side and fully demonstrable. We use the
+A possible extension would route the modification back through OpenROAD, which
+this example does not do. The current comparison is solver-side. We use the
 physical PDN scenario: a load draws a FIXED current through the grid; a locally
 under-provisioned power strap (reduced metal conductance) then causes both a
 larger IR drop and a Joule hotspot. "Reinforcing" the strap (widen / add vias =
-higher local conductance) is verified by re-running the coupled electrothermal
+higher local conductance) is evaluated by re-running the coupled electrothermal
 solve at the same delivered current.
 
 Run:  python -m eda_multiphysics.design_loop_demo
@@ -46,12 +46,12 @@ def main():
         print(f"  {tag:<26} peakT={r['peakT']:.5f}  hotspot x={_hotspot_x(m, r['T']):.3f}"
               f"  IRdrop={r['Vdrop']:.5f}  I={abs(r['current']):.3f}  iters={r['iters']}")
 
-    print("\nPhase-7 closed-loop electrothermal design modification (fixed current):")
+    print("\nSynthetic electrothermal design modification (fixed current):")
     line("C  baseline (weak strap)", base)
     line("D  reinforced strap", mod)
     dT = 100.0 * (mod["peakT"] - base["peakT"]) / base["peakT"]
     dV = 100.0 * (mod["Vdrop"] - base["Vdrop"]) / base["Vdrop"]
-    print(f"\n  VERIFIED IMPROVEMENT after reinforcement (same delivered current):")
+    print(f"\n  checked result after reinforcement (same delivered current):")
     print(f"    peak temperature : {base['peakT']:.5f} -> {mod['peakT']:.5f}  ({dT:+.2f}%)")
     print(f"    worst IR drop    : {base['Vdrop']:.5f} -> {mod['Vdrop']:.5f}  ({dV:+.2f}%)")
     improved = mod["peakT"] < base["peakT"] and mod["Vdrop"] < base["Vdrop"]

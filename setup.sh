@@ -18,7 +18,7 @@ EDA_ROOT="$(cd "$(dirname "$0")" && pwd)"
 COUPFE_URL="${COUPFE_URL:-https://github.com/tengzhang48/CoupFE.git}"
 COUPFE_BRANCH="${COUPFE_BRANCH:-main}"
 COUPFE_DIR="${COUPFE_DIR:-$EDA_ROOT/.deps/CoupFE}"
-COUPFE_REF="${COUPFE_REF:-933e497301ee3ddb23391b787726674f70b480c5}"
+COUPFE_REF="${COUPFE_REF:-454f73ce2de284262b214a2b37bd676c6aca3c0a}"
 
 if [ ! -d "$COUPFE_DIR/.git" ]; then
   if [ -e "$COUPFE_DIR" ]; then
@@ -38,7 +38,7 @@ else
 fi
 
 echo ">> verifying public branch $COUPFE_BRANCH contains $COUPFE_REF"
-git -C "$COUPFE_DIR" fetch origin \
+git -C "$COUPFE_DIR" fetch --force origin \
   "refs/heads/$COUPFE_BRANCH:refs/remotes/origin/$COUPFE_BRANCH"
 git -C "$COUPFE_DIR" cat-file -e "$COUPFE_REF^{commit}"
 if ! git -C "$COUPFE_DIR" merge-base --is-ancestor \
@@ -52,6 +52,10 @@ git -C "$COUPFE_DIR" checkout --detach "$COUPFE_REF"
 RESOLVED_REF="$(git -C "$COUPFE_DIR" rev-parse HEAD)"
 if [ "$RESOLVED_REF" != "$COUPFE_REF" ]; then
   echo "ERROR: resolved CoupFE commit '$RESOLVED_REF' != '$COUPFE_REF'" >&2
+  exit 2
+fi
+if [ -n "$(git -C "$COUPFE_DIR" status --porcelain=v1 --untracked-files=all)" ]; then
+  echo "ERROR: pinned CoupFE checkout is not clean: $COUPFE_DIR" >&2
   exit 2
 fi
 
@@ -69,8 +73,8 @@ PYTHONDONTWRITEBYTECODE=1 python "$EDA_ROOT/.github/scripts/check_runtime_core.p
 
 echo
 echo "Done. Verify the trust suite:"
-echo "    python -m eda_multiphysics.run        # standalone 53-gate harness, ~30 s"
-echo "    python -m pytest -q                   # default tier, including the 53 wrappers"
+echo "    python -m eda_multiphysics.run        # component/reference harness"
+echo "    python -m pytest -q                   # default tier, including harness wrappers"
 echo
 echo "Distributed PDN (optional; included by environment.yml):"
 echo "    mpirun -n 4 python -m eda_multiphysics.pdn_distributed 400 [--direct]"

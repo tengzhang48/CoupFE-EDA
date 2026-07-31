@@ -1,4 +1,4 @@
-"""Capstone: an end-to-end design -> reliability pipeline on a solver-neutral case.
+"""Composed integration demonstration on a versioned EDA-style case.
 
 Composes separately checked components into one automated flow that takes an
 EDA-style case and emits a reliability scorecard. The bundled default is a
@@ -45,7 +45,7 @@ DEFAULT_CASE = os.path.join(os.path.dirname(__file__), "cases", "synthetic_pdn")
 
 # Syed (ECTC 2004) energy-based SAC fatigue life: N_f = 1/(W' * dW_acc), dW in MPa(=MJ/m^3).
 # W'=0.0019 /MPa (hyperbolic-sine creep SAC; cross-checked range 0.0014-0.0019). The
-# energy density dW is the rigorous mesh-objective output; N_f is calibration-specific.
+# The material-point energy density dW and mapped N_f are calibration-specific.
 SYED_W = 0.0019
 
 
@@ -307,7 +307,7 @@ def run(case_dir=DEFAULT_CASE, spice=None, *, T_amb=25.0, Tcold=-40.0,
     if Thi <= Tcold:
         raise ValueError(f"solder cycle upper temperature {Thi:g} C must exceed Tcold {Tcold:g} C")
     cyc = thermal_cycle(SAC305, Tlo=Tcold, Thi=Thi, ncyc=ncyc)
-    dW = cyc["dW_stab"]                                # MJ/m^3 == MPa, mesh-objective
+    dW = cyc["dW_stab"]                                # MJ/m^3 == MPa, material-point model
     Nf_solder = 1.0 / (SYED_W * dW) if dW > 0 else np.inf
 
     # --- stage 5: electromigration on the analyzed PDN (hotter die -> worse EM) ---

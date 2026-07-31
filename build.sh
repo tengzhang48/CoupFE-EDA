@@ -13,14 +13,14 @@ set -euo pipefail
 EDA_ROOT="$(cd "$(dirname "$0")" && pwd)"
 COUPFE_URL="${COUPFE_URL:-https://github.com/tengzhang48/CoupFE.git}"
 COUPFE_BRANCH="${COUPFE_BRANCH:-main}"
-COUPFE_REF="${COUPFE_REF:-933e497301ee3ddb23391b787726674f70b480c5}"
+COUPFE_REF="${COUPFE_REF:-454f73ce2de284262b214a2b37bd676c6aca3c0a}"
 TAG="${TAG:-coupfe-eda}"
 RUN_TOOLCHAIN_TESTS="${RUN_TOOLCHAIN_TESTS:-0}"
 
 echo ">> checking public CoupFE branch: $COUPFE_URL ($COUPFE_BRANCH)"
 git ls-remote --exit-code "$COUPFE_URL" "refs/heads/$COUPFE_BRANCH" >/dev/null
 
-echo ">> docker build -t $TAG  (53-gate harness plus the full default pytest tier)"
+echo ">> docker build -t $TAG  (component/reference harness plus the default pytest tier)"
 EXTRA_ARGS=(
   --build-arg "COUPFE_URL=$COUPFE_URL"
   --build-arg "COUPFE_BRANCH=$COUPFE_BRANCH"

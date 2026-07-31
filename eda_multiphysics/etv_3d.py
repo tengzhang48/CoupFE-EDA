@@ -43,8 +43,19 @@ def _fieldsplit_solve(A, b, ndof):
     ksp.setUp()
     for sub in pc.getFieldSplitSubKSP():
         sub.setType("preonly"); sub.getPC().setType("gamg")
-    x = b.duplicate(); ksp.solve(b, x)
-    return x.getArray(), ksp.getIterationNumber()
+    x = b.duplicate()
+    ksp.solve(b, x)
+    reason = int(ksp.getConvergedReason())
+    iterations = ksp.getIterationNumber()
+    residual_norm = float(ksp.getResidualNorm())
+    dU = x.getArray().copy()
+    ksp.destroy()
+    if reason <= 0 or not np.all(np.isfinite(dU)):
+        raise RuntimeError(
+            "electrothermal FieldSplit solve failed: "
+            f"reason={reason}, iterations={iterations}, residual_norm={residual_norm:.6e}"
+        )
+    return dU, iterations
 
 
 def solve(n, props, V0=2.0, workdir=None, maxit=8):
@@ -76,7 +87,10 @@ def solve(n, props, V0=2.0, workdir=None, maxit=8):
         b = PETSc.Vec().createWithArray(-np.asarray(R), comm=PETSc.COMM_SELF)
         xbc = b.duplicate(); xbc.set(0.0)
         A.zeroRowsColumns(dr.astype(PETSc.IntType), diag=1.0, x=xbc, b=b)
-        dU, its = _fieldsplit_solve(A, b, ndof)
+        try:
+            dU, its = _fieldsplit_solve(A, b, ndof)
+        finally:
+            A.destroy()
         return dU, {"ksp_its": its}
 
     U, _n, info = coupled_newton([group], ndof, d, backend, maxit=maxit, tol=1e-11)
@@ -95,7 +109,7 @@ def main():
           f"last KSP {its} iters)")
     print(f"  self-heating: peak dT = {peak:.6f} vs sigma V0^2/8k = {exact:.6f}  "
           f"err {abs(peak - exact) / exact:.1e}  {'PASS' if abs(peak-exact)/exact < 2e-3 else 'CHECK'}")
-    print("  => the SAME coupled weak form, generated as Hex8 -> a real 3D element, validated.")
+    print("  the same coupled weak form is generated as Hex8 and checked on this 3D case.")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# Phase-2 exporter: OpenDB -> solver-neutral case files.
+# OpenDB exporter for the versioned CoupFE-EDA case files.
 #
 # Reads a placed+PDN OpenDB and writes:
 #   instances.csv  - per-instance eda_id, master, placement bbox (um), area

@@ -1,4 +1,4 @@
-"""Device-scale-dimension TSV screening preview with synthetic EDA-style sites."""
+"""Synthetic TSV-to-device screening and provenance demonstration."""
 from __future__ import annotations
 
 import argparse
@@ -49,6 +49,7 @@ def run():
     violations0 = sum(row.koz_violation for row in baseline)
     violations1 = sum(row.koz_violation for row in optimized)
     scorecard = {
+        "public_status": "DEMONSTRATION",
         "model_scope": "classical_lame_far_field_device_screening_proxy",
         "release_validation": False,
         "device_site_provenance": "synthetic_radial_angular_sampling",
@@ -67,9 +68,9 @@ def run():
         "violation_reduction": 1.0 - violations1 / max(violations0, 1),
         "peak_proxy_reduction": 1.0 - peak1 / max(peak0, 1.0e-30),
         "claim_boundary": (
-            "Demonstrates identity-preserving stress-to-device screening and a deterministic "
+            "Demonstrates identity-preserving stress-to-device mapping and a deterministic "
             "orientation action. It does not validate near-surface TSV stress, transistor delay, "
-            "or signoff KOZ."
+            "or a signoff keep-out zone."
         ),
     }
     return baseline, optimized, scorecard
@@ -105,8 +106,8 @@ def _write_svg(path, baseline, optimized, scorecard):
         '<rect width="100%" height="100%" fill="#091628"/>',
         '<style>text{font-family:Arial,sans-serif;fill:#dce7f5}.muted{fill:#92a4bb}'
         '.axis{stroke:#334965;stroke-width:1}.channel{stroke:#eef4fb;stroke-width:1.5}</style>',
-        '<text x="24" y="30" font-size="18" font-weight="bold">TSV-to-device back-annotation preview</text>',
-        '<text x="24" y="50" font-size="12" class="muted">10 µm TSV · 32 device sites · 5% mobility-proxy threshold · non-signoff stress preview</text>',
+        '<text x="24" y="30" font-size="18" font-weight="bold">Synthetic TSV-to-device back-annotation</text>',
+        '<text x="24" y="50" font-size="12" class="muted">10 µm TSV · synthetic device sites · 5% mobility-proxy threshold · demonstration</text>',
     ]
     for (cx, cy), title, rows in zip(centers, ("Baseline [100] channels", "Orientation-screening action"),
                                      (baseline, optimized)):
@@ -150,7 +151,7 @@ def main(argv=None):
     baseline, optimized, scorecard = run()
     if args.output_dir is not None:
         _write_outputs(args.output_dir, baseline, optimized, scorecard)
-    print("TSV screening preview (synthetic sites, device-scale dimensions, literature coefficients, proxy stress)")
+    print("TSV screening demonstration (synthetic sites, fixed geometry, cited coefficients, proxy stress)")
     print(json.dumps(scorecard, indent=2))
 
 

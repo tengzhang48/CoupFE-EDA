@@ -5,7 +5,7 @@ axisymmetric Python): a compiled **Hex8** element with displacement `u` (3 dof/n
 temperature `T` (1 dof/node) = 4 dof/node, the coupling tangent from complex step (no hand-coded
 Jacobian). The weak form mirrors CoupFE core's `examples/thermo_mechanics_quad8` (a compressible
 neo-Hookean solid with an isotropic thermal pressure -K*alpha*T and Fourier conduction), promoted
-to 3D for generated canonical geometries.
+to 3D for generated reference geometries.
 
 Closed-form oracles for this material (uniform temperature T = dT, reference T=0):
   * constrained block (u=0, F=I):    sigma = stress_PK1(I, dT) = -K*alpha*dT * I  (hydrostatic)
@@ -106,5 +106,5 @@ def free_expansion_lambda(dT, *, G=1.0, K=100.0, alpha=1.0e-3):
 if __name__ == "__main__":
     wd = os.path.join(os.path.dirname(__file__), "_tm_hex")
     mod = build_thermomech_kernel(wd, element="Hex8")
-    print("thermo-mechanical Hex8 kernel built + verified (codegen complex-step tangent).")
+    print("thermo-mechanical Hex8 kernel built and checked (codegen complex-step tangent).")
     print(f"  free-expansion stretch at dT=10: lambda = {free_expansion_lambda(10.0):.8f}")

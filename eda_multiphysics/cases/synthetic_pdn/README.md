@@ -1,7 +1,7 @@
 # Synthetic PDN integration fixture
 
 This case is a deterministic, project-authored 3×3 resistor grid used as the
-first simple placement → PDN → thermal → reliability demonstration without
+a small placement → PDN → thermal → reliability demonstration without
 bundling third-party design data. It starts exercising the intended interfaces;
 it is not a complete framework, real-chip benchmark, or signoff case.
 The next scientific milestone is validation against a lawfully shareable real
@@ -20,7 +20,7 @@ recomputes each load's `Vnode × I` heat and resistor loss so that the coupled
 thermal input continues to close to the same 9 mW source.
 All files are covered by the repository's Apache-2.0 license.
 
-The same solver-neutral interface accepts caller-supplied exports from
+The same versioned file interface accepts caller-supplied exports from
 [OpenROAD/OpenDB](https://openroad.readthedocs.io/en/latest/main/src/odb/README.html)
 and PDN networks emitted by
 [PDNSim `write_pg_spice`](https://openroad.readthedocs.io/en/latest/main/src/psm/README.html).

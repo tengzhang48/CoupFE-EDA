@@ -1,270 +1,238 @@
 # CoupFE-EDA
 
-Open, EDA-coupled **electro-thermo-mechanical multiphysics**, built on the
-[CoupFE](https://github.com/tengzhang48/CoupFE) operator contract.
+CoupFE-EDA is an experimental, CoupFE-based implementation for EDA-linked
+electrothermal and thermo-mechanical research. The current examples cover
+PDN/electrothermal handoffs, TSV stress, solder/package global-local studies,
+and design-object provenance. Evidence is limited to the tests, reference
+cases, and model scopes documented in this repository; this is not a signoff
+tool.
 
-**Niche and strength:** CoupFE-EDA is strongest as an EDA-aware, validation-first integration and
-local-reliability research platform—especially PDN/electrothermal handoffs, thermo-mechanical TSV
-stress, solder/package global-local analysis, and traceable design-object provenance. It is not a
-universal multiphysics package, package-CAD system, broad electromagnetic/CFD suite, or signoff tool.
+AI agents assisted with implementation, documentation, and test development.
+Public claims are defined by checked-in source, tests, cited references, and
+engineering review; agent output by itself is not evidence.
 
-The current architecture has **12 logical components implemented by 44 top-level Python modules**;
-the count and boundaries are defined in [`docs/COMPONENTS.md`](docs/COMPONENTS.md).
+The package consumes caller-supplied OpenROAD/OpenDB and PDNSim data through a
+versioned, file-based case format. A project-authored synthetic case keeps the
+integration path runnable without external design data. This repository shows
+one implementation built on CoupFE. Independent projects can use other finite
+element packages, coupling strategies, and data models; the checks here apply
+to this implementation and its stated inputs.
 
-This project couples caller-supplied OpenROAD/OpenDB and PDNSim data to a finite-element
-multiphysics solver for steady electrothermal power-delivery-network analysis, TSV
-thermomechanical stress, viscoplastic solder fatigue, electromigration, and more. A small
-project-authored synthetic case makes the integration path runnable without external design
-data. The trust suite validates the implemented numerical links against published or analytic
-oracles where available and checks other handoffs structurally. Those component checks
-do not provide an end-to-end device oracle; the experimental TSV-to-device claims
-remain blocked as described below.
+CoupFE-EDA is a downstream consumer of
+[CoupFE](https://github.com/tengzhang48/CoupFE). It uses the public operator
+contract (`residual`, `tangent`, `commit`, `newton_solve`, and
+`complex_step_tangent`) and does not modify CoupFE source. Mesh-aware adapters,
+including periodic face/node matching and relation construction, remain in the
+EDA package while generic affine constraints and finite-element operators remain
+in core.
 
-This release begins laying the **framework and foundation**: a solver-neutral case
-format, OpenROAD/OpenDB and PDNSim adapters, traceable object/provenance fields,
-multiphysics handoffs, and independently checked numerical components. The bundled
-synthetic case is the first simple, reproducible demonstration of that direction—not
-a finished framework or a substitute for a qualified real design.
+## Release scope
 
-It is a **downstream consumer of CoupFE**: CoupFE is a pinned dependency installed by
-`setup.sh`; *no CoupFE core file is modified here*. The entire suite is built on the public
-operator contract (`residual`/`tangent`/`commit`, `newton_solve`, `complex_step_tangent`).
-That clean separation is the point — CoupFE stays lean ("lightweight by omission"); this
-project grows independently.
+The public examples use four status labels:
 
-This repository shows **what one implementation can do now**. It is not a
-prescribed architecture or a proposed field-wide standard. Others can build
-entirely new EDA–multiphysics packages around different FEM solvers, coupling
-strategies, and data models. The tests and numerical claims here apply only to
-this CoupFE-based implementation.
+- **CHECKED** — exercised by a checked-in reference or invariant at the stated
+  model and resolution.
+- **DEMONSTRATION** — runnable integration whose composed output has no direct
+  device-level oracle.
+- **RESEARCH** — an available harness that still needs retained evidence on the
+  release revision before supporting a public result.
+- **WITHHELD** — removed from the public example/API surface, or not presented
+  as supported, until the stated blocker is resolved.
 
-**Release label:** experimental alpha research software. Public source availability is not a
-declaration that the TSV validation program is complete. The device-screening example remains a
-Lamé-proxy preview, the ten-category TSV scorecard is not green, and this is not a foundry or
-package-reliability signoff tool. See the
-[validation guide](docs/VALIDATION_GUIDE.md), [release scorecard](benchmarks/tsv_release_scorecard.json),
-and [third-party record](THIRD_PARTY.md).
+The main boundaries are:
 
-## Quick start (local conda)
+| Area | Status | Boundary |
+|---|---|---|
+| Analytic and component checks for PDN, heat transfer, electrothermal coupling, thermoelasticity, constitutive updates, and electromigration | **CHECKED** | Applies to the named equations, meshes, tolerances, and parameter sets |
+| Synthetic PDN-to-reliability pipeline, caller-data adapters, package geometry, and TSV-to-device screening | **DEMONSTRATION** | No bundled real-device/layout oracle or signoff claim |
+| Generated-geometry Hex8 and Tet4 paths | **CHECKED** | Tet4 is checked on generated box/cylinder/package geometry with the pinned Core revision; imported CAD and broader convergence studies remain open |
+| `etv_distributed_fs` serial-versus-rank path | **CHECKED** | Output agreement at size 24 with two and four ranks; no scaling or performance claim |
+| Other PETSc/MPI and scaling drivers | **RESEARCH** | Require retained current-revision rank output and environment records |
+| Plane-strain stateful multi-element `solder_joint_cycle` | **WITHHELD** | Removed because nonlinear increment convergence was not established |
+| Transient thermo-viscoplastic ETV FE Stage B | **WITHHELD** | Removed because nonlinear increment convergence was not established; steady electrothermal `etv_fe` and material-point `etv_solder` remain |
+| Multi-element 3D Anand solder BVP and its design-chain life transfer | **WITHHELD** | Removed because nonlinear increment convergence was not established; material-point, return-map, patch, and fully prescribed `prescribed_hex8_cycle` checks remain |
+
+See [EXAMPLES.md](EXAMPLES.md) and
+[examples/REFERENCES.md](examples/REFERENCES.md) for entry-point status and
+provenance.
+
+## Quick start
 
 ```bash
-conda env create -f environment.yml        # scientific + petsc4py/mpi4py + yosys + volare
+conda env create -f environment.yml
 conda activate coupfe-eda
-./setup.sh                                  # clones CoupFE + installs both (editable)
-python -m eda_multiphysics.run              # 53 trust gates (~32 s)
+./setup.sh
+python -m eda_multiphysics.run
+python -m pytest -q
 ```
 
-`setup.sh` clones the public CoupFE repository into the dedicated `.deps/CoupFE` checkout,
-verifies that public branch `main` contains the exact audited commit, installs that source
-path, and verifies the imported module location. Overrides are available through
-`COUPFE_URL` / `COUPFE_BRANCH` / `COUPFE_DIR` / `COUPFE_REF`. The environment carries the full
-open-EDA + MPI stack; OpenROAD itself is not on conda — install a compatible binary (the container does this
-for you, see below) or build from source.
+`setup.sh` clones or refreshes public CoupFE `main` in `.deps/CoupFE`, checks out
+and verifies commit `454f73ce2de284262b214a2b37bd676c6aca3c0a`, rejects a dirty
+dependency checkout, installs both packages in editable mode, and checks the
+import location. The source URL, branch, checkout directory, and commit can be
+set with `COUPFE_URL`, `COUPFE_BRANCH`, `COUPFE_DIR`, and `COUPFE_REF`; changing
+the commit requires a new qualification run.
 
-Periodic TSV mechanics requires pinned CoupFE core commit
-`933e497301ee3ddb23391b787726674f70b480c5`; `setup.sh` records it by default.
-That qualified Core release root is reachable from public `main`. The setup,
-container recipe, CI, and release checks all verify the exact revision rather
-than trusting a mutable branch tip or a name-only package dependency.
-The fast suite exercises the clean EDA periodic adapter, generic affine
-algebra, matching, and setup controls. See
-`docs/PERIODIC_MPC_STATUS.md` and the validation guide's
-periodic-MPC environment section before changing the dependency or reporting periodic results.
-The selected Core release root contains both generic affine MPC and native
-Tet4; the current EDA qualification uses that exact public revision.
+The default environment includes the scientific, mesh, MPI, and open-EDA Python
+dependencies. OpenROAD is installed separately or through the optional
+container.
 
-## Quick start (optional container)
+### Optional container
 
-Docker is optional and is not a source-release acceptance gate; the conda +
-`setup.sh` path above runs the complete qualification directly. The container
-recipe is a convenience for users who want one image containing the pinned/tested Precision
-Innovations Ubuntu 22.04 OpenROAD binary `2.0-17598` (2024-12-14), yosys, and the PETSc/MPI
-stack. The core commit and OpenROAD artifact digest are pinned; most conda-forge packages are a
-rolling compatible solve, so archive `conda list --explicit` when a byte-for-byte environment is
-required. The Dockerfile clones CoupFE over public HTTPS and verifies the same branch and commit:
+Docker is a convenience, not a source-release acceptance gate:
 
 ```bash
-./build.sh                                  # -> image; 53-gate harness plus default pytest tier
-docker run --rm -it coupfe-eda              # interactive shell with the whole toolchain
-docker run --rm coupfe-eda \
-    mpirun -n 4 python -m eda_multiphysics.pdn_distributed 400 --direct   # MPICH oversubscribes by default
-COUPFE_REF=<sha> ./build.sh                 # pin a specific CoupFE commit
+./build.sh
+docker run --rm -it coupfe-eda
+docker run --rm coupfe-eda python -m eda_multiphysics.run
 ```
 
-The default pytest tier includes wrappers for all 53 trust gates plus additional
-integration, CLI, and TSV tests. The container runs the standalone harness first and then that
-default tier, so these are overlapping checks rather than 147 independent tests.
+The image recipe pins the CoupFE commit and OpenROAD artifact digest. The
+conda-forge solve is rolling; record `conda list --explicit` when an exact
+environment record is needed. See [CONTAINER.md](CONTAINER.md).
 
-Full details — what's inside, build knobs, design decisions, verification evidence, and
-troubleshooting — are in **[CONTAINER.md](CONTAINER.md)**.
-The [release-evidence runbook](docs/RELEASE_EVIDENCE.md) defines the clean-root
-test/build record, retained logs and checksums, and the transient `dist/` policy.
+## What is included
 
-## The Trust Suite (53 Self-Contained Gates)
+### EDA and PDN handoffs
 
-`python -m eda_multiphysics.run` (or `pytest eda_multiphysics`) runs 53 gates
-covering published/analytic oracles, independent implementation comparisons,
-invariants, and interface contracts, with broken controls where they are
-meaningful — numpy+scipy+coupfe only, no OpenROAD/PETSc needed:
+- `eda_multiphysics/openroad/export_case.tcl` maps OpenDB objects into the
+  versioned case representation.
+- PDN networks can be read from caller-supplied PDNSim `write_pg_spice` output.
+- `case_thermal.py`, `electrothermal_chip.py`, and `chip_vtu.py` preserve source
+  identifiers and back-annotation fields across the handoff.
+- `reliability_pipeline.py` runs a deterministic synthetic IR → temperature →
+  stress → screening chain. Its graph voltage is checked against the fixture's
+  closed-form field, while later links rely on separate component checks. The
+  composed result is a demonstration.
 
-| domain | examples (oracle) |
-|---|---|
-| Electrical / PDN | conduction (Ohm); PDN-graph vs scipy; capacitance (ε·A/d) |
-| Thermal | steady (patch/parabolic); transient ((π/L)²α); thermal runaway (saddle-node); **h-convergence (2nd-order O(h²))** |
-| Electrothermal | Joule self-heating (σV0²/8k); coupled R(T) |
-| Thermomechanics | TSV (Lamé); bimetal (Timoshenko); cylinder (T&G); axisym (Lamé) |
-| Viscoplastic reliability | Anand saturation (SnPb); **SAC305 vs published Motalab Fig 3.10**; 2D and **3D Hex8** Anand return maps; **3D BVP corner-dW gradient**; Motalab 19 mm PBGA measured 4719-cycle case used as an **in-sample calibration anchor** (±2×), not independent validation; Darveaux/Syed; creep; electromigration (Black/Blech) |
+No ORFS GCD deck, PDK, generated design database, or raw OpenROAD output is
+bundled. The project-authored fixture and caller-data boundary are documented in
+[THIRD_PARTY.md](THIRD_PARTY.md).
 
-## Bigger demonstrations
+### Generated geometry and mechanics
 
-- **Capstone — design → reliability scorecard** (`reliability_pipeline.py`): one automated
-  chain on a deterministic, project-authored synthetic case — PDN IR → electrothermal
-  ΔT → TSV stress → SAC305 solder life → EM screen. The graph solve is checked against the
-  fixture's full closed-form voltage field; its per-instance `V×I` heat and resistor
-  loss close to source power during R(T) coupling. The remaining numerical stages
-  retain separate component gates. `python -m eda_multiphysics.reliability_pipeline`
-  prints the scorecard.
-  This is an integration demonstration, not real-design validation or signoff.
-- **Caller-supplied OpenROAD designs** (need the EDA toolchain — easiest via the container, which ships
-  the pinned/tested OpenROAD binary + yosys): `electrothermal_chip.py`, `chip_vtu.py` (full V–T–u
-  chain), `case_thermal.py`, and the Phase-7 PDN reinforcement. The adapter follows OpenDB's
-  [database interface](https://openroad.readthedocs.io/en/latest/main/src/odb/README.html), and
-  PDN networks can use
-  [`write_pg_spice`](https://openroad.readthedocs.io/en/latest/main/src/psm/README.html).
-  See `eda_multiphysics/RESULTS.md`.
-- **3D FE on generated device-relevant geometry, meshed by gmsh** (`mesh3d.py` + `tsv_3d.py`; need `gmsh`+`meshio`
-  and the gfortran toolchain): the compiled **Hex8** coupled element on canonical geometries — a
-  **cylindrical TSV** (heat-generation oracle), an **annular Cu/Si via** and a **layer/package
-  stack** (multi-material, one `ElementGroup` per material; composite-cylinder and 1D
-  series-resistance oracles). All-hex meshes from gmsh's subdivision algorithm — no hand-rolled
-  mesher.
-- **Generated-geometry linear-tet path** (`tet_element.py` + `tet_3d.py`): this Tet4 foundation
-  is intended for future imported CAD, while the repository currently qualifies generated
-  box/cylinder solids; the all-hex
-  subdivision is limited to qualified shapes, and a named STEP/BREP import adapter remains. A
-  **Tet4** coupled element comes from CoupFE core (CoupFE-EDA carries no consumer fallback).
-  The public Core pin supplies native `tet4`/`tet4r`, and the current 19-case toolchain tier
-  passes the Tet4 patch/self-heating and conformal-package gates. This qualifies the generated
-  shapes at the tested resolutions; a named STEP/BREP import adapter remains future work. See
-  `docs/TET_FEASIBILITY.md`.
-- **Thermo-mechanical stress on generated device-relevant geometry** (`thermomech_kernel.py`, `.thermomech_3d`,
-  `.thermomech_tsv`): a monolithic 3D **u+T** Hex8 element (complex-step coupling tangent) →
-  the **Cu/Si TSV thermal-mismatch stress**, validated vs the plane-strain composite-cylinder
-  closed form. A PCFIELDSPLIT u/T implementation with GAMG and a displacement rigid-body
-  near-null-space exists; its old timing and iteration table lacks retained raw/environment
-  evidence and is not a release performance claim.
-- **End-to-end 3D-FE solder fatigue** (`reliability_3d.py`) plus the **3D Hex8 Anand** element
-  (`anand_3d.py`): `anand_3d` stores the Anand state at Hex8 Gauss points and validates saturation,
-  full transient hardening (0.01% vs `integrate_uniaxial`), patch, and — as a **solved boundary-value
-  problem** on a regular cuboid reference mesh (`solder_joint_bvp_3d`, traction-free lateral
-  faces) — the **nonuniform corner-dW
-  gradient** where the crack initiates (`critical_joint_bvp_life` wires it into the design chain).
-  The Auburn 19 mm PBGA's **measured 4719-cycle** result is used as an
-  **in-sample calibration anchor**: the Darveaux/Motalab SAC305 model reproduces
-  it within the stated ±2× range, which is not independent validation.
-  **Geometry-driven**: `… reliability_3d design` prefers a versioned `joints.csv` map with stable
-  IDs, units, coordinate transform, and source provenance → each point's DNP → a per-joint fatigue
-  map. The bundled nine-point map is explicitly labeled as a project-authored **synthetic proxy**,
-  not a package bump export; missing maps use the labeled coordinate-decoding fallback.
-  The local elastic/global-local bridge now supports explicit **cylinder, barrel, and hourglass**
-  Gmsh profiles plus a conformal **solder/underfill/UBM/pad Tet4 package model**; the bare cylinder
-  remains the frozen oracle. See [`docs/GEOMETRY.md`](docs/GEOMETRY.md).
-- **TSV-to-device screening preview** (`tsv_device.py`, `examples/tsv_00_device_screening/`):
-  cubic (001)-Si rotation, the exact Raman stress-sum observable, published n/p piezoresistive
-  mobility mapping, stable source-object/device/TSV IDs, and a deterministic channel-orientation
-  action for a physically scaled 10 µm TSV case. CSV/JSON evidence and an SVG physical map are emitted.
-  A separate conformal blind Cu/oxide/anisotropic-Si Tet4 foundation now solves and samples the
-  exact Raman depth, but the preview retains its Lamé far-field proxy until mesh/domain convergence
-  passes. Experimental curvature/Raman validation and conservative transfer remain release-blocking.
-- **Distributed PETSc/MPI** (need `petsc4py`+`mpi4py` — `conda install -c conda-forge
-  petsc4py mpi4py`, which bundles superlu_dist): distributed PDN and coupled-solve drivers are
-  available. Historical 1M/5M-size and larger-rank timing tables are retained in
-  `eda_multiphysics/DISTRIBUTED.md`, but every performance claim is withheld until raw run
-  artifacts and environment records are retained on the final revisions.
+- `tsv_3d.py` exercises Hex8 electrothermal elements on generated cylinder,
+  annulus, and layer-stack meshes with named idealized references.
+- `tet_3d.py` exercises CoupFE's native Tet4 on generated box and cylinder
+  meshes. With Core `454f73c`, the checked scope includes the tested generated
+  shapes and conformal package case; imported STEP/BREP geometry and broader
+  mesh convergence remain research work.
+- `thermomech_3d.py` and `thermomech_tsv.py` cover generated thermo-mechanical
+  cases and compare selected observables with free-expansion,
+  constrained-block, or composite-cylinder references.
+- `mesh3d.py` provides generated TSV, layer-stack, profiled-joint, and conformal
+  package geometry helpers. It is not a package-CAD interface.
 
-## Layout
+### Solder and electro-thermo-viscoplastic studies
 
-```
-environment.yml            conda env (scientific + open-EDA + MPI stack)
-Dockerfile / build.sh      repeatable container recipe (pinned OpenROAD/core; rolling conda solve)
-CONTAINER.md               full container guide (build/run/design/troubleshooting)
-EXAMPLES.md                catalog of every runnable demo (grouped, with run commands)
-setup.sh                   clone CoupFE + install both (editable)
-pyproject.toml             package + optional extras ([distributed], [codegen], [dev])
-skills/SKILL.md            how to add a validated example/gate (read before extending)
-docs/                      documentation — see docs/README.md for the index
-  README.md                the doc index (reference / assessment / plans)
-  RELEASE_EVIDENCE.md      immutable private checkpoints, logs, and artifact checksums
-  theory.md · api.md · capabilities.md · lessons_learned.md   (reference)
-  VALIDATION_GUIDE.md · VALIDATION_ASSESSMENT.md · TET_FEASIBILITY.md   (validation)
-examples/REFERENCES.md     provenance and release status for every runnable entry point
-eda_multiphysics/          the package
-  run.py                   one-command trust-gate runner
-  gates.py                 the 53 gates (+ broken controls)
-  fe.py                    scalar-diffusion + helpers (thermal/electrical/electrostatic)
-  electrothermal*.py       coupled R(T)<->Joule<->thermal (+ caller-supplied cases)
-  tsv_stress / thermomech  thermoelasticity (TSV, bimetal, cylinder, 2D axisym)
-  anand / anand_3d / solder_joint / creep
-                           viscoplasticity + Darveaux/Syed fatigue
-  electromigration / capacitance / thermal_runaway / transient
-  pdn_graph / pdn_distributed    PDN electrical (serial + PETSc/MPI)
-  case_thermal.py                placement/power case -> thermal map + back-annotation
-  reliability_pipeline.py        CAPSTONE: synthetic integration scorecard; caller cases supported
-  etv_solder.py / etv_fe.py      electro-thermo-viscoplastic study (material-point + monolithic FE element)
-  etv_kernel / etv_distributed   compiled (codegen f2py) coupled element + distributed PETSc/MPI solve
-  etv_fieldsplit.py              FieldSplit (GAMG/field); performance record historical
-  etv_3d.py                      3D Hex8 coupled element (codegen) -- synthetic grid, validated
-  etv_distributed_fs.py          distributed FieldSplit correctness path; historical scaling record
-  mesh3d.py                      gmsh glue: via/stack/profiled bump + six-region Tet4 package
-  tet_element.py                 fail-closed lookup of core's native Tet4 configuration
-  tsv_3d.py                      3D Hex8 coupled element on gmsh device shapes (via/annulus/stack)
-  tet_3d.py                      Tet4 foundation on generated gmsh box/cylinder meshes
-  thermomech_kernel / _3d        monolithic 3D thermo-mechanical (u+T) Hex8 element + oracles
-  thermomech_tsv.py              Cu/Si TSV thermal-mismatch stress + FieldSplit/RBM research path
-  reliability_3d.py              end-to-end: gmsh solder joint -> 3D FE shear -> Anand -> Syed life
-  cases/synthetic_pdn/           project-authored deterministic integration fixture
-  openroad/export_case.tcl       OpenDB -> case exporter
-  RESULTS.md / DISTRIBUTED.md     detailed writeups
-  tests/                   pytest wrapper over the gates
+- `anand.py` and `anand_3d.py` provide material-point, return-map, transient,
+  affine-patch, and fully prescribed `prescribed_hex8_cycle` checks. The measured 4719-cycle
+  PBGA value is an in-sample calibration anchor, not independent validation.
+- `solder_joint.py` exposes the plane-strain return-map and elastic patch checks.
+  Its earlier stateful multi-element cycle is withheld as described above.
+- `etv_solder.py` retains the simplified material-point electro-thermal-
+  viscoplastic study.
+- `etv_fe.py` retains the steady electrothermal Quad4 implementation and its
+  analytic/staggered comparisons. The transient thermo-viscoplastic mesh stage
+  is withheld.
+- `reliability_3d.py` demonstrates global parametric joint/package geometry,
+  caller-supplied joint locations and provenance, and a calibration-specific
+  global-local workflow. Caller joint dimensions do not currently set the FE
+  mesh dimensions. The module does not expose the removed stateful
+  multi-element Anand BVP.
+
+### TSV-to-device screening
+
+`examples/tsv_00_device_screening/` maps a classical Lamé far-field stress proxy
+onto synthetic, stable device IDs using cited piezoresistance equations. It emits
+CSV, JSON, and SVG records. The result demonstrates identity-preserving mapping;
+it does not establish near-surface anisotropic stress, transistor delay, Cu
+protrusion, measured Raman agreement, or a signoff keep-out zone.
+
+### Distributed execution
+
+`etv_distributed_fs.py` includes the retained serial-versus-rank output check at
+size 24 with two and four ranks. The other PETSc/MPI modules and
+`scaling_bench.py` are research harnesses. Historical timing, speedup,
+efficiency, and large-problem records are not release evidence without raw
+output, machine inventory, and an environment record produced from the release
+revision.
+
+## Evidence and references
+
+The release checks are separated by dependency needs:
+
+```bash
+python -m eda_multiphysics.run       # self-contained component/reference gates
+python -m pytest -q                  # default regression tier
+python -m pytest -q -m toolchain     # compiled, mesh, and PETSc/MPI checks
 ```
 
-## Status
+Test totals are intentionally omitted here because they are regenerated during
+release qualification. A passing component check supports its named boundary;
+it does not qualify every composed workflow or caller dataset.
 
-Experimental alpha. The 53 gates are the trust layer; the design-oriented and distributed demos are
-documented in `eda_multiphysics/RESULTS.md` and `eda_multiphysics/DISTRIBUTED.md`. Experimental
-curvature/Raman validation, conservative global-local transfer, and a real OpenDB round trip are
-still release-blocking for the stronger TSV claims.
+The pytest toolchain tier does not run an OpenROAD/OpenDB or PDNSim round trip.
+Those adapters require a caller-provided tool installation and case-specific
+data.
 
-The project could help inform a reusable field interface if it matures, but it is
-currently only an example. The primary next milestone is **real-device
-validation**: a lawfully shareable device/layout and package geometry, traceable
-materials and loads, documented boundary conditions, retained raw solver evidence,
-and comparison with measured electrical/thermal/stress observables. A larger
-simulation alone will not satisfy that milestone.
+Useful records:
+
+- [Validation guide](docs/VALIDATION_GUIDE.md) — equations, references,
+  tolerances, and claim boundaries.
+- [Capabilities](docs/capabilities.md) — current implementation inventory.
+- [Geometry guide](docs/GEOMETRY.md) — mesh and package geometry scope.
+- [Periodic MPC status](docs/PERIODIC_MPC_STATUS.md) — ownership and dependency
+  boundary.
+- [Release evidence runbook](docs/RELEASE_EVIDENCE.md) — how to retain logs,
+  environments, and artifact checksums.
+- [Third-party record](THIRD_PARTY.md) — software, data, and attribution.
+
+The main open milestone is real-device validation: a lawfully shareable layout
+and package geometry, traceable materials and loads, documented boundary
+conditions, retained solver evidence, and comparison with measured electrical,
+thermal, or stress observables.
+
+## Repository map
+
+```text
+environment.yml            conda environment
+Dockerfile / build.sh      optional container recipe
+setup.sh                   pinned CoupFE checkout and editable install
+EXAMPLES.md                runnable example catalog
+examples/REFERENCES.md     entry-point provenance and status
+skills/SKILL.md            contributor workflow for adding a checked example
+docs/                      theory, API, geometry, validation, and release records
+eda_multiphysics/          package source and synthetic fixture
+tests/                     regression and toolchain tests
+```
+
+The package modules are grouped for navigation in
+[docs/COMPONENTS.md](docs/COMPONENTS.md); the grouping is organizational rather
+than a maturity score.
 
 ## Acknowledgments and attribution
 
-CoupFE-EDA builds on the work of the
-[OpenROAD](https://github.com/The-OpenROAD-Project/OpenROAD) community, including
+CoupFE-EDA uses the operator contract provided by
+[CoupFE](https://github.com/tengzhang48/CoupFE) and builds on interfaces provided
+by the [OpenROAD](https://github.com/The-OpenROAD-Project/OpenROAD) community,
+including
 [OpenDB](https://openroad.readthedocs.io/en/latest/main/src/odb/README.html) and
-[PDNSim](https://openroad.readthedocs.io/en/latest/main/src/psm/README.html), and on the
-solver contract provided by [CoupFE](https://github.com/tengzhang48/CoupFE).
-The external [ORFS GCD sanity design](https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts/tree/c9c22caf9bf9cfe46c5a4236c6ec7e7ae9863cc3/flow/designs/src/gcd)
-helped motivate the small-case workflow; its upstream README credits PyMTL and OpenCelerity.
-No GCD input decks, generated design files, or raw tool outputs are bundled here. Dated
-development documents retain explicitly labeled numerical summaries as historical context,
-not reproducible release evidence.
-
-The analytic, constitutive, and reliability models are credited to their original
-authors at the point of use and in the
-[validation guide](docs/VALIDATION_GUIDE.md) and
+[PDNSim](https://openroad.readthedocs.io/en/latest/main/src/psm/README.html).
+Analytic, constitutive, and reliability models are credited at the point of use,
+in the [validation guide](docs/VALIDATION_GUIDE.md), and in the
 [entry-point reference map](examples/REFERENCES.md). Third-party names identify
 their contributions and do not imply endorsement.
 
+The external
+[ORFS GCD sanity design](https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts/tree/c9c22caf9bf9cfe46c5a4236c6ec7e7ae9863cc3/flow/designs/src/gcd)
+helped illustrate an applicable flow. No GCD source, platform data, generated
+design file, or tool output is distributed here.
+
 ## License and third-party notices
 
-Code, tests, schemas, and configuration are Apache-2.0 licensed under [LICENSE](LICENSE).
-Project-authored prose and figures are CC-BY-4.0 under [the documentation license](docs/LICENSE.md).
-The bundled synthetic fixture's generator, assumptions, hashes, and first-party provenance are
-stored beside it. OpenROAD's container notice and the boundary for caller-supplied designs are
-documented in [NOTICE](NOTICE), [THIRD_PARTY.md](THIRD_PARTY.md), and [LICENSES/](LICENSES/).
+Code, tests, schemas, and configuration are Apache-2.0 licensed under
+[LICENSE](LICENSE). Project-authored prose and figures are CC-BY-4.0 under the
+[documentation license](docs/LICENSE.md). OpenROAD's container notice and the
+boundary for caller-supplied designs are documented in [NOTICE](NOTICE),
+[THIRD_PARTY.md](THIRD_PARTY.md), and [LICENSES/](LICENSES/).

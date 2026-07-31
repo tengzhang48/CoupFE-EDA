@@ -93,9 +93,9 @@ def main():
     (with the venv bin on PATH)."""
     import tempfile
     import numpy as np
-    import scipy.sparse.linalg as spla
-    from coupfe import ElementGroup, assemble_residual, assemble_tangent
+    from coupfe import ElementGroup
     from coupfe.runtime.compiled_element import CompiledElement
+    from ._coupled_solve import coupled_newton, direct_linsolve
     with tempfile.TemporaryDirectory() as wd:
         mod = build_et_kernel(wd, sigma0=3.0, alpha=0.0, k=1.5)
         n, V0 = 24, 2.0
@@ -114,19 +114,19 @@ def main():
                 d[2 * kk] = 0.0; d[2 * kk + 1] = 0.0
             if abs(nodes[kk, 0] - 1) < 1e-9:
                 d[2 * kk] = V0; d[2 * kk + 1] = 0.0
-        drows = np.array(sorted(d)); dvals = np.array([d[i] for i in drows])
-        U = np.zeros(ndof)
-        for _ in range(3):
-            U[drows] = dvals
-            R, _ = assemble_residual([group], U, None, 1.0, 1.0, ndof); R[drows] = 0.0
-            K = assemble_tangent([group], U, None, 1.0, 1.0, ndof).tolil()
-            for r in drows:
-                K.rows[r] = [r]; K.data[r] = [1.0]
-            U = U + spla.spsolve(K.tocsr(), -R)
+        U, _n, _info = coupled_newton(
+            [group], ndof, d, direct_linsolve, maxit=8, tol=1e-11
+        )
         peak, exact = U[1::2].max(), 3.0 * V0 ** 2 / (8 * 1.5)
+        relative_error = abs(peak - exact) / exact
+        if not np.isfinite(relative_error) or relative_error >= 2e-3:
+            raise RuntimeError(
+                "compiled electrothermal self-heating comparison failed: "
+                f"relative_error={relative_error:.6e}, tolerance=2.0e-3"
+            )
         print("Compiled electro-thermal Q4 kernel (codegen -> f2py -> batched assembly)")
         print(f"  self-heating: peak dT = {peak:.6f} vs sigma V0^2/8k = {exact:.6f}  "
-              f"err {abs(peak - exact) / exact:.1e}  (no Python element loop)")
+              f"err {relative_error:.1e}  PASS (no Python element loop)")
 
 
 if __name__ == "__main__":
