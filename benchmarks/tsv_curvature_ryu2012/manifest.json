@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "tsv_curvature_ryu2012",
+  "title": "Stabilized curvature of periodic blind Cu TSV arrays",
+  "source": {
+    "citation": "S.-K. Ryu et al., Applied Physics Letters 100, 041901 (2012)",
+    "doi": "10.1063/1.3678020",
+    "locator": "stabilized cooling and subsequent thermal-cycle branches"
+  },
+  "calibration_role": "calibration",
+  "data_status": "definition_only",
+  "geometry": {
+    "via_diameter_um": 10.0,
+    "via_depth_um": 55.0,
+    "wafer_thickness_um": 700.0,
+    "pitch_110_um": 40.0,
+    "pitch_1-10_um": 50.0,
+    "beam_width_mm": 5.0,
+    "beam_length_mm": 50.0
+  },
+  "thermal_history": {
+    "branch": "stabilized linear cooling/subsequent cycles only",
+    "room_temperature_C": 30.0,
+    "reference_temperature_C": [100.0, 300.0]
+  },
+  "coordinate_convention": "(001) Si; pitch axes [110] and [1-10]; beam and reference specimen must match the selected branch",
+  "quantities": [
+    {
+      "name": "zero_curvature_temperature_specimen_A",
+      "value": 100.0,
+      "unit": "degC",
+      "uncertainty": {"type": "paper_approximation", "value": null},
+      "use": "calibration input or held-out prediction, never both"
+    },
+    {
+      "name": "stabilized_curvature_curve",
+      "value": "digitization_pending",
+      "unit": "1/m",
+      "uncertainty": {"type": "digitization_pending", "value": null},
+      "use": "release-blocking NRMSE and slope comparison"
+    }
+  ],
+  "claim_boundary": "No global experimental-validation claim until stabilized branches are digitized with uncertainty and the reference-state role is frozen.",
+  "blocked_reason": "Curve digitization and uncertainty are not yet frozen; this manifest is a benchmark definition only.",
+  "manifest_sha256": "849c826679338ef8597e1ac8c2a1aa52b71714443c3a3523945b8cc4bcf36d39"
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "input_role": "provenance_record_for_constants_implemented_in_eda_multiphysics.tsv_device; not_read_by_run.py",
+  "silicon": {
+    "orientation": "(001)",
+    "cubic_stiffness_GPa": {"C11": 166.2, "C12": 64.4, "C44": 79.8},
+    "cte_per_K": 2.3e-6,
+    "source": "Ryu et al. 2012, doi:10.1109/TDMR.2012.2194784"
+  },
+  "copper": {
+    "youngs_modulus_GPa": 110.0,
+    "poisson_ratio": 0.35,
+    "cte_per_K": 17.0e-6,
+    "source": "Ryu et al. 2012, doi:10.1109/TDMR.2012.2194784"
+  },
+  "piezoresistance_1e-11_Pa-1": {
+    "n": {"pi11": -102.2, "pi12": 53.7, "pi44": -13.6},
+    "p": {"pi11": 6.6, "pi12": -1.1, "pi44": 138.1},
+    "source": "Ryu et al. 2012, Table I"
+  },
+  "qualification": "published_literature_model"
+}

@@ -1,0 +1,25 @@
+__pycache__/
+*.pyc
+*.for
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+.env/
+env/
+.deps/
+_coupfe_src/
+_etk*/
+*.so
+meson*.build
+.mesonpy*
+_tm_hex/
+# LaTeX intermediate files; retain the authored .tex and rendered .pdf deliverables.
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+!eda_multiphysics/templates/
+!eda_multiphysics/templates/*.for

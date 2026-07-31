@@ -1,0 +1,40 @@
+# Conda environment for CoupFE-EDA — the supported scientific + open-EDA + MPI recipe.
+# Python is pinned; most conda-forge packages intentionally track the current compatible solve.
+# Record `conda list --explicit` (or add a conda-lock file) for byte-for-byte reproduction.
+#
+# Used both for local setup and inside the container (Dockerfile). This env is meant to run the
+# WHOLE test surface, so CI can reproduce it in one command:
+#   * fast suite (53 gates)      — numpy / scipy / sympy only
+#   * toolchain tier (19 cases)  — needs gmsh + a Fortran/C compiler + meson + ninja (f2py compiles
+#                                  the codegen element kernels) and petsc4py + mpi4py
+#   * EDA/toolchain demos        — yosys (OpenROAD itself is a prebuilt binary, added by the Dockerfile)
+#
+#   conda env create -f environment.yml
+#   conda activate coupfe-eda
+#   ./setup.sh                                   # clone Core; install EDA + dev/release tools
+#   python -m eda_multiphysics.run               # 53 fast gates
+#   pytest -m toolchain                          # 19 toolchain cases (compiler + gmsh + PETSc/MPI)
+#
+name: coupfe-eda
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - sympy
+  - pytest
+  - pip
+  # --- distributed / MPI (conda-forge petsc4py bundles superlu_dist / MUMPS / hypre) ---
+  - petsc4py
+  - mpi4py
+  # --- compiled 3D / thermo-mechanical toolchain (needed by `pytest -m toolchain`) ---
+  - gmsh                # 3D meshing (via / annulus / stack / all-tet); provides the `gmsh` Python API
+  - meshio              # mesh I/O
+  - compilers           # c / cxx / fortran (gfortran) — f2py compiles the codegen element kernels
+  - meson               # f2py build backend (f2py invokes `meson` as a command; keep the env bin on PATH)
+  - ninja
+  # --- open EDA front-end (recent; OpenROAD installed separately as a prebuilt binary) ---
+  - yosys
+  - pip:
+    - volare        # SKY130 / GF180 open-PDK manager

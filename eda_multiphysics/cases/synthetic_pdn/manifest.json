@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "design": "synthetic_pdn",
+  "dbu_per_micron": 1000,
+  "units": "micron",
+  "n_instances": 9,
+  "die_um": [
+    0.0,
+    0.0,
+    100.0,
+    100.0
+  ],
+  "core_um": [
+    10.0,
+    10.0,
+    90.0,
+    90.0
+  ],
+  "provenance": {
+    "source_kind": "project_authored_synthetic_data",
+    "origin": "project_authored_synthetic_fixture",
+    "copyright": "2026 Teng Zhang and CoupMech Lab",
+    "license": "Apache-2.0",
+    "generator": "generate_case.py",
+    "randomness": "none",
+    "third_party_design_data": false,
+    "purpose": "Deterministic integration and regression example; not real-design validation."
+  },
+  "artifact_sha256": {
+    "instance_power.csv": "dcd1057ac3e9e32151163c72b6e178b52abee0fa723281b5802d6ecfd0c43a3a",
+    "instance_power.meta.json": "6e2576b38fe4cb9a31179ae9a905e1347ea6fbfab96938a7c7f03b5525cf0374",
+    "instances.csv": "b88a84e7d8490e0188beef7e1bcca1499d85ad60548fc41a5248acb892dae481",
+    "joints.csv": "4e42c88f0b73708cbc6788ae21743a56582d5d5826470ca8a0d221d1a2afdf11",
+    "joints.meta.json": "cdbf3198eb649fa4538a4d104759614289c7ef62444c4863fef67ff4529e0487",
+    "pdn_vdd.sp": "2db55275b4558c1a6a0d27744e4d1f3553197f431047af628f933b5cec664b93",
+    "reference_vdd_nodes.csv": "b9cccd10a875bb8a5dc2eba7b7b30f05d7a20e5c7885dc190db0a26d0cbdd4c6",
+    "reference_vdd_nodes.meta.json": "5a6ec5493354810f94c843df549d257a17ce702ee2e96c502c5e6187b9f7cf2d"
+  }
+}

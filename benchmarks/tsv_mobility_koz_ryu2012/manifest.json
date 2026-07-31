@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "tsv_mobility_koz_ryu2012",
+  "title": "Literature-model TSV mobility and keep-out-zone mapping",
+  "source": {
+    "citation": "S.-K. Ryu et al., IEEE Transactions on Device and Materials Reliability 12, 255-262 (2012)",
+    "doi": "10.1109/TDMR.2012.2194784",
+    "locator": "Eq. (1), Table I, Eqs. (8)-(16), Figs. 6-10"
+  },
+  "calibration_role": "model_verification",
+  "data_status": "frozen",
+  "geometry": {
+    "isolated_via_diameter_um": 10.0,
+    "isolated_via_height_um": 200.0,
+    "array_pitch_to_diameter": 3.0,
+    "wafer_orientation": "(001)"
+  },
+  "thermal_history": {"deltaT_C": -250.0, "branch": "linear thermoelastic literature model"},
+  "coordinate_convention": "[100]=0 deg, [010]=90 deg, [110]=45 deg, [1-10]=-45 deg on (001) Si",
+  "quantities": [
+    {
+      "name": "n_type_piezoresistance_pi11_pi12_pi44",
+      "value": [-102.2, 53.7, -13.6],
+      "unit": "1e-11/Pa",
+      "uncertainty": {"type": "published_table", "value": null},
+      "use": "exact coefficient/unit and rotation tests"
+    },
+    {
+      "name": "p_type_piezoresistance_pi11_pi12_pi44",
+      "value": [6.6, -1.1, 138.1],
+      "unit": "1e-11/Pa",
+      "uncertainty": {"type": "published_table", "value": null},
+      "use": "exact coefficient/unit and rotation tests"
+    },
+    {
+      "name": "isolated_n100_max_mobility_change",
+      "value": 0.61,
+      "unit": "fraction",
+      "uncertainty": {"type": "paper_approximation", "value": null},
+      "use": "contour-level verification after matching the full stated model"
+    },
+    {
+      "name": "isolated_p100_max_mobility_change",
+      "value": "below_0.05",
+      "unit": "fraction",
+      "uncertainty": {"type": "qualitative_threshold", "value": null},
+      "use": "negative-control topology/threshold gate"
+    },
+    {
+      "name": "isolated_n110_max_mobility_change",
+      "value": "below_0.05",
+      "unit": "fraction",
+      "uncertainty": {"type": "qualitative_threshold", "value": null},
+      "use": "rotation/threshold gate"
+    },
+    {
+      "name": "isolated_p110_max_mobility_change",
+      "value": 0.63,
+      "unit": "fraction",
+      "uncertainty": {"type": "paper_approximation", "value": null},
+      "use": "contour-level verification after matching the full stated model"
+    }
+  ],
+  "claim_boundary": "This reproduces a published piezoresistive model, not an independent transistor or delay experiment. The plan's unsupported 67.94% and 3.45% values are not release oracles.",
+  "manifest_sha256": "cebaa2dad5ce51422358711631dd43114c95a76eaf03b9e58553a070679ca322"
+}

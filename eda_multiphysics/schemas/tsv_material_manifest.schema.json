@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coupfe-eda.local/schemas/tsv_material_manifest.schema.json",
+  "title": "CoupFE-EDA TSV material manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest_id", "qualification", "materials", "thermal_history"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "manifest_id": {"type": "string", "minLength": 1},
+    "qualification": {"enum": ["illustrative_public", "calibrated_research", "foundry_qualified"]},
+    "materials": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["model", "properties", "source", "uncertainty"]
+      }
+    },
+    "thermal_history": {
+      "type": "object",
+      "required": ["stress_free_temperature_C", "analysis_temperature_C", "branch"]
+    }
+  }
+}

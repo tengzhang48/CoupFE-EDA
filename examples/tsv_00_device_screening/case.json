@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "case_id": "tsv_00_device_screening",
+  "input_role": "descriptive_record_of_values_currently_fixed_in_run.py",
+  "model_scope": "classical_lame_far_field_device_screening_proxy",
+  "wafer_orientation": "(001)",
+  "tsv": {
+    "id": "TSV_0001",
+    "center_um": [0.0, 0.0],
+    "diameter_um": 10.0,
+    "thermal_load_C": -250.0
+  },
+  "devices": {
+    "count": 32,
+    "provenance": "synthetic radial/angular sampling for an integration regression; not an extracted layout",
+    "radial_locations_um": [7.5, 10.0, 15.0, 22.0],
+    "angular_locations_degrees": [15.0, 60.0, 105.0, 150.0, 195.0, 240.0, 285.0, 330.0],
+    "carriers": ["n", "p"],
+    "baseline_channel_degrees": 0.0,
+    "allowed_action_degrees": [0.0, 45.0, -45.0]
+  },
+  "koz_threshold": 0.05,
+  "koz_threshold_runtime_configurable": false,
+  "release_validation": false
+}

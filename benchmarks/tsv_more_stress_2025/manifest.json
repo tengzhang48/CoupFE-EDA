@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "tsv_more_stress_2025",
+  "title": "Independent MORE-Stress reduced-array comparison",
+  "source": {
+    "citation": "T. Zhu et al., MORE-Stress, DATE 2025 / arXiv:2411.12690",
+    "doi": "10.48550/arXiv.2411.12690",
+    "locator": "reported ANSYS comparisons and open implementation"
+  },
+  "calibration_role": "external_comparison",
+  "data_status": "blocked",
+  "geometry": {"canonical_case": "to_be_matched_to_public_MORE-Stress_case"},
+  "thermal_history": {"definition": "to_be_frozen_before_external_run"},
+  "coordinate_convention": "must be reconciled with the selected MORE-Stress public example",
+  "quantities": [
+    {
+      "name": "reported_stress_error_upper_bound",
+      "value": 0.01,
+      "unit": "relative",
+      "uncertainty": {"type": "paper_claim", "value": null},
+      "use": "context only; not a CoupFE-EDA result"
+    },
+    {
+      "name": "coupfe_vs_more_stress_case",
+      "value": "external_run_pending",
+      "unit": "relative_error",
+      "uncertainty": {"type": "not_run", "value": null},
+      "use": "v0.5 independent-code gate"
+    }
+  ],
+  "claim_boundary": "No independent-code comparison claim until the same public case is run and the exact input/output mapping is archived.",
+  "blocked_reason": "MORE-Stress has not been installed or run in this repository.",
+  "manifest_sha256": "f762a705d58a74c8522f4e22f1da6ff399ee9874f3d55124052c1fda497380c6"
+}

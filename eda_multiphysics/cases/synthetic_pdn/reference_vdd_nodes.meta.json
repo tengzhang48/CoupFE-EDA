@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "reference_source": "closed_form_symmetric_resistor_grid",
+  "pdn_spice_sha256": "2db55275b4558c1a6a0d27744e4d1f3553197f431047af628f933b5cec664b93",
+  "supply_voltage_V": 1.0,
+  "worst_ir_drop_V": 0.00025,
+  "total_source_power_W": 0.009,
+  "total_load_power_W": 0.0089982,
+  "total_grid_loss_W": 1.8e-06,
+  "derivation": "By symmetry, edge nodes are Vdd-2IR and corner nodes are Vdd-(5/2)IR for this 3x3 grid."
+}

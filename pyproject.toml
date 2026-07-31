@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coupfe-eda"
+version = "0.1.0"
+description = "Open EDA-coupled electro-thermo-mechanical multiphysics, built on CoupFE"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "CoupMech Lab" }]
+license = "Apache-2.0 AND CC-BY-4.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY.md", "docs/LICENSE.md", "LICENSES/*.txt"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = ["numpy>=1.21", "scipy>=1.7"]
+# CoupFE is intentionally NOT a name-only package dependency. `setup.sh` clones the
+# documented public branch, verifies the exact audited commit, installs that path, and
+# verifies the import location. Do not add bare `coupfe` here: it could resolve an unrelated
+# project from a package index.
+
+[project.urls]
+Homepage = "https://github.com/tengzhang48/CoupFE-EDA"
+Repository = "https://github.com/tengzhang48/CoupFE-EDA"
+Documentation = "https://github.com/tengzhang48/CoupFE-EDA/tree/main/docs"
+Issues = "https://github.com/tengzhang48/CoupFE-EDA/issues"
+
+[project.optional-dependencies]
+distributed = ["petsc4py", "mpi4py"]   # PETSc/MPI; conda-forge petsc4py bundles superlu_dist
+codegen = ["sympy"]                     # coupfe weak-form -> Fortran (build-time)
+mesh = ["gmsh", "meshio"]               # 3D real-geometry meshing (mesh3d/tsv_3d); all-hex via gmsh
+dev = ["pytest>=7", "build>=1", "twine>=5"]
+
+[tool.setuptools.packages.find]
+include = ["eda_multiphysics*"]
+
+[tool.setuptools.package-data]
+"eda_multiphysics.openroad" = ["*.tcl"]
+"eda_multiphysics" = [
+    "cases/**/*.csv",
+    "cases/**/*.json",
+    "cases/**/*.md",
+    "cases/**/*.py",
+    "cases/**/*.sp",
+    "schemas/*.json",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["eda_multiphysics/tests", "tests"]
+# Toolchain tests (gmsh + petsc4py + gfortran, ~min each) are EXCLUDED by default so a bare
+# `pytest` stays fast; opt in with `pytest -m toolchain` (the trailing -m overrides this one).
+addopts = "-m 'not toolchain'"
+markers = [
+    "toolchain: regression tests for the 3D/thermo-mechanical/reliability toolchain (gmsh + petsc4py + gfortran)",
+]

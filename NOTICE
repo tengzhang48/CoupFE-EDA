@@ -1,0 +1,21 @@
+CoupFE-EDA
+Copyright 2026 Teng Zhang and CoupMech Lab
+
+CoupFE-EDA code, tests, schemas, configuration, and the bundled synthetic PDN
+fixture are licensed under the Apache License, Version 2.0. Project-authored
+documentation and figures are licensed under Creative Commons Attribution 4.0
+International. See docs/LICENSE.md for the exact scope.
+
+The bundled `synthetic_pdn` fixture is project-authored and contains no
+third-party RTL, PDK, platform, OpenROAD database, PDNSim output, or
+GCD-derived data. It is an integration/regression case, not real-design
+validation.
+
+The optional container recipe installs the pinned OpenROAD binary at revision
+a008522d8. Its retained BSD 3-Clause notice is:
+Copyright (c) 2018-2023, The Regents of the University of California
+The complete license is in LICENSES/OpenROAD-BSD-3-Clause.txt.
+
+Names and trademarks are used only to identify upstream projects. No
+endorsement is implied. See THIRD_PARTY.md for the external-tool and
+caller-supplied-data boundary.

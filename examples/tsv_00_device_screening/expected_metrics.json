@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "input_role": "regression_oracle_read_by_tests/test_tsv_device.py; not_read_by_run.py",
+  "n_devices": 32,
+  "baseline_violations": 12,
+  "optimized_violations": 0,
+  "baseline_peak_abs_mobility_change": 0.23598843548567472,
+  "optimized_peak_abs_mobility_change": 0.011885648618332287,
+  "tolerance": {"absolute": 1e-12},
+  "claim_boundary": "Deterministic integration regression only; not experimental TSV validation."
+}

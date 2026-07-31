@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coupfe-eda.local/schemas/physical_scene_tsv.schema.json",
+  "title": "CoupFE-EDA TSV physical scene",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scene_id", "coordinate_system", "wafer", "tsvs", "devices"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "scene_id": {"type": "string", "minLength": 1},
+    "coordinate_system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["length_unit", "frame", "transform_to_die_um"],
+      "properties": {
+        "length_unit": {"enum": ["nm", "um", "mm", "m"]},
+        "frame": {"type": "string", "minLength": 1},
+        "transform_to_die_um": {
+          "type": "object",
+          "required": ["matrix", "offset_um"],
+          "properties": {
+            "matrix": {"type": "array", "minItems": 3, "maxItems": 3},
+            "offset_um": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}}
+          }
+        }
+      }
+    },
+    "wafer": {
+      "type": "object",
+      "required": ["surface_normal", "crystal_to_global", "device_layer_depth_um"]
+    },
+    "tsvs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["tsv_id", "center", "diameter", "depth", "array_id", "geometry_fidelity"]
+      }
+    },
+    "devices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["device_id", "center", "carrier", "channel_degrees"]
+      }
+    }
+  }
+}

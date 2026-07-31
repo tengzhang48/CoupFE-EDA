@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "total_power_W": 0.0089982,
+  "total_power_provenance": "project_authored_synthetic_scenario",
+  "instance_power_model": "closed_form_dc_load_power",
+  "description": "Per-instance P=V*I from the fixture's closed-form node voltages and nine 1 mA loads; not an EDA-tool power report."
+}

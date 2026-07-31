@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "coordinate_unit": "micron",
+  "dimension_unit": "micron",
+  "coordinate_frame": "synthetic_die",
+  "source": "project_authored_synthetic_joint_map",
+  "geometry_fidelity": "proxy",
+  "source_description": "Synthetic 3x3 coordinates for exercising the joint-map API; not package or bump data.",
+  "transform_to_die_um": {
+    "matrix": [
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "offset_um": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "neutral_point_um": [
+    50.0,
+    50.0,
+    0.0
+  ]
+}

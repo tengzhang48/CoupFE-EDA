@@ -1,0 +1,39 @@
+name: fast-ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  fast:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      COUPFE_URL: https://github.com/tengzhang48/CoupFE.git
+      COUPFE_BRANCH: main
+      COUPFE_REF: 933e497301ee3ddb23391b787726674f70b480c5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install exact CoupFE source and CoupFE-EDA
+        run: |
+          python -m pip install --upgrade pip
+          ./setup.sh
+          python -m pip check
+      - name: Run standalone 53-gate trust harness
+        run: python -m eda_multiphysics.run
+      - name: Run default pytest tier (includes the 53 gate wrappers)
+        run: python -m pytest -q
+      - name: Build, smoke-install, and inspect public release artifacts
+        run: |
+          python -m build --sdist
+          python -m pip wheel --no-deps --wheel-dir dist dist/*.tar.gz
+          python -m twine check --strict dist/*
+          python .github/scripts/smoke_wheel.py dist/*.whl
+          python .github/scripts/check_release_artifacts.py dist
