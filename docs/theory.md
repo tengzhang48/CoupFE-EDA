@@ -132,10 +132,11 @@ saturation relation and selected digitized values from Motalab, and compare the
 three-dimensional return map with the one-dimensional transient.
 
 `prescribed_hex8_cycle` prescribes all boundary displacements of one Hex8 and
-exercises the state/commit path. It does not solve a multi-element joint
-boundary-value problem. A previously explored stateful plane-strain/transient
-FE extension is absent because its increments did not meet the stated
-convergence criterion.
+exercises the state/commit path. `solder_joint_cycle` and
+`solder_joint_bvp_3d` separately solve idealized multi-element blocks, while
+`etv_fe.thermoviscoplastic_cycle` couples a lumped temperature model to the
+spatial plane-strain mechanics. These are example problems, not qualified
+package geometries or predictive-life validations.
 
 ## Reliability mappings
 
@@ -171,15 +172,16 @@ real-device claim.
 The examples use structured Quad4/Hex8 elements and Gmsh-generated Hex8/Tet4
 meshes. Generated coupled kernels use CoupFE weak-form/code-generation support.
 Smooth element residuals can use complex-step differentiation for tangent
-construction. Anand return maps contain nonsmooth/root-finding operations and
-therefore use their specified elastic or modified-Newton tangent path.
+construction. Anand return maps contain nonsmooth/root-finding operations, so
+the stateful examples use a central-difference material tangent of the return
+map rather than complex-step differentiation.
 
 EDA operators implement CoupFE's `residual`, `tangent`, and `commit` contract.
 `newton_solve` commits state after its iteration loop; the returned iteration
-count is not a convergence flag. An EDA caller must establish convergence
-independently and must not repeat that state update. Mesh quality, boundary
-sets, units, region identity, and convergence remain part of the problem
-definition.
+count is not a convergence flag. The stateful solder examples therefore defer
+Core's commit, evaluate Core's residual rule, raise without advancing state on
+failure, and commit once on success. Mesh quality, boundary sets, units, region
+identity, and convergence remain part of the problem definition.
 
 ## Interpretation of evidence
 

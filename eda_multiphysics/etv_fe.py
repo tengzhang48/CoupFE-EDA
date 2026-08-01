@@ -1,4 +1,4 @@
-"""Monolithic electrothermal FE element on the CoupFE operator contract.
+"""Electrothermal FE checks and a partitioned solder-cycle demonstration.
 
 The material-point study (``etv_solder.py``) supplies a reduced comparison for
 this spatially resolved finite element: one
@@ -19,9 +19,10 @@ The checked examples compare this implementation with the exact 1D self-heating
 limit ``dT = sigma V0^2/8k`` and with the staggered Picard implementation in
 ``etv_solder.solve_et``. DOFs are interleaved per node: ``[phi, T]``.
 
-An earlier transient thermo-viscoplastic mesh extension is not included because
-its modified-Newton increments did not meet the stated convergence tolerance.
-The material-point coupling study remains in :mod:`eda_multiphysics.etv_solder`.
+The optional cycle demonstration combines a lumped backward-Euler temperature
+model with the spatial plane-strain Anand mechanics in ``solder_joint``.  It is
+partitioned (not a monolithic phi-T-u element), uses a fail-closed nonlinear
+increment solve, and is not a device or fatigue-life validation.
 """
 
 from __future__ import annotations
@@ -167,6 +168,163 @@ def consistency_vs_staggered(sigma0=3.0, V0=2.0, alpha_sig=0.05, k=1.5, L=1.0, n
     return T_mono.max(), T_stag.max(), rel, nit
 
 
+def thermoviscoplastic_cycle(
+    *,
+    temperature_model="lumped_transient",
+    q_joule=0.0,
+    g_th=8.0e6,
+    Tlo_C=-40.0,
+    Thi_C=125.0,
+    dalpha=20.0e-6,
+    ldnp_over_h=6.0,
+    nx=2,
+    ny=2,
+    ncyc=1,
+    steps_per_cyc=8,
+    period=1600.0,
+    maxit=30,
+    p=None,
+):
+    """Run a partitioned SAC305 thermo-viscoplastic block demonstration.
+
+    ``temperature_model='quasisteady'`` applies the chamber temperature plus
+    the steady Joule offset.  ``'lumped_transient'`` advances one uniform local
+    temperature with backward Euler and lagged inelastic-heating feedback, then
+    solves the spatial mechanical equilibrium.  The latter is deliberately not
+    described as a monolithic phi-T-u finite element.
+
+    Each mechanical increment must satisfy Core's Newton residual rule before
+    material state is committed.  Returned cycle ``dW`` is the sum over
+    increments of the equal-volume mean of Gauss-point values over the top
+    element layer.  The
+    reduced feedback sets the Taylor–Quinney fraction to one: all of that
+    top-layer inelastic work becomes a uniform lagged heat source.  Returned
+    energy is a demonstration output, not a calibrated lifetime prediction.
+    """
+    from ._stateful_solve import solve_stateful_increment
+    from .etv_solder import RHOC_SOLDER
+    from .solder_joint import AnandPlaneStrain, SAC305_PLANE
+
+    if temperature_model not in {"quasisteady", "lumped_transient"}:
+        raise ValueError(
+            "temperature_model must be 'quasisteady' or 'lumped_transient'"
+        )
+    if min(nx, ny, ncyc, maxit) < 1:
+        raise ValueError("mesh counts, ncyc, and maxit must be positive")
+    if steps_per_cyc < 2 or steps_per_cyc % 2:
+        raise ValueError("steps_per_cyc must be a positive even integer")
+    if g_th <= 0.0 or period <= 0.0 or q_joule < 0.0:
+        raise ValueError("g_th and period must be positive; q_joule must be nonnegative")
+    if Thi_C < Tlo_C:
+        raise ValueError("Thi_C must be greater than or equal to Tlo_C")
+
+    p = SAC305_PLANE if p is None else p
+    H = 0.1e-3
+    mesh = StructuredQuadMesh(nx, ny, H, H)
+    op = AnandPlaneStrain(mesh, p)
+    top = np.where(np.isclose(mesh.coords[:, 1], H))[0]
+    bottom = np.where(np.isclose(mesh.coords[:, 1], 0.0))[0]
+    top_elements = [
+        e for e, conn in enumerate(mesh.elems)
+        if np.isclose(mesh.coords[conn][:, 1].max(), H)
+    ]
+    TloK, ThiK = Tlo_C + 273.15, Thi_C + 273.15
+    Tref = 0.5 * (TloK + ThiK)
+    dt = period / steps_per_cyc
+    steady_joule_offset = q_joule / g_th
+    local_temperature = TloK + steady_joule_offset
+    inelastic_power = 0.0
+    U = np.zeros(op.ndof)
+    cycle_energy = []
+    temperature_history = []
+    convergence = []
+
+    def boundary_conditions(gamma):
+        bc = {}
+        for node in bottom:
+            bc[2 * int(node)] = 0.0
+            bc[2 * int(node) + 1] = 0.0
+        for node in top:
+            bc[2 * int(node)] = gamma * H
+            bc[2 * int(node) + 1] = 0.0
+        return bc
+
+    # Establish the cold-end mechanical state once. Its work initializes the
+    # path and is not counted in the reported cold -> hot -> cold cycle.
+    op.T = local_temperature
+    op.dt = dt
+    cold_gamma = dalpha * (local_temperature - Tref) * ldnp_over_h
+    U, info = solve_stateful_increment(
+        op, U, boundary_conditions(cold_gamma), dt=dt, maxit=maxit
+    )
+    convergence.append(info)
+    temperature_history.append(local_temperature - 273.15)
+
+    for _cyc in range(ncyc):
+        accumulated = 0.0
+        for step in range(1, steps_per_cyc + 1):
+            fraction = step / steps_per_cyc
+            triangle = 1.0 - abs(2.0 * fraction - 1.0)
+            chamber_temperature = TloK + (ThiK - TloK) * triangle
+            if temperature_model == "lumped_transient":
+                capacity_rate = RHOC_SOLDER / dt
+                local_temperature = (
+                    capacity_rate * local_temperature
+                    + q_joule
+                    + inelastic_power
+                    + g_th * chamber_temperature
+                ) / (capacity_rate + g_th)
+            else:
+                local_temperature = chamber_temperature + steady_joule_offset
+            temperature_history.append(local_temperature - 273.15)
+
+            gamma = dalpha * (local_temperature - Tref) * ldnp_over_h
+            op.T = local_temperature
+            op.dt = dt
+            U, info = solve_stateful_increment(
+                op, U, boundary_conditions(gamma), dt=dt, maxit=maxit
+            )
+            convergence.append(info)
+            dW_step = float(op.dW[top_elements].mean())
+            accumulated += dW_step
+            inelastic_power = dW_step * 1.0e6 / dt
+        cycle_energy.append(accumulated)
+
+    return {
+        "temperature_model": temperature_model,
+        "dW_cyc": cycle_energy,
+        "dW_last": cycle_energy[-1],
+        "dW_aggregation": "increment sum of equal-volume top-layer Gauss-point mean",
+        "inelastic_heat_fraction": 1.0,
+        "temperature_C_min": min(temperature_history),
+        "temperature_C_max": max(temperature_history),
+        "n_elem": int(len(mesh.elems)),
+        "max_iterations": max(i["iterations"] for i in convergence),
+        "max_relative_residual": max(i["relative_residual"] for i in convergence),
+        "max_residual_fraction_of_limit": max(
+            i["residual_fraction_of_limit"] for i in convergence
+        ),
+    }
+
+
+def thermoviscoplastic_comparison(**kwargs):
+    """Compare the two documented temperature models at one demonstration case."""
+    quasisteady = thermoviscoplastic_cycle(
+        temperature_model="quasisteady", **kwargs
+    )
+    transient = thermoviscoplastic_cycle(
+        temperature_model="lumped_transient", **kwargs
+    )
+    denominator = max(abs(quasisteady["dW_last"]), 1.0e-30)
+    return {
+        "quasisteady": quasisteady,
+        "lumped_transient": transient,
+        "relative_energy_difference": (
+            transient["dW_last"] - quasisteady["dW_last"]
+        ) / denominator,
+    }
+
+
 def main():
     peak, exact, err, nit = verify_selfheating_fe()
     print("Monolithic coupled electro-thermal FE element (CoupFE contract)")
@@ -177,6 +335,35 @@ def main():
           f"rel {rel:.1e}  (monolithic took {nit2} Newton iters)")
     print("  one block Newton system with cross-field terms supplied by the")
     print("  complex-step tangent.")
+    from .etv_solder import dandu_bump, joule_density
+    q_joule = joule_density(dandu_bump()["j_avg"])
+    slow = thermoviscoplastic_comparison(q_joule=q_joule, ncyc=2)
+    fast = thermoviscoplastic_comparison(
+        q_joule=q_joule, period=1.0, ncyc=2
+    )
+    quasi = slow["quasisteady"]
+    transient = slow["lumped_transient"]
+    max_demo_iterations = max(
+        case["max_iterations"]
+        for result in (slow, fast)
+        for case in (result["quasisteady"], result["lumped_transient"])
+    )
+    print("\nPartitioned SAC305 thermo-viscoplastic solder-cycle demonstration")
+    print(
+        f"  {quasi['n_elem']} Quad4 elements; quasisteady dW="
+        f"{quasi['dW_last']:.5f} MPa, lumped-transient dW="
+        f"{transient['dW_last']:.5f} MPa"
+    )
+    print(
+        "  lumped-vs-quasisteady energy difference: "
+        f"slow cycle {100.0 * slow['relative_energy_difference']:+.3f}%, "
+        f"fast cycle {100.0 * fast['relative_energy_difference']:+.1f}%"
+    )
+    print(
+        f"  all mechanical increments met Core's residual rule before commit; max Newton "
+        f"iterations={max_demo_iterations}"
+    )
+    print("  scope: model-comparison demonstration, not monolithic phi-T-u or device validation")
 
 
 if __name__ == "__main__":

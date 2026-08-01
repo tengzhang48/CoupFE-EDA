@@ -159,6 +159,51 @@ fields, recovered local quantities, calibrated life relations, and experimental
 comparisons. Report whether a parameter set is in-sample, transferred, or
 held-out.
 
+## Stateful constitutive workflows
+
+Treat every nonlinear increment with history-dependent material state as a
+transaction. For the current Anand examples, use
+`eda_multiphysics._stateful_solve.solve_stateful_increment` instead of writing a
+second application-level Newton loop:
+
+1. evaluate all Newton trials through the deferred-commit material proxy;
+2. form the constitutive tangent with the implemented central-difference path;
+3. accept only when the free residual satisfies the exact CoupFE solver rule;
+4. commit the accepted state exactly once; and
+5. raise before reporting energy or life output if the increment is rejected.
+
+An iteration count at the configured cap and finite-looking arrays are not
+evidence of convergence. Record the residual norm, the applicable residual
+limit, their ratio, and the maximum iteration count for the run. Add a forced
+failure test that proves rejected trials do not commit state.
+
+Keep initialization separate from a reported cycle. The solder examples first
+establish the cold mechanical state, exclude that preload from cycle energy,
+and then use an even, endpoint-inclusive cold-to-hot-to-cold schedule. State the
+alloy, mesh, cycle count, steps per cycle, temperature range, and period beside
+each result; do not silently transfer a baseline between SnPbAg and SAC305.
+
+For the current plane and ETV examples, the cycle observable sums accepted-
+increment `dW` after cold initialization and averages Gauss-point values only
+over top-layer elements. Equal weighting is valid for the current equal-volume
+structured mesh. Use quadrature/Jacobian volume weighting before applying the
+same observable to unequal elements.
+
+Describe the electro-thermal-viscoplastic example as a partitioned
+lumped-temperature/spatial-mechanics sensitivity study, not a monolithic
+potential-temperature-displacement solve. Its current reduced thermal path uses
+one uniform lumped temperature, backward Euler, one-increment-lagged inelastic
+heat, a Taylor–Quinney fraction of one, and the explicit `MPa` to `J/m³`
+conversion. Describe the regular Hex8 solder block as an idealized field
+demonstration, not evidence of a physical crack location or predictive device
+life. Preserve selected design-object identity and provenance through any
+design-linked screening result.
+
+Check each numerical tangent after establishing nonzero committed history.
+Compare the assembled tangent with a separate assembled-residual directional
+difference and assert that residual and tangent trial evaluations do not mutate
+the committed history.
+
 ## Solver and performance work
 
 Use the supported CoupFE operator and compiled-element interfaces before adding
@@ -202,6 +247,7 @@ python -m eda_multiphysics.run
 pytest eda_multiphysics
 # Focused default-tier groups
 pytest tests/test_integration_regressions.py
+pytest tests/test_integration_regressions.py -k 'stateful or thermoviscoplastic'
 pytest tests/test_tsv_device.py
 pytest tests/test_tsv_local_3d.py
 pytest tests/test_periodic_adapter.py

@@ -49,7 +49,7 @@ def run():
     violations0 = sum(row.koz_violation for row in baseline)
     violations1 = sum(row.koz_violation for row in optimized)
     scorecard = {
-        "public_status": "DEMONSTRATION",
+        "example_scope": "synthetic_identity_preserving_integration",
         "model_scope": "classical_lame_far_field_device_screening_proxy",
         "release_validation": False,
         "device_site_provenance": "synthetic_radial_angular_sampling",

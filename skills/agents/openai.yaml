@@ -1,4 +1,4 @@
 interface:
   display_name: "Develop CoupFE-EDA"
   short_description: "Extend EDA-linked multiphysics examples"
-  default_prompt: "Use $develop-coupfe-eda to extend an EDA-linked interconnect or package-reliability example with a named reference, stable semantics, regression checks, and a bounded non-signoff claim."
+  default_prompt: "Use $develop-coupfe-eda to extend an EDA-linked multiphysics example with stable semantics, fail-closed solver evidence, regression checks, and a bounded non-signoff claim."

@@ -5,18 +5,22 @@ the return-map and operator structure in ``solder_joint.py``:
 
 * J2 radial-return Anand update with the same closed-form saturation oracle.
 * A stateful CoupFE ``Operator`` with residual/tangent/commit.
-* Elastic modified-Newton tangent; the return map uses abs/sign/Brent and is not
-  complex-analytic.
+* A numerical material tangent for stateful equilibrium; the return map uses
+  abs/sign/Brent and is not complex-analytic.
 
-Checked comparisons and controls:
+Checked comparisons and demonstrations:
   1. 3D pure-shear return map saturates to ``anand.sat_stress``.
   2. 3D uniaxial-stress transient matches ``anand.integrate_uniaxial``.
   3. Hex8 elastic patch test reproduces an affine strain field exactly.
   4. A fully prescribed one-Hex8 constitutive cycle returns finite SAC305/Syed
      screening output; zero thermal swing is the broken control.
+  5. A small multi-element block with traction-free lateral faces exercises
+     nonlinear equilibrium and reports a dissipation field after every
+     increment meets Core's residual rule.
 
-The earlier multi-element cyclic boundary-value driver is not included because
-its modified-Newton increments did not meet the stated convergence tolerance.
+The cyclic cases are idealized demonstrations, not package-life validation.
+They use a numerical material tangent, fail closed against Core's residual
+rule, and commit state once per accepted increment.
 
 Run:  python -m eda_multiphysics.anand_3d
 """
@@ -293,21 +297,37 @@ class AnandHex8:
         return Residual(gdofs=np.arange(self.ndof), values=R)
 
     def tangent(self, U, state, t, dt):
-        if self._K is None:
-            D = elastic_matrix_3d(self.p)
-            rows, cols, vals = [], [], []
-            for conn in self.m.elems:
-                ed = self._edofs(conn)
-                xy = self.m.coords[conn]
-                Ke = np.zeros((24, 24))
-                for xi, eta, zeta, w in _GAUSS3:
-                    B, detJ = _B_detJ_hex8(xy, xi, eta, zeta)
-                    Ke += B.T @ D @ B * detJ * w
-                for i in range(24):
-                    for j in range(24):
-                        rows.append(ed[i]); cols.append(ed[j]); vals.append(Ke[i, j])
-            self._K = (np.asarray(rows), np.asarray(cols), np.asarray(vals))
-        return Tangent(rows=self._K[0], cols=self._K[1], values=self._K[2])
+        if self.elastic and self._K is not None:
+            return Tangent(rows=self._K[0], cols=self._K[1], values=self._K[2])
+
+        rows, cols, vals = [], [], []
+        for e, conn in enumerate(self.m.elems):
+            ed = self._edofs(conn)
+            ue = U[ed]
+            xy = self.m.coords[conn]
+            Ke = np.zeros((24, 24))
+            for g, (xi, eta, zeta, w) in enumerate(_GAUSS3):
+                B, detJ = _B_detJ_hex8(xy, xi, eta, zeta)
+                eps = B @ ue
+                if self.elastic:
+                    D = elastic_matrix_3d(self.p)
+                else:
+                    D = np.zeros((6, 6))
+                    for j in range(6):
+                        h = 1.0e-7 * max(1.0, abs(float(eps[j])))
+                        ep = eps.copy(); ep[j] += h
+                        em = eps.copy(); em[j] -= h
+                        sp, _, _, _ = self._stress(ep, e, g)
+                        sm, _, _, _ = self._stress(em, e, g)
+                        D[:, j] = (sp - sm) / (2.0 * h)
+                Ke += B.T @ D @ B * detJ * w
+            for i in range(24):
+                for j in range(24):
+                    rows.append(ed[i]); cols.append(ed[j]); vals.append(Ke[i, j])
+        data = (np.asarray(rows), np.asarray(cols), np.asarray(vals))
+        if self.elastic:
+            self._K = data
+        return Tangent(rows=data[0], cols=data[1], values=data[2])
 
     def commit(self, U, state, t, dt):
         for e, conn in enumerate(self.m.elems):
@@ -413,6 +433,11 @@ def prescribed_hex8_cycle(*, Tlo=-40.0, Thi=125.0,
     update through the FE operator/commit path. It is not a multi-element
     boundary-value solution or a predictive solder-joint life calculation.
     """
+    if ncyc < 1 or steps_per_cyc < 2 or steps_per_cyc % 2:
+        raise ValueError("ncyc must be positive and steps_per_cyc must be even")
+    if Thi < Tlo:
+        raise ValueError("Thi must be greater than or equal to Tlo")
+
     H = 0.1e-3
     m = StructuredHexMesh(1, 1, 1, H, H, H)
     op = AnandHex8(m, p)
@@ -421,34 +446,140 @@ def prescribed_hex8_cycle(*, Tlo=-40.0, Thi=125.0,
     Tref = 0.5 * (TloK + ThiK)
     period = 1600.0
     dt = period / steps_per_cyc
+    from ._stateful_solve import solve_stateful_increment
+
     U = np.zeros(op.ndof)
     Wc = [0.0]
     Wacc = 0.0
+    convergence = []
+
+    def boundary_conditions(gamma):
+        bc = {}
+        for node in bot:
+            bc[3 * int(node)] = 0.0
+            bc[3 * int(node) + 1] = 0.0
+            bc[3 * int(node) + 2] = 0.0
+        for node in top:
+            bc[3 * int(node)] = gamma * H
+            bc[3 * int(node) + 1] = 0.0
+            bc[3 * int(node) + 2] = 0.0
+        return bc
+
+    op.T = TloK
+    op.dt = dt
+    cold_gamma = dalpha * (TloK - Tref) * ldnp_over_h
+    U, info = solve_stateful_increment(
+        op, U, boundary_conditions(cold_gamma), dt=dt, maxit=25
+    )
+    convergence.append(info)
     for _cyc in range(ncyc):
-        for k in range(steps_per_cyc):
+        for k in range(1, steps_per_cyc + 1):
             frac = k / steps_per_cyc
             tri = 1.0 - abs(2.0 * frac - 1.0)
             T = TloK + (ThiK - TloK) * tri
             gamma = dalpha * (T - Tref) * ldnp_over_h
             op.T = T
             op.dt = dt
-            bc = {}
-            for n in bot:
-                bc[3 * int(n)] = 0.0
-                bc[3 * int(n) + 1] = 0.0
-                bc[3 * int(n) + 2] = 0.0
-            for n in top:
-                bc[3 * int(n)] = gamma * H
-                bc[3 * int(n) + 1] = 0.0
-                bc[3 * int(n) + 2] = 0.0
-            U, _, _ = newton_solve([op], U, None, op.ndof, bc, dt=dt, maxit=25)
+            U, info = solve_stateful_increment(
+                op, U, boundary_conditions(gamma), dt=dt, maxit=25
+            )
+            convergence.append(info)
             Wacc += float(op.dW.mean())
         Wc.append(Wacc)
     dW_cyc = [Wc[i] - Wc[i - 1] for i in range(1, ncyc + 1)]
     dW = dW_cyc[-1]
     Nf = 1.0 / (SYED_W_SAC305 * max(dW, 1e-30))
     return dict(dW_cyc=dW_cyc, dW_stab=dW, Nf=Nf,
-                gamma_range=dalpha * (ThiK - TloK) * ldnp_over_h)
+                gamma_range=dalpha * (ThiK - TloK) * ldnp_over_h,
+                max_iterations=max(i["iterations"] for i in convergence),
+                max_relative_residual=max(i["relative_residual"] for i in convergence),
+                max_residual_fraction_of_limit=max(
+                    i["residual_fraction_of_limit"] for i in convergence
+                ))
+
+
+def solder_joint_bvp_3d(*, nx=3, ny=3, nz=2, Tlo=-40.0, Thi=125.0,
+                        dalpha=14.4e-6, ldnp_over_h=6.0, ncyc=1,
+                        steps_per_cyc=8, p=SAC305_3D, maxit=20):
+    """Run an idealized multi-element 3D solder-block demonstration.
+
+    The bottom face is fixed, the top face is displaced as a rigid platen, and
+    lateral faces are traction-free.  The returned element dissipation field is
+    useful for exercising nonlinear assembly and state transfer.  It is not a
+    crack-location oracle, a mesh-converged field, or a predictive life result.
+    Every increment must meet Core's residual rule before its state is
+    committed.
+    """
+    from ._stateful_solve import solve_stateful_increment
+
+    if min(nx, ny, nz, ncyc, maxit) < 1:
+        raise ValueError("mesh counts, ncyc, and maxit must be positive")
+    if steps_per_cyc < 2 or steps_per_cyc % 2:
+        raise ValueError("steps_per_cyc must be a positive even integer")
+    if Thi < Tlo:
+        raise ValueError("Thi must be greater than or equal to Tlo")
+
+    H = 0.1e-3
+    mesh = StructuredHexMesh(nx, ny, nz, H, H, H)
+    op = AnandHex8(mesh, p)
+    top, bottom = mesh.top(), mesh.bottom()
+    TloK, ThiK = Tlo + 273.15, Thi + 273.15
+    Tref = 0.5 * (TloK + ThiK)
+    dt = 1600.0 / steps_per_cyc
+    U = np.zeros(op.ndof)
+    convergence = []
+    dW_elem = np.zeros(len(mesh.elems))
+
+    def boundary_conditions(gamma):
+        bc = {}
+        for node in bottom:
+            for component in range(3):
+                bc[3 * int(node) + component] = 0.0
+        for node in top:
+            bc[3 * int(node)] = gamma * H
+            bc[3 * int(node) + 1] = 0.0
+            bc[3 * int(node) + 2] = 0.0
+        return bc
+
+    op.T = TloK
+    op.dt = dt
+    cold_gamma = dalpha * (TloK - Tref) * ldnp_over_h
+    U, info = solve_stateful_increment(
+        op, U, boundary_conditions(cold_gamma), dt=dt, maxit=maxit
+    )
+    convergence.append(info)
+
+    for _cyc in range(ncyc):
+        accumulated = np.zeros(len(mesh.elems))
+        for step in range(1, steps_per_cyc + 1):
+            fraction = step / steps_per_cyc
+            triangle = 1.0 - abs(2.0 * fraction - 1.0)
+            T = TloK + (ThiK - TloK) * triangle
+            gamma = dalpha * (T - Tref) * ldnp_over_h
+            op.T = T
+            op.dt = dt
+            U, info = solve_stateful_increment(
+                op, U, boundary_conditions(gamma), dt=dt, maxit=maxit
+            )
+            convergence.append(info)
+            accumulated += op.dW.mean(axis=1)
+        dW_elem = accumulated
+
+    dW_peak = float(dW_elem.max())
+    dW_mean = float(dW_elem.mean())
+    return {
+        "dW_elem": dW_elem,
+        "dW_peak": dW_peak,
+        "dW_mean": dW_mean,
+        "peak_to_mean": dW_peak / max(dW_mean, 1.0e-30),
+        "gamma_range": dalpha * (ThiK - TloK) * ldnp_over_h,
+        "n_elem": int(len(mesh.elems)),
+        "max_iterations": max(i["iterations"] for i in convergence),
+        "max_relative_residual": max(i["relative_residual"] for i in convergence),
+        "max_residual_fraction_of_limit": max(
+            i["residual_fraction_of_limit"] for i in convergence
+        ),
+    }
 
 
 def main():
@@ -464,9 +595,17 @@ def main():
           f"{'PASS' if perr < 1e-10 else 'CHECK'}")
     r = prescribed_hex8_cycle()
     print(f"  prescribed one-Hex8 SAC305 cycle: dW={r['dW_stab']:.4f} MPa, "
-          f"Nf={r['Nf']:,.0f} cycles, gamma_range={r['gamma_range']*100:.2f}%")
+          f"calibration-specific Syed screen={r['Nf']:,.0f} cycles, "
+          f"gamma_range={r['gamma_range']*100:.2f}%")
     z = prescribed_hex8_cycle(Tlo=25.0, Thi=25.0, ncyc=1)
     print(f"  broken control (no thermal swing): dW={z['dW_stab']:.1e}")
+    bvp = solder_joint_bvp_3d()
+    print(
+        f"  multi-element block demonstration: {bvp['n_elem']} Hex8, "
+        f"dW peak/mean={bvp['peak_to_mean']:.3f}, "
+        f"max Newton iterations={bvp['max_iterations']}"
+    )
+    print("  scope: idealized field demonstration, not crack-location or predictive-life validation")
 
 
 if __name__ == "__main__":

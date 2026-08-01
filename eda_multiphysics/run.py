@@ -1,10 +1,10 @@
 """One-command entry point for the EDA-multiphysics suite.
 
-  python -m eda_multiphysics.run            # run all validation trust-gates (~30 s)
+  python -m eda_multiphysics.run            # run all validation gates (~1-2 min)
 
 The suite combines analytic/literature references, independent-path
-comparisons, invariants, interface/structural checks, and broken controls. This
-is the trust layer; caller-supplied OpenROAD-to-multiphysics demonstrations need
+comparisons, invariants, interface/structural checks, and broken controls. These
+are scoped evidence checks; caller-supplied OpenROAD-to-multiphysics examples need
 the EDA toolchain, input rights, and case-specific qualification. See
 RESULTS.md.
 """
@@ -16,7 +16,7 @@ from .gates import run_all
 
 def main():
     rs = run_all()
-    print(f"\n{'EDA-multiphysics trust gates':<46}{'status':>8}  detail")
+    print(f"\n{'EDA-multiphysics evidence gates':<46}{'status':>8}  detail")
     print("-" * 86)
     for r in rs:
         print(f"{r['name']:<46}{'PASS' if r['ok'] else 'FAIL':>8}  {r['detail']}")

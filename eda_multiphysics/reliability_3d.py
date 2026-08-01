@@ -11,9 +11,11 @@ Evidence: the FE nominal shear reproduces the kinematic dgamma = du/h (the DNP s
 added value over the analytic is the strain *concentration*. The frozen oracle uses a cylinder;
 parametric barrel and hourglass profiles are available through ``joint_shape`` for geometry
 sensitivity studies.
-Scope: this module is a global-local chain (elastic 3D FE for deformation plus a
-material-point viscoplastic mapping for dW/life). It does not solve a stateful
-multi-element viscoplastic boundary-value problem. N_f is calibration-specific.
+Scope: the profiled-joint/package path is a global-local chain (elastic 3D FE
+for deformation plus a material-point viscoplastic mapping for dW/life). The
+separate ``critical_joint_bvp_screening`` path drives a regular stateful Hex8
+block from the maximum-DNP design object; it is not the profiled package mesh.
+N_f is calibration-specific.
 The measured-life gate is an in-sample calibration reproduction within +/-2x,
 not independent validation; the reported dW is not a mesh-convergence result.
 
@@ -278,16 +280,18 @@ def from_design(spice_path=DEFAULT_SPICE, *, h_solder=50.0, R=25.0, dalpha=14.4e
                 dbu_per_um=None, joint_map_path=None, joint_shape="cylinder", R_mid=None,
                 include_package=False,
                 package_geometry=None, package_materials=None, mod=None, package_mod=None):
-    """Joint map -> 3D-FE -> fatigue map for a design.
+    """Joint map -> 3D-FE -> calibration-specific screening map for a design.
 
-    Explicit ``joints.csv`` geometry is preferred; otherwise the power-grid footprint is a labeled
-    proxy. The 3D FE solves a critical-joint elastic response; a documented
+    An explicit ``joints.csv`` location/identity map is preferred; otherwise
+    the power-grid footprint is a labeled proxy. Diameter and height fields are
+    retained as provenance but do not currently size the parametric FE model.
+    The 3D FE solves a maximum-DNP-joint elastic response; a documented
     strain-versus-DNP mapping then gives calibration-dependent Anand/Syed output
     per joint. Returns a dict including IDs and source provenance.
     """
     joints = design_joints(spice_path, joint_map_path=joint_map_path, dbu_per_um=dbu_per_um)
     xy, cen, dnp = joints["xy"], joints["center"], joints["dnp"]
-    L_D = float(dnp.max())                                  # critical corner joint
+    L_D = float(dnp.max())                                  # maximum-DNP joint
     du = dalpha * dT * L_D
     if R_mid is None:
         R_mid = R * ({"cylinder": 1.0, "barrel": 1.15, "hourglass": 0.85}.get(
@@ -340,6 +344,72 @@ def from_design(spice_path=DEFAULT_SPICE, *, h_solder=50.0, R=25.0, dalpha=14.4e
                 coordinate_frame=joints["coordinate_frame"], joint_map_path=joints["path"])
 
 
+def critical_joint_bvp_screening(
+    spice_path=DEFAULT_SPICE,
+    *,
+    h_solder=50.0,
+    dalpha=14.4e-6,
+    Tlo=-40.0,
+    Thi=125.0,
+    nx=3,
+    ny=3,
+    nz=2,
+    ncyc=1,
+    steps_per_cyc=8,
+    dbu_per_um=None,
+    joint_map_path=None,
+):
+    """Connect the maximum-DNP design object to the stateful block example.
+
+    This retains source identity and the design-derived ``L_D`` while using the
+    caller-supplied ``h_solder`` to form ``L_D/h`` for the regular Hex8 block in
+    :func:`anand_3d.solder_joint_bvp_3d`.  Joint-map height metadata is retained
+    but does not currently set the block height.
+    The Syed value is reported only as a calibration-specific screening output;
+    it is not a package-life prediction.
+    """
+    from .anand_3d import solder_joint_bvp_3d
+
+    if h_solder <= 0.0:
+        raise ValueError("h_solder must be positive")
+
+    joints = design_joints(
+        spice_path,
+        joint_map_path=joint_map_path,
+        dbu_per_um=dbu_per_um,
+    )
+    critical_index = int(np.argmax(joints["dnp"]))
+    L_D = float(joints["dnp"][critical_index])
+    result = solder_joint_bvp_3d(
+        nx=nx,
+        ny=ny,
+        nz=nz,
+        Tlo=Tlo,
+        Thi=Thi,
+        dalpha=dalpha,
+        ldnp_over_h=L_D / h_solder,
+        ncyc=ncyc,
+        steps_per_cyc=steps_per_cyc,
+    )
+    return {
+        **result,
+        "L_D": L_D,
+        "ldnp_over_h": L_D / h_solder,
+        "joint_id": str(joints["joint_ids"][critical_index]),
+        "source_object_id": str(joints["source_object_ids"][critical_index]),
+        "net": str(joints["nets"][critical_index]),
+        "diameter_um": float(joints["diameter_um"][critical_index]),
+        "height_um": float(joints["height_um"][critical_index]),
+        "screening_height_um": float(h_solder),
+        "joint_source": joints["source"],
+        "joint_map_explicit": bool(joints["explicit"]),
+        "joint_geometry_fidelity": joints["geometry_fidelity"],
+        "coordinate_frame": joints["coordinate_frame"],
+        "joint_map_path": joints["path"],
+        "Nf_screen_peak": 1.0 / (SYED_W * max(result["dW_peak"], 1.0e-30)),
+    }
+
+
 def _run_design(joint_shape="cylinder", R_mid=None, include_package=False, joint_map_path=None):
     mod = package_mod = None
     if include_package:
@@ -352,26 +422,38 @@ def _run_design(joint_shape="cylinder", R_mid=None, include_package=False, joint
         )
     r = from_design(mod=mod, package_mod=package_mod, joint_shape=joint_shape, R_mid=R_mid,
                     include_package=include_package, joint_map_path=joint_map_path)
-    print("Joint map -> 3D FE -> solder-fatigue map on a versioned layout footprint")
+    print("Joint map -> 3D FE -> calibration-specific solder screening map")
     print(f"  geometry source: {r['joint_source']} ({'explicit map' if r['joint_map_explicit'] else 'fallback'})")
     print(f"  geometry fidelity: {r['joint_geometry_fidelity']}")
     print(f"  design: {r['n_joints']} joints, footprint {r['extent'][0]:.0f}x{r['extent'][1]:.0f} um "
-          f"| critical DNP = {r['L_D']:.1f} um (corner)")
+          f"| critical DNP = {r['L_D']:.1f} um (maximum-DNP joint)")
     print(f"  joint geometry: {r['joint_shape']} / {r['joint_model']} "
           f"(pad radius {r['R_pad']:.2f} um, mid radius {r['R_mid']:.2f} um)")
     print(f"  critical joint 3D FE: shear gamma={r['gamma_fe']:.4f} vs DNP du/h={r['gamma_dnp']:.4f} "
           f"-> equiv-strain {r['eps_eq_crit']:.4f}")
     Nf = r["lives"]
-    print(f"  SAC305 Anand->Syed life across the array: worst (corner) = {Nf.min():,.0f} cycles, "
-          f"best (centre) = {Nf.max():,.0e}, median = {np.median(Nf):,.0f}")
-    print("  => the 3D-FE reliability chain is driven by a versioned, provenance-labeled footprint,")
+    print(f"  calibration-specific Anand->Syed screen across the array: "
+          f"minimum = {Nf.min():,.0f} cycles, maximum = {Nf.max():,.0e}, "
+          f"median = {np.median(Nf):,.0f}")
+    print("  the 3D-FE screening chain is driven by a versioned, provenance-labeled footprint,")
     print("     not an assumed L_D. The bundled coordinates are synthetic; caller-supplied")
-    print("     package geometry and calibrated materials are required for predictive life.")
+    print("     package geometry, calibrated materials, and measured validation are required")
+    print("     before treating the screening values as predictive life.")
+
+
 def main(argv=None):
     import argparse
-    parser = argparse.ArgumentParser(description="3D solder-joint geometry and fatigue analysis.")
-    parser.add_argument("mode", nargs="?", choices=("joint", "design"), default="joint",
-                        help="single normalized joint or layout-driven life map")
+
+    parser = argparse.ArgumentParser(
+        description="3D solder-joint geometry and calibration-specific screening."
+    )
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        choices=("joint", "design", "stateful"),
+        default="joint",
+        help="single normalized joint, layout-driven map, or stateful block demonstration",
+    )
     parser.add_argument("--shape", choices=("cylinder", "barrel", "hourglass"),
                         default="cylinder", help="joint radial profile")
     parser.add_argument("--mid-radius", type=float,
@@ -379,8 +461,26 @@ def main(argv=None):
     parser.add_argument("--package", action="store_true",
                         help="include conformal underfill, UBM, and pad regions (Tet4)")
     parser.add_argument("--joint-map",
-                        help="schema-v1 joints.csv path for design mode; defaults to case sibling")
+                        help="schema-v1 joints.csv for design/stateful modes; defaults to case sibling")
     args = parser.parse_args(argv)
+    if args.mode == "stateful":
+        result = critical_joint_bvp_screening(joint_map_path=args.joint_map)
+        print("Design-linked stateful 3D solder-block demonstration")
+        print(
+            f"  joint {result['joint_id']} from {result['joint_source']}; "
+            f"L_D/h={result['ldnp_over_h']:.3f}"
+        )
+        print(
+            f"  {result['n_elem']} Hex8; dW peak/mean="
+            f"{result['peak_to_mean']:.3f}; max Newton iterations="
+            f"{result['max_iterations']}"
+        )
+        print(
+            f"  calibration-specific Syed screening value: "
+            f"{result['Nf_screen_peak']:,.0f} cycles"
+        )
+        print("  scope: idealized demonstration, not crack-location or package-life validation")
+        return
     if args.mode == "design":
         _run_design(args.shape, args.mid_radius, args.package, args.joint_map)
         return

@@ -28,32 +28,24 @@ in core.
 
 ## Release scope
 
-The public examples use four status labels:
+The release reports availability, evidence, input provenance, and qualification
+boundary separately. A single maturity label would hide important differences
+between a checked component, a synthetic integration example, and a
+real-device comparison.
 
-- **CHECKED** — exercised by a checked-in reference or invariant at the stated
-  model and resolution.
-- **DEMONSTRATION** — runnable integration whose composed output has no direct
-  device-level oracle.
-- **RESEARCH** — an available harness that still needs retained evidence on the
-  release revision before supporting a public result.
-- **WITHHELD** — removed from the public example/API surface, or not presented
-  as supported, until the stated blocker is resolved.
-
-The main boundaries are:
-
-| Area | Status | Boundary |
+| Capability available now | Evidence included here | Qualification boundary |
 |---|---|---|
-| Analytic and component checks for PDN, heat transfer, electrothermal coupling, thermoelasticity, constitutive updates, and electromigration | **CHECKED** | Applies to the named equations, meshes, tolerances, and parameter sets |
-| Synthetic PDN-to-reliability pipeline, caller-data adapters, package geometry, and TSV-to-device screening | **DEMONSTRATION** | No bundled real-device/layout oracle or signoff claim |
-| Generated-geometry Hex8 and Tet4 paths | **CHECKED** | Tet4 is checked on generated box/cylinder/package geometry with the pinned Core revision; imported CAD and broader convergence studies remain open |
-| `etv_distributed_fs` serial-versus-rank path | **CHECKED** | Output agreement at size 24 with two and four ranks; no scaling or performance claim |
-| Other PETSc/MPI and scaling drivers | **RESEARCH** | Require retained current-revision rank output and environment records |
-| Plane-strain stateful multi-element `solder_joint_cycle` | **WITHHELD** | Removed because nonlinear increment convergence was not established |
-| Transient thermo-viscoplastic ETV FE Stage B | **WITHHELD** | Removed because nonlinear increment convergence was not established; steady electrothermal `etv_fe` and material-point `etv_solder` remain |
-| Multi-element 3D Anand solder BVP and its design-chain life transfer | **WITHHELD** | Removed because nonlinear increment convergence was not established; material-point, return-map, patch, and fully prescribed `prescribed_hex8_cycle` checks remain |
+| Analytic and component paths for PDN, heat transfer, electrothermal coupling, thermoelasticity, constitutive updates, and electromigration | Named equations, reference meshes, independent implementations, invariants, and broken controls | Applies only to the documented equations, meshes, tolerances, and parameter sets |
+| Synthetic PDN → temperature → stress → solder/EM example | Closed-form PDN field, exact power closure, provenance/hash checks, and separately checked downstream components | Bundled inputs are project-authored; the composed downstream result has no fabricated-device oracle or signoff claim |
+| Caller OpenDB/PDNSim case and back-annotation contracts | Parser/schema, stable-ID, unit/frame-transform, provenance, and back-annotation tests; the bundled exporter is reviewed but not executed by this suite | No bundled live OpenROAD round trip or qualification of caller-owned designs |
+| Generated profiled solder, six-region package, Hex8, and Tet4 paths | Topology, Jacobian/volume, interface, boundary-condition, multimaterial, patch, and generated-mesh checks | No imported production CAD, qualified package deck, or broad mesh-convergence claim |
+| Plane-strain SnPbAg `solder_joint_cycle` | Repaired numerical material tangent; every increment must satisfy Core's residual rule before one state commit | Idealized block and loading; reported energy is an example result, not package-life validation |
+| Partitioned SAC305 thermo-viscoplastic cycle in `etv_fe` | Backward-Euler lumped temperature plus spatial Anand increments that meet Core's residual rule; quasisteady comparison | Unit Taylor–Quinney conversion of top-layer work to uniform heat; not a monolithic phi-T-u element or device validation |
+| Multi-element `solder_joint_bvp_3d` and design-linked screening | Fail-closed 18-Hex8 dissipation field and retained design-object provenance | Idealized regular block; no crack-location, mesh/load-step-converged field, or predictive-life claim |
+| `etv_distributed_fs` serial-versus-rank path | Output agreement at size 24 with two and four ranks | No scaling or performance claim; other PETSc/MPI drivers require their own retained run records |
 
 See [EXAMPLES.md](EXAMPLES.md) and
-[examples/REFERENCES.md](examples/REFERENCES.md) for entry-point status and
+[examples/REFERENCES.md](examples/REFERENCES.md) for entry-point evidence and
 provenance.
 
 ## Quick start
@@ -126,20 +118,21 @@ bundled. The project-authored fixture and caller-data boundary are documented in
 ### Solder and electro-thermo-viscoplastic studies
 
 - `anand.py` and `anand_3d.py` provide material-point, return-map, transient,
-  affine-patch, and fully prescribed `prescribed_hex8_cycle` checks. The measured 4719-cycle
-  PBGA value is an in-sample calibration anchor, not independent validation.
-- `solder_joint.py` exposes the plane-strain return-map and elastic patch checks.
-  Its earlier stateful multi-element cycle is withheld as described above.
+  affine-patch, fully prescribed `prescribed_hex8_cycle`, and fail-closed
+  multi-element block examples. The measured 4719-cycle PBGA value is an
+  in-sample calibration anchor, not independent validation.
+- `solder_joint.py` exposes the plane-strain return-map, elastic patch, and a
+  fail-closed stateful multi-element cycle example.
 - `etv_solder.py` retains the simplified material-point electro-thermal-
   viscoplastic study.
-- `etv_fe.py` retains the steady electrothermal Quad4 implementation and its
-  analytic/staggered comparisons. The transient thermo-viscoplastic mesh stage
-  is withheld.
+- `etv_fe.py` contains the steady electrothermal Quad4 implementation and its
+  analytic/staggered comparisons, plus a partitioned lumped-temperature and
+  spatial-mechanics cycle example.
 - `reliability_3d.py` demonstrates global parametric joint/package geometry,
   caller-supplied joint locations and provenance, and a calibration-specific
   global-local workflow. Caller joint dimensions do not currently set the FE
-  mesh dimensions. The module does not expose the removed stateful
-  multi-element Anand BVP.
+  mesh dimensions. `critical_joint_bvp_screening` connects the maximum-DNP
+  design object to the idealized stateful block while retaining that boundary.
 
 ### TSV-to-device screening
 

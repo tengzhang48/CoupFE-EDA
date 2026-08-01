@@ -36,17 +36,18 @@ model-integration foundation.
 
 ## Stateful solder/package analysis
 
-Reintroduce a multi-element Anand joint solve only with:
+The public plane and regular-block examples now provide fail-closed increments,
+one state commit per accepted increment, numerical material tangents, and
+zero-swing controls. The next steps toward a package result are:
 
-- explicit per-increment convergence status and fail-closed behavior;
-- one material-state commit per accepted increment;
 - load-step and mesh convergence studies;
-- energy/work balance and zero-swing controls;
+- energy/work balance beyond the existing zero-swing controls;
 - generated-profile and conformal-package material mapping; and
 - a measured package case that is separate from calibration when possible.
 
-The current prescribed one-Hex8 cycle and stateless elastic generated-package
-path should remain as bounded unit/integration examples.
+The current prescribed one-Hex8 cycle, regular-block stateful examples, and
+elastic generated-package path should remain clearly bounded while this work
+continues.
 
 ## Mesh and design adapters
 

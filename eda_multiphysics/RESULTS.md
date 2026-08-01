@@ -23,12 +23,27 @@ PETSc, and MPI cases are reported separately from the default tests.
 | PDN graph | independent SciPy assembly/solve and synthetic closed-form voltage | checks the supported resistor-network path |
 | Reliability equations | Black, Blech, Syed/Darveaux functions and an in-sample PBGA tie point | checks equations and one calibration reproduction; no device/package life qualification |
 | ETV material/reduced model | self-heating, fixed-mesh crowding context, staggered/coupled limit | checks the reduced-model implementation and limiting behavior |
-| Stage-A ETV FE | monolithic Quad4 self-heating and sequential comparison | checks the spatial `phi`/`T` element; no stateful thermo-viscoplastic mesh cycle |
+| ETV FE | monolithic Quad4 self-heating and sequential comparison; partitioned lumped-temperature/spatial-SAC305 cycle | checks the spatial `phi`/`T` element and a fail-closed partitioned mechanics example; it is not a monolithic `phi-T-u` validation |
 
-The retained stateful finite-element example is
-`anand_3d.prescribed_hex8_cycle`. All face displacements are prescribed, so it
-checks state evolution and the CoupFE commit path in one element. It is not a
-multi-element solder-joint boundary-value solution.
+## Repaired stateful demonstration results
+
+These are current reruns, not the earlier modified-Newton outputs. The drivers
+use a central-difference material tangent. Each increment is solved without
+advancing material state, checked against Core's existing rule
+`||R_free|| < 1e-9 ||R0_free||` or `||R_free|| < 1e-14`, and committed exactly
+once only after acceptance.
+
+| Example configuration | Current result | Solver record | Interpretation |
+|---|---|---|---|
+| Plane-strain SnPbAg, 3×2 Quad4, one −40→125→−40 °C cycle over 1600 s, 12 increments | top-layer Gauss/element-mean `dW = 0.331884 MPa` (`MPa = MJ/m³`) | maximum 7 Newton iterations; maximum final-residual/acceptance-limit fraction `0.683` | Idealized stateful block example; not a stabilized-cycle or package-life validation |
+| Partitioned SAC305, 2×2 Quad4, Dandu-derived Joule density, two −40→125→−40 °C chamber cycles of 1600 s | last-cycle top-layer Gauss/element-mean `dW = 0.478647 MPa` quasisteady and `0.478343 MPa` lumped transient (`-0.0634%`) | maximum 9 iterations; all increments met Core's residual rule before commit | Slow-cycle reduced-model sensitivity with unit Taylor–Quinney conversion to uniform heat; not monolithic `phi-T-u` validation |
+| Same partitioned case with a 1 s period | last-cycle top-layer Gauss/element-mean `dW = 0.760818 MPa` quasisteady and `0.252229 MPa` lumped transient (`-66.85%`); transient peak `98.60 °C` versus `144.94 °C` | maximum 11 iterations; all increments met Core's residual rule before commit | Fast-cycle model sensitivity with the same reduced heat-feedback assumption; no device oracle |
+| SAC305 stateful block, 3×3×2 Hex8, one −40→125→−40 °C cycle over 1600 s, 8 increments | `dW_peak = 0.389021 MPa`, `dW_mean = 0.343364 MPa`, peak/mean `1.13297` | maximum 8 iterations; maximum final-residual/acceptance-limit fraction `0.901` | All increments met Core's residual rule; stabilized-cycle, load-step/mesh-convergence, and crack-location evidence are not established |
+| Synthetic maximum-DNP joint → default 18-Hex8 screening block, one −40→125→−40 °C cycle over 1600 s | joint `SYNTH_J00`, caller/default `h = 50 µm`, `L_D/h = 0.848528`, `dW_peak = 0.0111335 MPa`, Syed screen `47,273` cycles | maximum 6 iterations; source object `VDD_20000_20000_1` retained | Identity-preserving, calibration-specific screening output; joint-map height does not size the block and predictive life is not established |
+
+No-swing controls for the plane, 3D, and partitioned examples return zero
+inelastic work. A transaction regression also forces nonconvergence and verifies
+that no material state is committed.
 
 ## Integration and provenance paths
 
@@ -72,13 +87,14 @@ self-heating cases.
 These checks are bounded by their chosen meshes and solver environments. This
 file makes no timing, memory, rank-scaling, imported-CAD, or signoff claim.
 
-## Excluded stateful workflows
+## Historical solver record
 
-Earlier plane-strain ETV cycles and multi-element stateful solder-joint BVP/life
-functions did not meet their stated increment convergence boundary. They are
-absent from the public modules and examples. Reintroduction requires explicit
-convergence reporting, fail-closed behavior, one solver-owned commit per
-returned increment, and mesh/load-step evidence.
+The pre-repair plane, ETV, and 3D drivers used an elastic modified-Newton
+tangent. Instrumented audits showed max-iteration exhaustion in the tested
+configurations; the plane and ETV paths also committed each state twice. Their
+old energy, life, and corner-location outputs are therefore not current release
+results. Git history retains the code for research provenance. The table above
+reports only repaired, fail-closed reruns.
 
 ## Running the checks
 

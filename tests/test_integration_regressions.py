@@ -10,17 +10,165 @@ import numpy as np
 import pytest
 
 
-def test_nonconverged_stateful_fe_workflows_are_not_public_examples():
-    """Do not restore historical false-green cycle/BVP drivers without a convergence gate."""
+def test_repaired_stateful_fe_demonstrations_meet_residual_rule_and_report_scope():
+    """Retained cycle/BVP examples must meet the residual rule before output."""
     from eda_multiphysics import anand_3d, etv_fe, reliability_3d, solder_joint
 
-    assert not hasattr(solder_joint, "solder_joint_cycle")
-    assert not hasattr(etv_fe, "etv_fe_cycle")
-    assert not hasattr(etv_fe, "fe_coupling_effect")
-    assert not hasattr(anand_3d, "solder_joint_bvp_3d")
-    assert not hasattr(anand_3d, "solder_joint_cycle_3d")
+    plane = solder_joint.solder_joint_cycle(
+        nx=2, ny=2, ncyc=1, steps_per_cyc=8
+    )
+    assert plane["dW_last"] == pytest.approx(0.3510639484, rel=1.0e-5)
+    assert "top-layer Gauss-point mean" in plane["dW_aggregation"]
+    assert plane["max_residual_fraction_of_limit"] < 1.0
+
+    etv = etv_fe.thermoviscoplastic_cycle(
+        temperature_model="lumped_transient",
+        nx=2,
+        ny=2,
+        ncyc=1,
+        steps_per_cyc=8,
+    )
+    assert etv["dW_last"] == pytest.approx(0.5446577390, rel=1.0e-5)
+    assert "top-layer Gauss-point mean" in etv["dW_aggregation"]
+    assert etv["inelastic_heat_fraction"] == pytest.approx(1.0)
+    assert etv["max_residual_fraction_of_limit"] < 1.0
+
+    bvp = anand_3d.solder_joint_bvp_3d()
+    assert bvp["dW_peak"] == pytest.approx(0.3890213548, rel=1.0e-5)
+    assert bvp["peak_to_mean"] == pytest.approx(1.1329701222, rel=1.0e-5)
+    assert bvp["max_residual_fraction_of_limit"] < 1.0
+
     assert hasattr(anand_3d, "prescribed_hex8_cycle")
-    assert not hasattr(reliability_3d, "critical_joint_bvp_life")
+    assert hasattr(reliability_3d, "critical_joint_bvp_screening")
+
+
+def test_stateful_increment_commits_once_and_fails_closed():
+    """A converged increment commits once; a rejected increment commits nothing."""
+    from coupfe.operators.base import Residual, Tangent
+
+    from eda_multiphysics._stateful_solve import solve_stateful_increment
+
+    class LinearOperator:
+        ndof = 1
+
+        def __init__(self, *, constant_residual=False):
+            self.commits = 0
+            self.constant_residual = constant_residual
+
+        def residual(self, U, state, t, dt):
+            value = 1.0 if self.constant_residual else float(U[0] - 1.0)
+            return Residual(gdofs=np.array([0]), values=np.array([value]))
+
+        def tangent(self, U, state, t, dt):
+            return Tangent(
+                rows=np.array([0]),
+                cols=np.array([0]),
+                values=np.array([1.0]),
+            )
+
+        def commit(self, U, state, t, dt):
+            self.commits += 1
+            return state
+
+    convergent = LinearOperator()
+    U, info = solve_stateful_increment(convergent, np.zeros(1), {})
+    assert U[0] == pytest.approx(1.0)
+    assert info["residual_fraction_of_limit"] < 1.0
+    assert convergent.commits == 1
+
+    rejected = LinearOperator(constant_residual=True)
+    with pytest.raises(RuntimeError, match="material state was not committed"):
+        solve_stateful_increment(rejected, np.zeros(1), {}, maxit=2)
+    assert rejected.commits == 0
+
+
+@pytest.mark.parametrize(
+    "operator_kind,seeds",
+    [("quad4-plane-strain", (1, 2, 3)), ("hex8-3d", (4, 5, 6))],
+)
+def test_stateful_tangent_matches_residual_direction_without_mutation(
+    operator_kind, seeds
+):
+    """The assembled numerical tangent matches a separate residual derivative."""
+    from eda_multiphysics.anand_3d import AnandHex8, SAC305_3D, StructuredHexMesh
+    from eda_multiphysics.fe import StructuredQuadMesh
+    from eda_multiphysics.solder_joint import AnandPlaneStrain, SNPB
+
+    if operator_kind == "quad4-plane-strain":
+        op = AnandPlaneStrain(StructuredQuadMesh(2, 2, 1.0e-4, 1.0e-4), SNPB)
+    else:
+        op = AnandHex8(
+            StructuredHexMesh(1, 1, 1, 1.0e-4, 1.0e-4, 1.0e-4), SAC305_3D
+        )
+    op.T = 350.0
+    op.dt = 100.0
+
+    preload_seed, trial_seed, direction_seed = seeds
+    preload = np.random.default_rng(preload_seed).normal(
+        scale=1.0e-7, size=op.ndof
+    )
+    op.commit(preload, None, 1.0, op.dt)
+    assert np.linalg.norm(op.epp) > 0.0
+
+    U = preload + np.random.default_rng(trial_seed).normal(
+        scale=5.0e-8, size=op.ndof
+    )
+    direction = np.random.default_rng(direction_seed).normal(size=op.ndof)
+    direction /= np.linalg.norm(direction)
+    committed = (op.epp.copy(), op.s.copy(), op.dW.copy())
+
+    tangent = op.tangent(U, None, 1.0, op.dt)
+    K = np.zeros((op.ndof, op.ndof))
+    np.add.at(K, (tangent.rows, tangent.cols), tangent.values)
+
+    def residual_vector(displacement):
+        contribution = op.residual(displacement, None, 1.0, op.dt)
+        result = np.zeros(op.ndof)
+        np.add.at(result, contribution.gdofs, contribution.values)
+        return result
+
+    h = 1.0e-9
+    derivative = (
+        residual_vector(U + h * direction) - residual_vector(U - h * direction)
+    ) / (2.0 * h)
+    relative_error = np.linalg.norm(K @ direction - derivative) / max(
+        np.linalg.norm(derivative), 1.0e-30
+    )
+    assert relative_error < 1.0e-4
+
+    np.testing.assert_array_equal(op.epp, committed[0])
+    np.testing.assert_array_equal(op.s, committed[1])
+    np.testing.assert_array_equal(op.dW, committed[2])
+
+
+def test_stateful_bvp_screening_preserves_design_identity():
+    """The repaired stateful block keeps the selected design object and scope."""
+    from eda_multiphysics.reliability_3d import (
+        SYED_W,
+        critical_joint_bvp_screening,
+        design_joints,
+    )
+
+    joints = design_joints()
+    critical = int(np.argmax(joints["dnp"]))
+    result = critical_joint_bvp_screening(
+        nx=2, ny=2, nz=2, ncyc=1, steps_per_cyc=4
+    )
+    assert result["joint_id"] == str(joints["joint_ids"][critical])
+    assert result["source_object_id"] == str(
+        joints["source_object_ids"][critical]
+    )
+    assert result["net"] == str(joints["nets"][critical])
+    assert result["coordinate_frame"] == joints["coordinate_frame"]
+    assert result["joint_geometry_fidelity"] == joints["geometry_fidelity"]
+    assert result["joint_map_path"] == joints["path"]
+    assert result["L_D"] == pytest.approx(float(joints["dnp"][critical]))
+    assert result["ldnp_over_h"] == pytest.approx(result["L_D"] / 50.0)
+    assert result["screening_height_um"] == pytest.approx(50.0)
+    assert result["Nf_screen_peak"] == pytest.approx(
+        1.0 / (SYED_W * result["dW_peak"])
+    )
+    assert result["max_residual_fraction_of_limit"] < 1.0
 
 
 def test_time_integrators_reject_failed_or_incomplete_solutions(monkeypatch):

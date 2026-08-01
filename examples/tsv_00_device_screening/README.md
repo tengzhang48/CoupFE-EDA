@@ -26,11 +26,12 @@ load, threshold, and TSV ID are fixed in code. `case.json` documents those fixed
 choices, `materials.json` records the literature provenance of constants
 implemented in `eda_multiphysics.tsv_device`, and `expected_metrics.json` is
 used by the regression test rather than by the example at runtime.
-See [`../REFERENCES.md`](../REFERENCES.md) for the complete input-role and claim-status map.
+See [`../REFERENCES.md`](../REFERENCES.md) for the complete input-role and
+evidence-boundary map.
 
 The stress input is a classical Lamé far-field solution, converted to a full
 axisymmetric tensor and checked against the corresponding idealized equation.
-This is a **DEMONSTRATION** of the data mapping. It does not reproduce the
+This runnable example exercises the data mapping. It does not reproduce the
 anisotropic free-surface stress 0.2 µm below the die surface and does not support
 claims about measured Raman curves, transistor delay, Cu protrusion, or a
 signoff keep-out zone. Those claims require benchmark data, a qualified local

@@ -10,7 +10,7 @@ for the evidence boundary of each path.
 | Coupled electrothermal | `etv_solder`, `etv_fe`, `etv_kernel`, `etv_3d`, `tsv_3d`, `tet_3d` | Reduced, monolithic, compiled, and generated-mesh electrothermal examples |
 | PDN and design handoff | `pdn_graph`, `pdn_distributed`, `case_thermal`, `electrothermal_chip`, `chip_vtu` | Resistor-network solve, placement/power mapping, optional PETSc solve, and output adapters |
 | Thermomechanics | `thermomech`, `thermomech_kernel`, `thermomech_3d`, `thermomech_tsv`, `tsv_stress` | Reference and generated three-dimensional thermal-stress models |
-| Solder constitutive models | `anand`, `solder_joint`, `anand_3d`, `creep` | Material-point, return-map, prescribed-state-update, and creep examples |
+| Solder constitutive models | `anand`, `solder_joint`, `anand_3d`, `creep` | Material-point, return-map, prescribed-state-update, fail-closed stateful block, and creep examples |
 | Reliability handoff | `joint_map`, `reliability_3d`, `reliability_pipeline`, `electromigration` | Stable design objects, generated package/joint meshes, calibration mappings, and composed synthetic screening |
 | Geometry and mesh adapters | `mesh3d`, `tet_element`, `periodic` | Gmsh-generated regions, mesh checks, native Core Tet4 lookup, and EDA-owned periodic matching |
 | TSV local/device path | `tsv_local_3d`, `tsv_device`, `tsv_validation` | Anisotropic local mechanics, field recovery, Raman/device transformations, manifests, and fail-closed status evaluation |

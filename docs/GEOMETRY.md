@@ -108,8 +108,10 @@ generated-region example. Default stiffness values are study inputs, not a
 qualified package material deck.
 
 The public generated-joint path checks geometry, region assembly, imposed
-boundary data, and elastic strain extraction. A converged stateful Anand solve
-on the generated joint/package mesh is not included.
+boundary data, and elastic strain extraction. In the separate stateful Anand
+example every increment meets Core's residual rule on a regular Hex8 block; it
+has not yet been transferred onto
+the profiled generated joint/package mesh.
 
 ## Joint-map contract
 

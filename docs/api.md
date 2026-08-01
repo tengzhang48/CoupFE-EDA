@@ -24,6 +24,10 @@ an unrelated index is not an accepted substitute.
 electrical/thermal iteration. `etv_fe.solve_coupled_et(...)` solves the
 monolithic Quad4 `phi`/`T` system. Its public checks are
 `verify_selfheating_fe(...)` and `consistency_vs_staggered(...)`.
+`etv_fe.thermoviscoplastic_cycle(...)` and
+`thermoviscoplastic_comparison(...)` add a partitioned SAC305 example with a
+lumped temperature model and spatial plane-strain mechanics; they are not a
+monolithic `phi-T-u` formulation.
 
 `transient.mode_decay(...)`, `capacitance.parallel_plate(...)`, and
 `thermal_runaway.critical(...)` / `steady_T(...)` are small reference models.
@@ -132,7 +136,10 @@ and evaluates a fail-closed TSV evidence scorecard. A manifest marked
 included parameter sets.
 
 `solder_joint.anand_return_map(...)` and `patch_test()` cover the plane-strain
-return-map/reference element. No public plane-strain cycle driver is exposed.
+return-map/reference element. `solder_joint_cycle(...)` runs an idealized
+multi-element SnPbAg cold→hot→cold cycle with fail-closed increments and
+reports the increment-summed, equal-volume mean of Gauss-point energy-density
+increments over the top element layer.
 
 `anand_3d` provides:
 
@@ -140,23 +147,32 @@ return-map/reference element. No public plane-strain cycle driver is exposed.
 - `validate_return_map_3d()`, `validate_return_map_transient_3d()`, and
   `patch_test_3d()`; and
 - `prescribed_hex8_cycle(...)`, a fully prescribed one-Hex8 state-update
-  exercise.
+  exercise; and
+- `solder_joint_bvp_3d(...)`, an idealized multi-element SAC305 block with
+  traction-free lateral faces and a returned element dissipation field.
 
-The one-Hex8 cycle is not a multi-element boundary-value solve. Its returned
-life value is a calibration mapping of the computed work, not a device-life
+The one-Hex8 cycle is not a multi-element boundary-value solve. In the separate
+block example every increment meets Core's residual rule, but the result does
+not establish load-step or mesh convergence, a crack location, or device-life
 prediction.
 
-`reliability_3d` supplies generated-mesh, stateless elastic handoff functions:
+`reliability_3d` supplies generated-mesh handoff functions:
 
 - `solve_solder_joint(...)` and `solve_solder_package_joint(...)`;
 - `element_strain(...)` and `tet_element_strain(...)`;
 - `design_joints(...)` / `design_grid(...)`; and
 - `from_design(...)` for applying the documented DNP displacement and
-  calibration mappings across a design map.
+  calibration mappings across a design map; and
+- `critical_joint_bvp_screening(...)` for preserving the maximum-DNP joint
+identity while driving the idealized stateful block.
+
+`critical_joint_bvp_screening(...)` derives `L_D` from the selected design-map
+object and forms `L_D/h` with its caller-supplied `h_solder`. Returned joint-map
+height is provenance metadata; it does not currently size the regular block.
 
 `from_design(...)` prefers an explicit joint map. PDN node-name decoding is a
-clearly labeled proxy fallback. The module does not expose a stateful Anand
-boundary-value fatigue driver.
+clearly labeled proxy fallback. The stateful screening value is
+calibration-specific and is not a package-life prediction.
 
 `electromigration.black_mttf(...)`, `acceleration_factor(...)`,
 `blech_product_crit(...)`, and `em_screen(...)` provide the algebraic EM
@@ -195,6 +211,14 @@ returns. Its iteration count is not a convergence flag. Callers must establish
 convergence independently and must not commit a stateful operator a second
 time. The operator owns material state; geometry and source-object adapters
 remain in CoupFE-EDA.
+
+`_stateful_solve.solve_stateful_increment(...)` supplies that application
+transaction for the solder examples. It suppresses Core's automatic commit
+during the trial solve, evaluates the same Core residual rule, raises without
+advancing state on failure, and commits the operator exactly once on success.
+The Quad4 and Hex8 numerical tangents are checked against a separate assembled-
+residual directional difference after a nonzero history preload; the check also
+requires trial residual/tangent calls to leave committed state unchanged.
 
 `_coupled_solve.coupled_newton(...)` is the shared driver for selected compiled
 multi-group examples. It accepts a linear-solve callback so the same assembly

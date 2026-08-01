@@ -1,17 +1,18 @@
-"""Plane-strain Anand material and elastic finite-element checks.
+"""Plane-strain SnPbAg Anand checks and a thermal-cycle demonstration.
 
 This module checks the tensor return map against the same closed-form saturation
 relation used by :mod:`eda_multiphysics.anand`, then checks the surrounding Quad4
 assembly with an elastic affine patch test.
 
-Evidence chain (claim boundary stated per stage):
+Evidence chain:
   1. Anand material point vs closed-form saturation stress      (anand.py)
   2. plane-strain J2 return map vs the same relation in shear   (this file)
   3. FE elastic patch test for an affine displacement field     (this file)
+  4. a fail-closed, multi-element thermal-cycle demonstration   (this file)
 
-The earlier nonlinear multi-element thermal-cycle driver is intentionally not
-part of the public example surface: its modified-Newton solve did not meet the
-stated convergence tolerance.  Git history retains it for future research.
+The cycle is an idealized demonstration, not package-life validation.  Each
+increment uses a numerical material tangent, is checked against Core's Newton
+residual rule, and advances material state exactly once only after convergence.
 
 Run:  python -m eda_multiphysics.solder_joint
 """
@@ -21,10 +22,11 @@ from __future__ import annotations
 import numpy as np
 from scipy.optimize import brentq
 
-from .anand import SNPB, sat_stress
-from .anand_3d import _resistance_update_exact
+from .anand import SAC305, SNPB, sat_stress
+from .anand_3d import _flow_rate_from_q, _resistance_update_exact
 
 SNPB = dict(SNPB, nu=0.40)   # solder Poisson ratio (near-incompressible)
+SAC305_PLANE = dict(SAC305, nu=0.40)
 
 
 def _lame(p):
@@ -58,7 +60,7 @@ def anand_return_map(eps2d, epp_n, s_n, T, dt, p):
 
     def g(dg):
         q = qtr - 3 * G * dg
-        rate = p["A"] * np.exp(-p["QR"] / T) * np.sinh(p["xi"] * max(q, 0.0) / s_of(dg)) ** (1.0 / p["m"])
+        rate = _flow_rate_from_q(max(q, 0.0), s_of(dg), T, p)
         return dg - dt * rate
 
     dg = brentq(g, 0.0, qtr / (3 * G) * (1 - 1e-12), xtol=1e-16, rtol=1e-13, maxiter=200)
@@ -145,9 +147,9 @@ class AnandPlaneStrain:
     """Plane-strain Quad4 FE operator with the Anand viscoplastic material.
 
     Stateful: committed plastic strain epp[e,g,4] and resistance s[e,g] per Gauss
-    point. `T`, `dt` set by the driver each increment. Tangent = elastic (modified
-    Newton; robust for the small thermal increments). Optional `elastic_only` for
-    the patch test.
+    point. ``T`` and ``dt`` are set by the driver each increment.  Nonlinear
+    solves use a numerical material tangent of the return map; ``elastic_only``
+    retains the exact elastic tangent for the patch test.
     """
 
     def __init__(self, mesh, p, elastic_only=False):
@@ -189,21 +191,37 @@ class AnandPlaneStrain:
         return Residual(gdofs=np.arange(self.ndof), values=R)
 
     def tangent(self, U, state, t, dt):
-        if self._K is None:
-            D = _Del(self.p)
-            rows, cols, vals = [], [], []
-            for e, conn in enumerate(self.m.elems):
-                ed = self._edofs(conn)
-                xy = self.m.coords[conn]
-                Ke = np.zeros((8, 8))
-                for xi, eta in _GP2:
-                    B, detJ = _B_detJ(xy, xi, eta)
-                    Ke += B.T @ D @ B * detJ
-                for i in range(8):
-                    for j in range(8):
-                        rows.append(ed[i]); cols.append(ed[j]); vals.append(Ke[i, j])
-            self._K = (np.array(rows), np.array(cols), np.array(vals))
-        return Tangent(rows=self._K[0], cols=self._K[1], values=self._K[2])
+        if self.elastic and self._K is not None:
+            return Tangent(rows=self._K[0], cols=self._K[1], values=self._K[2])
+
+        rows, cols, vals = [], [], []
+        for e, conn in enumerate(self.m.elems):
+            ed = self._edofs(conn)
+            ue = U[ed]
+            xy = self.m.coords[conn]
+            Ke = np.zeros((8, 8))
+            for g, (xi, eta) in enumerate(_GP2):
+                B, detJ = _B_detJ(xy, xi, eta)
+                eps = B @ ue
+                if self.elastic:
+                    D = _Del(self.p)
+                else:
+                    D = np.zeros((3, 3))
+                    for j in range(3):
+                        h = 1.0e-7 * max(1.0, abs(float(eps[j])))
+                        ep = eps.copy(); ep[j] += h
+                        em = eps.copy(); em[j] -= h
+                        sp, _, _, _ = self._stress(ep, e, g, False)
+                        sm, _, _, _ = self._stress(em, e, g, False)
+                        D[:, j] = (sp - sm) / (2.0 * h)
+                Ke += B.T @ D @ B * detJ
+            for i in range(8):
+                for j in range(8):
+                    rows.append(ed[i]); cols.append(ed[j]); vals.append(Ke[i, j])
+        data = (np.asarray(rows), np.asarray(cols), np.asarray(vals))
+        if self.elastic:
+            self._K = data
+        return Tangent(rows=data[0], cols=data[1], values=data[2])
 
     def commit(self, U, state, t, dt):
         for e, conn in enumerate(self.m.elems):
@@ -243,8 +261,119 @@ def patch_test():
     return err < 1e-9
 
 
+def solder_joint_cycle(*, nx=3, ny=2, Tlo=-40.0, Thi=125.0, dalpha=20e-6,
+                       ldnp_over_h=6.0, ncyc=1, steps_per_cyc=12,
+                       maxit=30):
+    """Run an idealized plane-strain SnPbAg thermal-cycle demonstration.
+
+    The bottom pad is fixed, the top pad follows the CTE-mismatch displacement,
+    and the lateral faces are traction-free.  This is a runnable mechanics and
+    state-transfer example; its geometry, loading, and local energy extraction
+    are not a qualified package prediction.
+
+    Every increment must satisfy Core's Newton residual rule or the function
+    raises before committing that increment.  The reported cycle ``dW`` is the
+    sum over increments of the equal-volume mean of Gauss-point values over
+    the top element layer; it is a deliberately local example observable, not
+    a whole-mesh average.
+    """
+    from ._stateful_solve import solve_stateful_increment
+    from .fe import StructuredQuadMesh
+
+    if nx < 1 or ny < 1 or ncyc < 1 or maxit < 1:
+        raise ValueError("mesh counts, ncyc, and maxit must be positive")
+    if steps_per_cyc < 2 or steps_per_cyc % 2:
+        raise ValueError("steps_per_cyc must be a positive even integer")
+    if Thi < Tlo:
+        raise ValueError("Thi must be greater than or equal to Tlo")
+
+    H = 0.1e-3
+    m = StructuredQuadMesh(nx, ny, H, H)
+    op = AnandPlaneStrain(m, SNPB)
+    TloK, ThiK = Tlo + 273.15, Thi + 273.15
+    Tref = 0.5 * (TloK + ThiK)
+    top = np.where(np.isclose(m.coords[:, 1], H))[0]
+    bot = np.where(np.isclose(m.coords[:, 1], 0.0))[0]
+    top_elems = [
+        e for e, conn in enumerate(m.elems)
+        if np.isclose(m.coords[conn][:, 1].max(), H)
+    ]
+    dt = 1600.0 / steps_per_cyc
+    U = np.zeros(op.ndof)
+    cycle_energy = []
+    convergence = []
+
+    def boundary_conditions(gamma):
+        bc = {}
+        for node in bot:
+            bc[2 * int(node)] = 0.0
+            bc[2 * int(node) + 1] = 0.0
+        for node in top:
+            bc[2 * int(node)] = gamma * H
+            bc[2 * int(node) + 1] = 0.0
+        return bc
+
+    # Establish the cold-end state once; its work is initialization and is not
+    # counted as a thermal cycle. Each reported cycle then runs cold -> hot -> cold.
+    op.T = TloK
+    op.dt = dt
+    cold_gamma = dalpha * (TloK - Tref) * ldnp_over_h
+    U, info = solve_stateful_increment(
+        op, U, boundary_conditions(cold_gamma), dt=dt, maxit=maxit
+    )
+    convergence.append(info)
+    for _cyc in range(ncyc):
+        accumulated = 0.0
+        for step in range(1, steps_per_cyc + 1):
+            fraction = step / steps_per_cyc
+            triangle = 1.0 - abs(2.0 * fraction - 1.0)
+            T = TloK + (ThiK - TloK) * triangle
+            gamma = dalpha * (T - Tref) * ldnp_over_h
+            op.T = T
+            op.dt = dt
+            U, info = solve_stateful_increment(
+                op, U, boundary_conditions(gamma), dt=dt, maxit=maxit
+            )
+            convergence.append(info)
+            accumulated += float(op.dW[top_elems].mean())
+        cycle_energy.append(accumulated)
+
+    return {
+        "dW_cyc": cycle_energy,
+        "dW_last": cycle_energy[-1],
+        "dW_aggregation": "increment sum of equal-volume top-layer Gauss-point mean",
+        "gamma_range": dalpha * (ThiK - TloK) * ldnp_over_h,
+        "n_elem": int(len(m.elems)),
+        "max_iterations": max(i["iterations"] for i in convergence),
+        "max_relative_residual": max(i["relative_residual"] for i in convergence),
+        "max_residual_fraction_of_limit": max(
+            i["residual_fraction_of_limit"] for i in convergence
+        ),
+    }
+
+
+def cycle_demo():
+    """Print the bounded public cycle result."""
+    result = solder_joint_cycle()
+    print("\nPlane-strain SnPbAg solder thermal-cycle demonstration")
+    print(
+        f"  {result['n_elem']} Quad4 elements; shear range "
+        f"{100.0 * result['gamma_range']:.2f}%"
+    )
+    print(
+        "  inelastic energy increments by cycle: "
+        + ", ".join(f"{value:.5f} MPa" for value in result["dW_cyc"])
+    )
+    print(
+        f"  all increments met Core's residual rule before commit; max Newton iterations "
+        f"{result['max_iterations']}"
+    )
+    print("  scope: idealized demonstration, not package-life validation")
+
+
 if __name__ == "__main__":
     import sys
     ok = validate_return_map()
     ok &= patch_test()
+    cycle_demo()
     sys.exit(0 if ok else 1)

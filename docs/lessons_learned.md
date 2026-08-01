@@ -39,11 +39,12 @@ test remains green.
 
 Likewise, returning an iterate is not evidence of increment convergence. A
 public stateful cycle/BVP driver needs an explicit convergence result, a
-fail-closed policy, and a regression that exercises failure. The previous
-plane-strain ETV cycle and multi-element stateful solder BVP functions were
-removed because they did not meet that boundary. The retained
-`prescribed_hex8_cycle` fixes every face displacement and checks the material
-state path; it is labeled as a one-element exercise.
+fail-closed policy, and a regression that exercises failure. Earlier versions
+of the plane/ETV/3D drivers did not meet that boundary. The repaired examples
+use a numerical material tangent and `_stateful_solve`: a failed increment
+raises without a state update, and an accepted increment commits exactly once.
+`prescribed_hex8_cycle` remains a separate fully prescribed one-element
+exercise.
 
 ## Coupling should be checked in limiting cases
 
@@ -57,7 +58,10 @@ package geometry.
 Complex-step tangents are useful for smooth residuals. They are not applicable
 through root finders, `abs`, `sign`, or other non-analytic operations in an
 Anand return map. Those paths need an explicitly documented tangent and
-increment-convergence strategy.
+increment-convergence strategy. The repaired Quad4 and Hex8 operators use a
+central-difference material tangent; a regression establishes nonzero committed
+history, compares the assembled tangent with a separate residual directional
+difference, and verifies that neither trial evaluation mutates history.
 
 ## Geometry is more than connectivity
 

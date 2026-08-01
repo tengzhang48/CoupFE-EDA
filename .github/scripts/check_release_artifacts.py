@@ -66,6 +66,7 @@ PUBLIC_PACKAGE_FILES = SCHEMA_ASSETS | SYNTHETIC_CASE_ASSETS | {
         "RESULTS.md",
         "__init__.py",
         "_coupled_solve.py",
+        "_stateful_solve.py",
         "anand.py",
         "anand_3d.py",
         "capacitance.py",

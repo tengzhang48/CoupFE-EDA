@@ -196,6 +196,36 @@ def gate_solder_patch():
     return _g("solder FE elastic patch test", ok, "affine field exact")
 
 
+def gate_solder_cycle_demonstration():
+    from .solder_joint import solder_joint_cycle
+
+    r = solder_joint_cycle(nx=2, ny=2, ncyc=1, steps_per_cyc=8)
+    ok = (
+        np.isfinite(r["dW_last"])
+        and r["dW_last"] > 0.0
+        and r["max_residual_fraction_of_limit"] < 1.0
+    )
+    return _g(
+        "plane-strain stateful cycle (idealized demonstration)",
+        ok,
+        f"{r['n_elem']} elements; dW={r['dW_last']:.5f} MPa; "
+        f"max iterations={r['max_iterations']}; every increment accepted before commit",
+    )
+
+
+def gate_solder_cycle_broken_control():
+    from .solder_joint import solder_joint_cycle
+
+    r = solder_joint_cycle(
+        nx=2, ny=2, Tlo=25.0, Thi=25.0, ncyc=1, steps_per_cyc=4
+    )
+    return _g(
+        "BROKEN-CONTROL: plane cycle with no thermal swing has no dW",
+        abs(r["dW_last"]) < 1.0e-12,
+        f"dW={r['dW_last']:.1e}; max iterations={r['max_iterations']}",
+    )
+
+
 # ---- 3D Anand Hex8 viscoplastic element ----
 def gate_anand_3d_return_map():
     from .anand_3d import validate_return_map_3d
@@ -239,6 +269,42 @@ def gate_anand_3d_broken_control():
     r = prescribed_hex8_cycle(Tlo=25.0, Thi=25.0, ncyc=1, steps_per_cyc=8)
     return _g("BROKEN-CONTROL: 3D Anand no swing -> no dW", abs(r["dW_stab"]) < 1e-12,
               f"dW={r['dW_stab']:.1e} (must be ~0)")
+
+
+def gate_anand_3d_bvp_demonstration():
+    from .anand_3d import solder_joint_bvp_3d
+
+    r = solder_joint_bvp_3d()
+    ok = (
+        np.all(np.isfinite(r["dW_elem"]))
+        and r["dW_mean"] > 0.0
+        and r["max_residual_fraction_of_limit"] < 1.0
+    )
+    return _g(
+        "3D stateful solder block (idealized demonstration)",
+        ok,
+        f"{r['n_elem']} elements; dW peak/mean={r['peak_to_mean']:.3f}; "
+        f"max iterations={r['max_iterations']}; no crack-location claim",
+    )
+
+
+def gate_anand_3d_bvp_broken_control():
+    from .anand_3d import solder_joint_bvp_3d
+
+    r = solder_joint_bvp_3d(
+        nx=2,
+        ny=2,
+        nz=2,
+        Tlo=25.0,
+        Thi=25.0,
+        ncyc=1,
+        steps_per_cyc=4,
+    )
+    return _g(
+        "BROKEN-CONTROL: 3D block with no thermal swing has no dW",
+        abs(r["dW_peak"]) < 1.0e-12,
+        f"peak dW={r['dW_peak']:.1e}; max iterations={r['max_iterations']}",
+    )
 
 
 def gate_solder_life_experimental_anchor():
@@ -315,7 +381,7 @@ def gate_capstone_pipeline():
         r["release_validation"] is False
         and r["analysis_role"] == "synthetic_integration_demonstration"
     )
-    return _g("capstone V->T->u->life pipeline (synthetic fixture)",
+    return _g("capstone V->T->u->screening pipeline (synthetic fixture)",
               ir_ok and physical and power_ok and claim_ok,
               f"IR {r['ir_ours']*1e3:.3f}mV vs reference "
               f"{(r['ir_reference'] or 0)*1e3:.3f}; "
@@ -333,7 +399,7 @@ def gate_capstone_broken_control():
     zero_ok = cold["peak_dT"] < 1e-2 and cold["peak_stress"] < 1e-2
     handoffs_ok = (hot["dW"] > cold["dW"] and hot["Nf_solder"] < cold["Nf_solder"]
                    and hot["em_temp_acceleration"] > cold["em_temp_acceleration"])
-    return _g("BROKEN-CONTROL: P=0 structural zero + active life handoffs",
+    return _g("BROKEN-CONTROL: P=0 structural zero + active screening handoffs",
               zero_ok and handoffs_ok,
               f"zero dT={cold['peak_dT']:.1e}K σ={cold['peak_stress']:.1e}MPa; "
               f"5mW Nf {cold['Nf_solder']:,.0f}->{hot['Nf_solder']:,.0f}, "
@@ -433,6 +499,48 @@ def gate_etv_fe_broken_control():
               f"peakT={float(abs(T).max()):.1e} (must be ~0)")
 
 
+def gate_etv_partitioned_cycle_demonstration():
+    from .etv_fe import thermoviscoplastic_comparison
+    from .etv_solder import dandu_bump, joule_density
+
+    q_joule = joule_density(dandu_bump()["j_avg"])
+    r = thermoviscoplastic_comparison(
+        q_joule=q_joule, period=1.0, ncyc=2
+    )
+    quasi = r["quasisteady"]
+    transient = r["lumped_transient"]
+    ok = (
+        -0.9 < r["relative_energy_difference"] < -0.3
+        and transient["temperature_C_max"] < quasi["temperature_C_max"]
+        and quasi["max_residual_fraction_of_limit"] < 1.0
+        and transient["max_residual_fraction_of_limit"] < 1.0
+    )
+    return _g(
+        "partitioned thermo-viscoplastic fast-cycle sensitivity",
+        ok,
+        f"fast-cycle lumped-vs-quasisteady dW difference="
+        f"{100.0 * r['relative_energy_difference']:+.3f}%; "
+        "mechanical increments accepted before commit",
+    )
+
+
+def gate_etv_partitioned_broken_control():
+    from .etv_fe import thermoviscoplastic_cycle
+
+    r = thermoviscoplastic_cycle(
+        temperature_model="lumped_transient",
+        Tlo_C=25.0,
+        Thi_C=25.0,
+        ncyc=1,
+        steps_per_cyc=4,
+    )
+    return _g(
+        "BROKEN-CONTROL: partitioned cycle with no thermal swing has no dW",
+        abs(r["dW_last"]) < 1.0e-12,
+        f"dW={r['dW_last']:.1e}; max iterations={r['max_iterations']}",
+    )
+
+
 # reliability + classic-mechanics benchmark gates (each returns name/ok/detail)
 from .electromigration import (gate_black_acceleration, gate_blech_product,  # noqa: E402
                                gate_em_broken_control)
@@ -450,11 +558,14 @@ GATES = [
     # SAC305 (modern lead-free) -- reproduce published Motalab Fig 3.10 benchmark
     gate_anand_sac305_saturation, gate_anand_sac305_benchmark,
     gate_anand_sac305_broken_control,
-    gate_solder_return_map, gate_solder_patch, gate_pdn_vs_scipy,
+    gate_solder_return_map, gate_solder_patch,
+    gate_solder_cycle_demonstration, gate_solder_cycle_broken_control,
+    gate_pdn_vs_scipy,
     # 3D Hex8 Anand material/element checks plus a fully prescribed cycle smoke check
     gate_anand_3d_return_map, gate_anand_3d_transient,
     gate_anand_3d_transient_broken_control, gate_anand_3d_patch,
     gate_anand_3d_sac305_cycle_smoke, gate_anand_3d_broken_control,
+    gate_anand_3d_bvp_demonstration, gate_anand_3d_bvp_broken_control,
     # in-sample calibration reproduction: Darveaux/Motalab SAC305 4719-cycle case (+/-2x) + control
     gate_solder_life_experimental_anchor, gate_solder_life_experimental_broken_control,
     # electromigration (Black + Blech)
@@ -477,6 +588,8 @@ GATES = [
     gate_etv_monolithic_consistency, gate_etv_coupling_quasistatic,
     # ETV FE refinement: monolithic coupled electro-thermal element on the CoupFE contract
     gate_etv_fe_selfheating, gate_etv_fe_consistency, gate_etv_fe_broken_control,
+    gate_etv_partitioned_cycle_demonstration,
+    gate_etv_partitioned_broken_control,
 ]
 
 

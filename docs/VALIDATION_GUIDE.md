@@ -73,7 +73,9 @@ The `eda_multiphysics.gates` harness covers:
 - material/reduced ETV self-heating, current-crowding context, staggered and
   coupled consistency checks; and
 - the Stage-A monolithic Quad4 electrothermal element versus a slab oracle and
-  sequential solve.
+  sequential solve; and
+- repaired plane, partitioned ETV, and 3D stateful demonstrations with
+  fail-closed residual checks and no-swing controls.
 
 The crowding check uses a simplified fixed mesh and a cited context range. It
 does not reproduce an external device geometry. The life tie point reuses a
@@ -92,15 +94,18 @@ The default pytest suite adds checks for:
 - local Tet4 affine strain, field sampling, recovery, and fail-closed geometry
   inputs;
 - periodic face matching, edge/corner relations, lossy-index rejection, and
-  the Core/EDA ownership boundary; and
-- removal of nonconverged stateful FE-cycle/BVP entry points from the public
-  modules.
+  the Core/EDA ownership boundary;
+- one accepted-state commit for stateful increments that meet Core's residual
+  rule and zero commits for a forced failure;
+- Quad4 and Hex8 numerical-tangent agreement with a separate assembled-residual
+  directional difference after a nonzero history preload; and
+- identity preservation from the maximum-DNP joint map object into the
+  stateful 3D screening block.
 
-The final item is deliberate: the previous plane-strain ETV cycle and
-stateful solder-joint boundary-value functions did not meet their stated
-increment convergence criterion. They are not public examples and must not be
-restored without an explicit convergence status and a regression that fails on
-nonconvergence.
+Earlier versions of the plane, ETV, and 3D drivers did not meet this boundary.
+Their old outputs are not release evidence. The repaired public examples use a
+numerical material tangent, Core's existing residual rule, deferred commit,
+and failure regressions.
 
 ## Optional toolchain families
 

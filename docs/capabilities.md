@@ -22,8 +22,8 @@ element and affine-constraint primitives.
 | Thermomechanics | Two-dimensional bimetal/cylinder models and generated three-dimensional block/TSV models | Closed forms, patch/free-expansion/constrained-block checks, and selected generated-mesh comparisons |
 | TSV local model | Generated blind Cu/oxide/anisotropic-Si Tet4 submodel, stress recovery, Raman sampling, mobility and KOZ proxy functions | Constitutive rotation, topology, interpolation, affine-field, hashing, and fail-closed metadata checks; experimental Raman/device comparison remains open |
 | Periodic TSV cell | Gmsh-matched opposite faces and EDA-owned affine-relation construction consumed by Core constraints | Serial homogeneous and heterogeneous checked cases; source-equivalent boundary selection, mesh convergence, MPI consumption, and experiment remain open |
-| Solder constitutive models | Anand material-point integrations, a plane-strain return map, and a prescribed one-Hex8 SAC305 state-update exercise | Saturation, transient comparison, patch tests, zero-swing control, and an in-sample published calibration tie point |
-| Solder/package geometry | Generated cylinder/profile/package regions with stable design-map handoff | Mesh/topology and stateless elastic/generated-mesh regression cases; a converged stateful joint boundary-value fatigue solve is not included |
+| Solder constitutive models | Anand material-point integrations, plane-strain SnPbAg and three-dimensional SAC305 operators, prescribed cycles, and small stateful block examples | Saturation, transient comparison, patch tests, fail-closed increment residuals, one accepted-state commit, zero-swing controls, and an in-sample published calibration tie point |
+| Solder/package geometry | Generated cylinder/profile/package regions with stable design-map handoff plus a regular 18-Hex8 stateful screening block | Geometry/topology and elastic generated-mesh regressions; stateful increments meet Core's residual rule, but load-step/mesh convergence, crack location, and predictive life are not established |
 | Reliability mappings | Black/Blech screening, Syed/Darveaux mappings, and design-map propagation | Algebraic and handoff checks; life values remain calibration- and mission-profile-dependent |
 | Distributed execution | PETSc paths for PDN and selected coupled examples | Retained serial-versus-MPI output comparison for `etv_distributed_fs` at size 24 with two and four ranks; other distributed modules are research drivers and no general scaling claim is made |
 | Tet4 path | Native Core Tet4 consumed on generated boxes, cylinders, and local package/TSV regions | Patch and generated-geometry regression cases; imported production CAD and broad convergence studies remain open |
@@ -40,21 +40,26 @@ placement/power metadata
         -> solder and electromigration screening quantities
 ```
 
-Each handoff records units and provenance. The composed result is labeled
-`synthetic_integration_demonstration`; successful handoffs do not establish
-real-device prediction accuracy.
+Each handoff records units and provenance. The bundled case is project-authored
+synthetic input; successful handoffs do not establish real-device prediction
+accuracy.
 
-The ETV work has two public levels:
+The ETV work has three public levels:
 
 - `etv_solder.py` exercises electrothermal and Anand coupling at a material or
   reduced-model level.
 - `etv_fe.py` implements the spatial monolithic electrothermal element (the
   Stage-A `phi`/`T` system) and compares it with the sequential implementation.
+- `etv_fe.thermoviscoplastic_cycle` combines a lumped backward-Euler
+  temperature model with spatial SAC305 increments that meet Core's residual
+  rule. It uses a unit Taylor–Quinney conversion of top-layer-average
+  inelastic work to uniform lagged heat and is a
+  partitioned sensitivity example, not a monolithic `phi-T-u` element.
 
-An earlier transient thermo-viscoplastic FE-cycle extension did not satisfy its
-convergence criterion and is not part of the public API. Likewise, the
-prescribed one-Hex8 Anand cycle checks state evolution through the operator
-contract; it is not a multi-element solder-joint boundary-value prediction.
+The stateful spatial paths use a numerical material tangent and defer state
+commit until Core's residual rule is met. The prescribed one-Hex8 cycle remains
+a constitutive/operator-path check; `solder_joint_bvp_3d` separately exercises
+multi-element equilibrium on an idealized regular block.
 
 ## Geometry and software handoffs
 
@@ -103,7 +108,8 @@ This release does not establish:
 - foundry/process qualification, process corners, or signoff accuracy;
 - general electromagnetic, fluid, package-CAD, or optimization coverage;
 - real-device TSV mobility, Raman, temperature, stress, or lifetime agreement;
-- a converged stateful three-dimensional solder fatigue boundary-value result;
+- crack-location, mesh-converged dissipation, or predictive solder-life accuracy
+  from the idealized stateful block;
 - performance or memory scaling beyond retained checked-size tests; or
 - correctness for arbitrary imported CAD, mesh density, material set, or
   boundary condition.
