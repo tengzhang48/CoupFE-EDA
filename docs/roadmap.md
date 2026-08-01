@@ -68,10 +68,10 @@ After serial equations and evidence are stable:
 
 - add a distributed periodic-TSV consumer;
 - compare serial and MPI results at selected sizes;
-- define matrix, partition, solver, and environment metadata for performance
-  runs;
-- retain raw output and repeat measurements; and
-- report scaling only for the measured configurations.
+- extend the retained `etv_distributed_fs` benchmark to additional machines,
+  sizes, and rank-placement policies without combining unlike records;
+- add memory and partition metrics when they can be captured reproducibly; and
+- report scaling only for the retained measured configurations.
 
 ## Release and usability
 

@@ -16,6 +16,23 @@ removing a temperature swing, changing an activation parameter, or imposing a
 fixed periodic box. A control that cannot reject the corresponding error adds
 little evidence.
 
+Repository placement should make the evidence type visible. Reusable operators
+and adapters belong in `eda_multiphysics/`; a readable workflow with fixed
+inputs and interpreted output belongs in `examples/`; an automated assertion
+belongs in `tests/`; and a fixed reference or performance study with retained
+provenance and complete sanitized process records belongs in `benchmarks/`. An example may include a
+small numerical oracle without becoming a performance benchmark.
+
+Not locating an old log is not evidence that the underlying calculation
+failed. Before withholding an implemented workflow or deleting its public
+entry point, search the current tree, Git history and branches, coordination
+notes, known worktrees, and authorized attached storage. Then inspect the code
+and rerun the case when the dependencies and inputs are available. Report an
+old number as historical/unqualified when its context is incomplete; report a
+new number as a rerun with its new revision and environment. Only a concrete
+failed convergence check or other reproduced defect supports calling the case
+failed.
+
 ## Dependency identity is part of the result
 
 CoupFE-EDA depends on a precise Core contract. A Python environment can import
@@ -102,8 +119,12 @@ must be recorded with any measured comparison.
 A serial-versus-MPI comparison at selected ranks can check a distributed path.
 It does not establish general scaling. Timing, memory, and iteration claims
 also require the matrix size, partition, solver options, PETSc/MPI/compiler
-versions, hardware, rank placement, raw output, and repeated-run policy.
-Unretained exploratory timing should not appear as a release claim.
+versions, hardware, rank placement, complete sanitized output, and repeated-run policy.
+Unretained exploratory timing should not appear as a current result. Historical
+tables may be preserved for transparency when labeled as unqualified and kept
+separate from reruns made with a named public revision. Repeated measurements
+should be aggregated at a declared grain (for example, median solve wall time
+per rank) without discarding the individual sanitized records.
 
 ## Synthetic data should be explicit
 

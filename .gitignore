@@ -14,12 +14,12 @@ _etk*/
 meson*.build
 .mesonpy*
 _tm_hex/
-# LaTeX intermediate files; retain the authored .tex and rendered .pdf deliverables.
+# LaTeX and rendered-document files are outside the reviewed source artifact.
+*.tex
+*.pdf
 *.aux
 *.log
 *.nav
 *.out
 *.snm
 *.toc
-!eda_multiphysics/templates/
-!eda_multiphysics/templates/*.for

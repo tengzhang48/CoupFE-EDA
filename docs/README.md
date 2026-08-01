@@ -11,6 +11,8 @@ or experimental evidence. It does not describe a signoff-qualified flow.
   boundaries.
 - [API reference](api.md) maps workflows to modules and callable entry points.
 - [Examples](../EXAMPLES.md) identifies runnable examples and their input data.
+- [Benchmarks](../benchmarks/) contains fixed reference and performance studies,
+  including the retained solver-scaling records.
 - [Validation guide](VALIDATION_GUIDE.md) explains the evidence classes and test
   commands.
 - [Theory](theory.md) records the equations and cited model sources.
@@ -18,6 +20,8 @@ or experimental evidence. It does not describe a signoff-qualified flow.
 ## Engineering reference
 
 - [Component map](COMPONENTS.md) groups the modules for navigation.
+- [API migrations](API_MIGRATIONS.md) records corrected or renamed pre-release
+  interfaces.
 - [Geometry](GEOMETRY.md) documents generated geometry, joint maps, and mesh
   handoffs.
 - [Periodic MPC status](PERIODIC_MPC_STATUS.md) records the Core/EDA ownership
@@ -28,6 +32,9 @@ or experimental evidence. It does not describe a signoff-qualified flow.
 - [Engineering lessons](lessons_learned.md) summarizes current implementation
   lessons.
 - [Roadmap](roadmap.md) lists the next evidence-producing work.
+- [Technical history](history/) preserves the initial purpose, detailed plans,
+  audits, negative findings, and development results without treating dated
+  records as current release claims.
 
 ## Licensing and provenance
 

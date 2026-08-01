@@ -6,9 +6,25 @@ minor releases. Arrays use NumPy. Unless a function states otherwise, geometry
 uses SI units; several EDA adapters use micrometres and record that choice in
 metadata.
 
-Install through `./setup.sh` so the package imports the qualified CoupFE
+Install through `./setup.sh` so the package imports the tested CoupFE
 revision `454f73ce2de284262b214a2b37bd676c6aca3c0a`. A name-matched package from
 an unrelated index is not an accepted substitute.
+
+## Guided API examples
+
+The standalone workflows call the same public functions documented below and
+add fixed configuration, JSON output, a local numerical oracle, references, and
+interpretation:
+
+| Example | Public API |
+|---|---|
+| [`examples/solder_plane_cycle`](../examples/solder_plane_cycle/) | `solder_joint.solder_joint_cycle(...)` |
+| [`examples/etv_partitioned_cycle`](../examples/etv_partitioned_cycle/) | `etv_fe.thermoviscoplastic_comparison(...)` |
+| [`examples/solder_3d_cycle`](../examples/solder_3d_cycle/) | `anand_3d.solder_joint_bvp_3d(...)` |
+| [`examples/design_linked_solder_screening`](../examples/design_linked_solder_screening/) | `reliability_3d.critical_joint_bvp_screening(...)` |
+
+Use the package functions directly when composing a new workflow. Use the
+example runners when reviewing the documented default inputs and outputs.
 
 ## Scalar fields
 
@@ -50,6 +66,11 @@ and labeled power inputs to a two-dimensional temperature field.
 `electrothermal_chip.run(...)` and `chip_vtu.run(...)` provide composed
 placement/PDN/thermal examples. The bundled default is the project-authored
 `cases/synthetic_pdn` scenario. Caller data must declare units and provenance.
+
+`design_loop_demo.compare_design(nx=100, ny=4)` compares a synthetic weak-strap
+case with a solver-side reinforced-strap perturbation under the same
+total-current invariant. It illustrates analysis-to-design feedback without
+modifying or rerunning a live OpenROAD design.
 
 `joint_map.load_joint_map(csv_path, metadata_path=None)` loads the versioned
 joint-map contract. It normalizes units, applies an optional affine transform,
@@ -163,12 +184,15 @@ prediction.
 - `design_joints(...)` / `design_grid(...)`; and
 - `from_design(...)` for applying the documented DNP displacement and
   calibration mappings across a design map; and
-- `critical_joint_bvp_screening(...)` for preserving the maximum-DNP joint
-identity while driving the idealized stateful block.
+- `critical_joint_bvp_screening(...)` for preserving one maximum-DNP joint
+  identity, the full tie set, and the selection rule while driving the
+  idealized stateful block.
 
 `critical_joint_bvp_screening(...)` derives `L_D` from the selected design-map
 object and forms `L_D/h` with its caller-supplied `h_solder`. Returned joint-map
 height is provenance metadata; it does not currently size the regular block.
+If several objects tie at maximum DNP, the result lists all tied joint IDs and
+selects the first in stable joint-map row order.
 
 `from_design(...)` prefers an explicit joint map. PDN node-name decoding is a
 clearly labeled proxy fallback. The stateful screening value is
@@ -198,10 +222,14 @@ The following modules require optional compilers, Gmsh, PETSc, and/or MPI:
   `reliability_3d` for compiled/generated three-dimensional cases.
 
 Tool availability, solver configuration, and retained checked-size evidence
-must be recorded with the run. The package does not make a performance or
-scalability guarantee. In this release, the retained multi-rank regression
-covers `etv_distributed_fs`; the other distributed modules remain research
-drivers.
+must be recorded with the run. `scaling_bench` writes repeated
+`etv_distributed_fs` measurements and their complete sanitized process output
+to a new directory; the study definition and retained records live in
+[`benchmarks/solver_scaling`](../benchmarks/solver_scaling/). A benchmark result
+applies to its recorded revision, problem size, solver configuration, hardware,
+and rank/thread placement; it is not a general performance guarantee. The
+checked-size multi-rank regression covers `etv_distributed_fs`; the other
+distributed modules remain research drivers.
 
 ## Solver contract
 

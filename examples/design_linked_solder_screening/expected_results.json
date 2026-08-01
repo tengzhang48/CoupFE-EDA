@@ -1,0 +1,82 @@
+{
+  "absolute_tolerance": 1e-09,
+  "relative_tolerance": 1e-05,
+  "expected": {
+    "example": "design_linked_solder_screening",
+    "input_provenance": {
+      "joint_source": "project_authored_synthetic_joint_map",
+      "joint_map_explicit": true,
+      "geometry_fidelity": "proxy",
+      "coordinate_frame": "synthetic_die",
+      "representative_elastic_modulus_MPa": 43000.0,
+      "representative_poisson_ratio": 0.4
+    },
+    "selected_design_object": {
+      "joint_id": "SYNTH_J00",
+      "source_object_id": "VDD_20000_20000_1",
+      "net": "VDD",
+      "L_D_um": 42.4264068712,
+      "joint_map_diameter_um": null,
+      "joint_map_height_um": null,
+      "selection_criterion": "maximum distance to neutral point",
+      "maximum_dnp_tie_count": 4,
+      "maximum_dnp_tied_joint_ids": ["SYNTH_J00", "SYNTH_J02", "SYNTH_J20", "SYNTH_J22"],
+      "tie_break_policy": "maximum DNP; first tied object in stable joint-map row order"
+    },
+    "configuration": {
+      "mesh_elements_xyz": [3, 3, 2],
+      "block_dimensions_mm": [0.1, 0.1, 0.1],
+      "n_elements": 18,
+      "temperature_C": [-40.0, 125.0],
+      "cycle_period_s": 1600.0,
+      "cycles": 1,
+      "increments_per_cycle": 8,
+      "delta_alpha_per_K": 1.44e-05,
+      "screening_height_um": 50.0,
+      "L_D_over_h": 0.848528137424,
+      "Syed_energy_coefficient_per_MPa": 0.0019
+    },
+    "results": {
+      "dW_element_MPa": [
+        0.00483370283253,
+        0.0111335154369,
+        0.00483370283253,
+        0.00483370283214,
+        0.0111335154346,
+        0.00483370283214,
+        0.00483370283253,
+        0.0111335154369,
+        0.00483370283253,
+        0.00483370277395,
+        0.01113351531,
+        0.00483370277395,
+        0.00483370277487,
+        0.0111335153102,
+        0.00483370277487,
+        0.00483370277395,
+        0.01113351531,
+        0.00483370277395
+      ],
+      "dW_peak_MPa": 0.0111335154369,
+      "dW_mean_MPa": 0.00693364032659,
+      "peak_to_mean": 1.60572439765,
+      "engineering_shear_range": 0.00201610285452,
+      "Syed_calibration_screen_cycles": 47273.1000783
+    },
+    "solver_evidence": {
+      "all_increments_accepted": true
+    }
+  },
+  "bounds": [
+    {
+      "path": "solver_evidence.max_newton_iterations",
+      "minimum_inclusive": 1,
+      "maximum_inclusive": 20
+    },
+    {
+      "path": "solver_evidence.max_final_residual_fraction_of_acceptance_limit",
+      "minimum_inclusive": 0.0,
+      "maximum_exclusive": 1.0
+    }
+  ]
+}

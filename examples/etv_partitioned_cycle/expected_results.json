@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "input_role": "Regression oracle read only when run.py is called with --check",
+  "configuration": "2x2 Quad4, two -40 to 125 to -40 C cycles, eight increments per cycle; 1600 s and 1 s periods",
+  "metrics": [
+    {
+      "path": "inputs.representative_elastic_modulus_MPa",
+      "value": 43000.0,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.representative_poisson_ratio",
+      "value": 0.4,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.volumetric_heat_capacity_J_per_m3K",
+      "value": 1600000.0,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.dandu_context.solder_resistivity_ohm_m",
+      "value": 1.33e-7,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.dandu_context.derived_joule_density_W_per_m3",
+      "value": 159517996.46865556,
+      "relative_tolerance": 1e-10,
+      "absolute_tolerance": 1e-3
+    },
+    {
+      "path": "results.slow_cycle.quasisteady.dW_last_MPa",
+      "value": 0.4786465994175291,
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.dW_last_MPa",
+      "value": 0.4783433137879026,
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.relative_energy_difference_percent",
+      "value": -0.06336316397014427,
+      "absolute_tolerance": 0.0002
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.dW_last_MPa",
+      "value": 0.7608183740948495,
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.dW_last_MPa",
+      "value": 0.25222928532970823,
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.relative_energy_difference_percent",
+      "value": -66.8476348734628,
+      "absolute_tolerance": 0.002
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.temperature_C_max",
+      "value": 98.60146223882845,
+      "absolute_tolerance": 0.001
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.temperature_C_max",
+      "value": 144.93974955858192,
+      "absolute_tolerance": 0.001
+    }
+  ],
+  "bounds": [
+    {
+      "path": "results.slow_cycle.quasisteady.max_residual_fraction_of_acceptance_limit",
+      "maximum_exclusive": 1.0
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.max_residual_fraction_of_acceptance_limit",
+      "maximum_exclusive": 1.0
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.max_residual_fraction_of_acceptance_limit",
+      "maximum_exclusive": 1.0
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.max_residual_fraction_of_acceptance_limit",
+      "maximum_exclusive": 1.0
+    }
+  ],
+  "current_limits": "Deterministic reduced-model comparison; not a monolithic multiphysics or measured-device validation."
+}

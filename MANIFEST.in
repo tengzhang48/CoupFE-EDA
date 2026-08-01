@@ -21,9 +21,10 @@ include .github/scripts/record_release_evidence.py
 include .github/scripts/smoke_wheel.py
 include .github/workflows/fast-ci.yml
 
-recursive-include benchmarks *.json
+recursive-include benchmarks *.json *.md *.py *.txt
 
 include docs/COMPONENTS.md
+include docs/API_MIGRATIONS.md
 include docs/GEOMETRY.md
 include docs/LICENSE.md
 include docs/PERIODIC_MPC_STATUS.md
@@ -36,6 +37,7 @@ include docs/capabilities.md
 include docs/lessons_learned.md
 include docs/roadmap.md
 include docs/theory.md
+recursive-include docs/history *.md
 include docs/validation_guide/generate_figures.py
 recursive-include docs/validation_guide/figures *.png
 

@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import os
 import sys
-import time
 
 import numpy as np
 import scipy.sparse as sp
@@ -30,6 +29,7 @@ from .etv_distributed import PROPS, V0, _dirichlet_fn, _kernel, build_grid
 
 
 def main():
+    from mpi4py import MPI
     from petsc4py import PETSc
     from coupfe.runtime.compiled_element import CompiledElement
 
@@ -94,8 +94,13 @@ def main():
         Rv.assemble()
         return A, Rv
 
-    t0 = time.time()
+    # Synchronize before the measured region and use MPI's monotonic wall
+    # clock. The reported value below is the maximum elapsed time across all
+    # ranks, so a faster rank cannot hide time spent by the slowest one.
+    comm.barrier()
+    t0 = MPI.Wtime()
     its = 0
+    ksp_iterations_by_step = []
     converged = False
     last_update = float("inf")
     for step in range(8):                               # Newton loop (quadratic Joule term)
@@ -116,6 +121,7 @@ def main():
         x = A.createVecLeft()
         ksp.solve(b, x)
         its = ksp.getIterationNumber()
+        ksp_iterations_by_step.append(int(its))
         reason = int(ksp.getConvergedReason())
         ksp_residual = float(ksp.getResidualNorm())
         if reason <= 0:
@@ -147,13 +153,19 @@ def main():
             "distributed FieldSplit Newton solve did not converge: "
             f"iterations=8, last_update={last_update:.6e}, tolerance=1.0e-11"
         )
-    comm.barrier(); dt = time.time() - t0
+    comm.barrier()
+    local_elapsed = MPI.Wtime() - t0
+    dt = comm.tompi4py().allreduce(local_elapsed, op=MPI.MAX)
 
     if rank == 0:
         peakT = float(U[1::2].max())
         print(f"DISTRIBUTED FieldSplit coupled electro-thermal | {n}x{n} = {ndof:,} DOF | "
               f"{size} rank(s) | my_ne={len(my_elems)}")
-        print(f"  wall={dt:.2f}s | last KSP iters={its} | peak dT={peakT:.4f}")
+        print(
+            f"  synchronized max-rank wall={dt:.6g}s | "
+            f"Newton steps={len(ksp_iterations_by_step)} | "
+            f"KSP iters/step={ksp_iterations_by_step} | peak dT={peakT:.4f}"
+        )
         if "--validate" in sys.argv:
             from .etv_distributed import serial_solve
             Us = serial_solve(n)
@@ -163,7 +175,7 @@ def main():
                 raise RuntimeError(
                     f"distributed-versus-serial comparison failed: relative_error={err:.6e}"
                 )
-        print(f"SCALEFS {ndof} {size} {dt:.4f} {its}")
+        print(f"SCALEFS {ndof} {size} {dt:.9g} {its}")
 
 
 if __name__ == "__main__":

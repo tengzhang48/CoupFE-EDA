@@ -6,7 +6,7 @@ PDN/electrothermal handoffs, TSV stress, solder/package global-local studies,
 and design-object provenance. Evidence is limited to the tests, reference
 cases, and model scopes documented below; this is not a signoff tool.
 
-The dependency-qualified Core revision is
+The tested Core revision is
 `454f73ce2de284262b214a2b37bd676c6aca3c0a`. Geometry-specific matching and
 periodic adapters remain in this repository; Core supplies mesh-agnostic finite
 element and affine-constraint primitives.
@@ -19,13 +19,15 @@ element and affine-constraint primitives.
 | Electrothermal coupling | Sequential and monolithic `phi`/`T` formulations with temperature-dependent conductivity and Joule heating | One-dimensional self-heating oracle, monolithic-versus-staggered comparison, power balance, and zero-power controls |
 | PDN handoff | Resistor-network parser/solver, OpenROAD/OpenDB export adapter, and serial or PETSc solve paths | Independent SciPy comparison and a project-authored synthetic 3×3 fixture; no foundry design or PDK is bundled |
 | EDA provenance | Versioned case metadata, stable joint IDs, coordinate/unit transforms, hashes, and explicit proxy labels | Schema and integration regressions; caller-supplied design data retains its own license and qualification burden |
+| Analysis feedback | Thermal/back-annotation records and a synthetic weak-strap/reinforced-strap comparison at fixed current | Solver-side design perturbation and invariant only; no live database edit, DRC/timing rerun, or automated design optimization |
+| Compiled weak-form elements | CoupFE-generated electrothermal and thermo-mechanical kernels consumed by serial, generated-mesh, and selected MPI paths | Analytic/reference and toolchain checks for the implemented elements; no general code-generation or performance guarantee |
 | Thermomechanics | Two-dimensional bimetal/cylinder models and generated three-dimensional block/TSV models | Closed forms, patch/free-expansion/constrained-block checks, and selected generated-mesh comparisons |
 | TSV local model | Generated blind Cu/oxide/anisotropic-Si Tet4 submodel, stress recovery, Raman sampling, mobility and KOZ proxy functions | Constitutive rotation, topology, interpolation, affine-field, hashing, and fail-closed metadata checks; experimental Raman/device comparison remains open |
 | Periodic TSV cell | Gmsh-matched opposite faces and EDA-owned affine-relation construction consumed by Core constraints | Serial homogeneous and heterogeneous checked cases; source-equivalent boundary selection, mesh convergence, MPI consumption, and experiment remain open |
-| Solder constitutive models | Anand material-point integrations, plane-strain SnPbAg and three-dimensional SAC305 operators, prescribed cycles, and small stateful block examples | Saturation, transient comparison, patch tests, fail-closed increment residuals, one accepted-state commit, zero-swing controls, and an in-sample published calibration tie point |
+| Solder constitutive models | Anand material-point integrations, plane-strain SnPbAg and three-dimensional SAC305 operators, prescribed cycles, and small stateful block examples | Saturation, transient comparison, patch tests, fail-closed increment residuals, one accepted-state commit, zero-swing controls, an in-sample published calibration tie point, and four [guided result-bearing workflows](../EXAMPLES.md#guided-workflows-and-retained-example-results) |
 | Solder/package geometry | Generated cylinder/profile/package regions with stable design-map handoff plus a regular 18-Hex8 stateful screening block | Geometry/topology and elastic generated-mesh regressions; stateful increments meet Core's residual rule, but load-step/mesh convergence, crack location, and predictive life are not established |
 | Reliability mappings | Black/Blech screening, Syed/Darveaux mappings, and design-map propagation | Algebraic and handoff checks; life values remain calibration- and mission-profile-dependent |
-| Distributed execution | PETSc paths for PDN and selected coupled examples | Retained serial-versus-MPI output comparison for `etv_distributed_fs` at size 24 with two and four ranks; other distributed modules are research drivers and no general scaling claim is made |
+| Distributed execution | PETSc paths for PDN and selected coupled examples; repeat-aware `etv_distributed_fs` measurement harness | Retained serial-versus-MPI output comparison at size 24 plus the bounded records in [`benchmarks/solver_scaling`](../benchmarks/solver_scaling/); every timing applies only to its named revision, problem, environment, hardware, and rank/thread configuration |
 | Tet4 path | Native Core Tet4 consumed on generated boxes, cylinders, and local package/TSV regions | Patch and generated-geometry regression cases; imported production CAD and broad convergence studies remain open |
 
 ## Coupled workflows
@@ -110,7 +112,8 @@ This release does not establish:
 - real-device TSV mobility, Raman, temperature, stress, or lifetime agreement;
 - crack-location, mesh-converged dissipation, or predictive solder-life accuracy
   from the idealized stateful block;
-- performance or memory scaling beyond retained checked-size tests; or
+- performance or memory scaling beyond the configurations with retained raw
+  records in [`benchmarks/solver_scaling`](../benchmarks/solver_scaling/); or
 - correctness for arbitrary imported CAD, mesh density, material set, or
   boundary condition.
 

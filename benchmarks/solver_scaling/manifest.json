@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "coupfe-eda-etv-fieldsplit-fixed-size",
+  "benchmark_kind": "strong_scaling_rank_sweep",
+  "driver": {
+    "module": "eda_multiphysics.etv_distributed_fs",
+    "launcher": "mpirun",
+    "machine_record_prefix": "SCALEFS",
+    "machine_record_fields": [
+      "ndof",
+      "ranks",
+      "wall_seconds",
+      "last_ksp_iterations"
+    ]
+  },
+  "problem": {
+    "input": "n by n structured Quad4 element grid",
+    "fields_per_node": 2,
+    "expected_ndof_formula": "2 * (n + 1)^2",
+    "fixed_during_rank_sweep": true
+  },
+  "metric": {
+    "name": "driver_reported_synchronized_max_rank_solve_wall_seconds",
+    "unit": "seconds",
+    "grain": "one fixed-size coupled solve per rank count and repeat",
+    "timed_region": "from a synchronized pre-Newton barrier through a synchronized final barrier; maximum elapsed MPI wall time across ranks",
+    "excluded": [
+      "MPI process launch",
+      "Python imports",
+      "grid creation",
+      "generated-kernel build"
+    ],
+    "aggregation": "median with every sample and minimum/maximum retained",
+    "rank_aggregation": "maximum synchronized MPI wall time across ranks"
+  },
+  "solver_configuration": {
+    "nonlinear": {
+      "maximum_steps": 8,
+      "convergence_metric": "maximum absolute solution increment",
+      "convergence_tolerance": 1e-11
+    },
+    "linear": {
+      "ksp": "gmres",
+      "relative_tolerance": 1e-10,
+      "maximum_iterations": 500,
+      "preconditioner": "additive fieldsplit with GAMG per scalar field"
+    }
+  },
+  "protocol": {
+    "minimum_repeats_per_rank": 3,
+    "recommended_repeats_when_variability_is_material": 5,
+    "threads_per_rank": 1,
+    "forced_thread_controls": [
+      "OMP_NUM_THREADS",
+      "OPENBLAS_NUM_THREADS",
+      "MKL_NUM_THREADS",
+      "VECLIB_MAXIMUM_THREADS",
+      "NUMEXPR_NUM_THREADS"
+    ],
+    "warmup_policy": "no discarded warm-ups; every fresh launch is retained and aggregated",
+    "kernel_protocol": "fresh per-rank generated-kernel build before the synchronized timed region of every launch",
+    "launcher_scope": "single launcher-visible host; no hostfile arguments",
+    "recommended_open_mpi_binding": "--bind-to core --map-by core --report-bindings",
+    "optional_processor_list": "--cpu-list <processor IDs>; the harness records the exact list and generates a retained Open MPI rankfile with one selected processor per rank",
+    "physical_cores_required_for_performance_interpretation": true,
+    "oversubscription_interpretation": "functional smoke only",
+    "stable_hardware_software_allocation_required": true
+  },
+  "acceptance": {
+    "mpirun_returncode": 0,
+    "scalefs_record_count_per_launch": 1,
+    "reported_ranks_must_equal_requested": true,
+    "reported_ndof_must_match_formula": true,
+    "wall_seconds_must_be_finite_and_positive": true,
+    "last_ksp_iterations_must_be_nonnegative": true
+  },
+  "required_bundle_files": [
+    "environment.json",
+    "provenance.json",
+    "run_manifest.json",
+    "summary.json",
+    "table.md",
+    "runs/rank-####-repeat-###.stdout.txt",
+    "runs/rank-####-repeat-###.stderr.txt"
+  ],
+  "current_retained_measurements": []
+}

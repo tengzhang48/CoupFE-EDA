@@ -1,18 +1,18 @@
 # Examples
 
-This catalog groups runnable modules by purpose. Run commands from the
-repository root after creating `environment.yml` and running `./setup.sh`.
-Input provenance and per-entry references are listed in
-[`examples/REFERENCES.md`](examples/REFERENCES.md).
+This catalog first lists guided, result-bearing workflows and then the package's
+module entry points. Run commands from the repository root after creating
+`environment.yml` and running `./setup.sh`. Input provenance and per-entry
+references are listed in [`examples/REFERENCES.md`](examples/REFERENCES.md).
 
-Each row states its evidence and boundary directly. It does not assign one
-blanket maturity label to a workflow that may contain checked components,
-synthetic inputs, and an unqualified composed output.
+Each row states its evidence and limits directly. It does not assign one
+blanket maturity label to a workflow that may combine checked components,
+synthetic inputs, and a composed result without a real-device reference.
 
 Dependency tiers: 🟢 numpy/scipy/CoupFE · 🟠 compiled, mesh, or PETSc/MPI
 toolchain · 🔴 caller-installed OpenROAD/OpenDB/PDNSim tooling.
 
-## Qualification commands
+## Verification commands
 
 | Command | What it exercises | Tier |
 |---|---|---|
@@ -21,15 +21,29 @@ toolchain · 🔴 caller-installed OpenROAD/OpenDB/PDNSim tooling.
 | `python -m pytest -q -m toolchain` | Compiled, generated-mesh, and PETSc/MPI tier | 🟠 |
 | `python -m eda_multiphysics.validate` | Electrothermal comparison ladder | 🟢 |
 
-Test totals belong to a dated release qualification record rather than this
-catalog. The toolchain pytest tier does not invoke OpenROAD/OpenDB or PDNSim.
+Test totals belong to a dated verification record rather than this catalog.
+The toolchain pytest tier does not invoke OpenROAD/OpenDB or PDNSim.
+
+## Guided workflows and retained example results
+
+Each directory below contains a README, a runnable `run.py`, and a small JSON
+oracle. The runner prints a reviewable result; `--check` compares selected
+fields with the retained value. These are numerical examples, not timing
+benchmarks or experimental oracles.
+
+| Workflow | Current retained result | Boundary | Tier |
+|---|---|---|---|
+| [`python examples/solder_plane_cycle/run.py --check`](examples/solder_plane_cycle/) | Six-Quad4 SnPbAg cycle; top-layer cycle energy and solver residual telemetry | Idealized plane-strain block; no stabilized-cycle or package-life validation | 🟢 |
+| [`python examples/etv_partitioned_cycle/run.py --check`](examples/etv_partitioned_cycle/) | SAC305 quasisteady versus lumped-transient temperature sensitivity at slow and fast periods | Partitioned uniform-temperature feedback; not a monolithic `phi-T-u` or device result | 🟢 |
+| [`python examples/solder_3d_cycle/run.py --check`](examples/solder_3d_cycle/) | Stateful 18-Hex8 SAC305 dissipation field, peak/mean, and residual telemetry | Idealized regular block; no crack-location, mesh/load-step-convergence, or predictive-life result | 🟢 |
+| [`python examples/design_linked_solder_screening/run.py --check`](examples/design_linked_solder_screening/) | Maximum-DNP synthetic joint identity carried into the stateful block and a calibration-specific screen | Only object identity and `L_D` cross the handoff; block geometry and solder height remain study inputs | 🟢 |
+| [`python examples/tsv_00_device_screening/run.py`](examples/tsv_00_device_screening/) | Synthetic device IDs mapped through a Lamé far-field stress proxy to cited mobility proxies and CSV/JSON/SVG output | Identity-preserving synthetic study; not transistor-delay, measured-stress, or signoff-KOZ evidence | 🟢 |
 
 ## Design and data handoffs
 
 | Command | What it demonstrates or checks | Boundary | Tier |
 |---|---|---|---|
 | `python -m eda_multiphysics.reliability_pipeline` | Synthetic PDN IR → temperature → TSV stress → solder/EM path; closed-form fixture voltage, exact power closure, provenance, and handoffs are regression-checked | Bundled input is project-authored; downstream composed values have no fabricated-device oracle | 🟢 |
-| `python examples/tsv_00_device_screening/run.py` | Synthetic device IDs → Lamé far-field stress proxy → cited mobility proxy → identity-preserving CSV/JSON/SVG | Synthetic sites and stress proxy; not transistor-delay or signoff-KOZ evidence | 🟢 |
 | `python -m eda_multiphysics.case_thermal [-o output.csv]` | Synthetic or caller-supplied placement/power → thermal map with provenance-tagged back-annotation | Caller data and case assumptions require their own qualification | 🟢 |
 | `python -m eda_multiphysics.design_loop_demo` | Synthetic weak-strap case with a same-current before/after invariant | No bundled OpenROAD round trip | 🟢 |
 | `python -m eda_multiphysics.electrothermal_chip <case_dir> <pdn.sp> <P_total_W>` | Coupled R(T) analysis on caller-supplied files; OpenROAD/PDNSim is not invoked at run time | Requires lawful caller input and case-specific checks | 🟢 |
@@ -58,6 +72,9 @@ future work.
 
 ## Solder and electro-thermo-viscoplastic examples
 
+The guided runners above present the stateful results. The module commands
+below additionally execute their component checks and developer-facing output.
+
 | Command | Evidence included | Boundary | Tier |
 |---|---|---|---|
 | `python -m eda_multiphysics.anand` | Material-point saturation and cited-parameter comparisons | Constitutive checks only; parameter sets are calibration-dependent | 🟢 |
@@ -74,7 +91,7 @@ does not emit an energy or life result.
 The 4719-cycle PBGA datum is an in-sample calibration anchor. It is not an
 independent lifetime validation.
 
-## Distributed and scaling harnesses
+## Distributed solver entry points
 
 | Command | Evidence and boundary | Tier |
 |---|---|---|
@@ -82,7 +99,12 @@ independent lifetime validation.
 | `mpirun -n 2 python -m eda_multiphysics.pdn_distributed 400 --direct` | Available distributed synthetic-PDN driver; publish a result only with current-revision rank output | 🟠 |
 | `python -m eda_multiphysics.etv_fieldsplit` | Available serial FieldSplit driver; needs a retained current-revision solve record | 🟠 |
 | `mpirun -n 2 python -m eda_multiphysics.etv_distributed` | Available ASM distributed driver; needs retained rank output | 🟠 |
-| `python -m eda_multiphysics.scaling_bench --n 1580 --ranks 2,4,8` | Machine-specific measurement harness; retain raw output and environment before publishing timings | 🟠 |
+| `python -m eda_multiphysics.scaling_bench --n 512 --ranks 1,2,4,8 --repeats 3 --bind-cores --output-dir <new-directory>` | Writes a retained strong-scaling bundle with complete sanitized rank streams, rank binding, and environment/provenance data | 🟠 |
+
+Scaling is a benchmark, not an example or correctness test. See
+[`benchmarks/solver_scaling/`](benchmarks/solver_scaling/) for the study
+definition, current retained measurements, and separately labeled historical
+records.
 
 ## Individual component checks
 

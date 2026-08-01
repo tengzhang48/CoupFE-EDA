@@ -99,8 +99,9 @@ The default pytest suite adds checks for:
   rule and zero commits for a forced failure;
 - Quad4 and Hex8 numerical-tangent agreement with a separate assembled-residual
   directional difference after a nonzero history preload; and
-- identity preservation from the maximum-DNP joint map object into the
-  stateful 3D screening block.
+- identity preservation from one maximum-DNP joint-map object into the
+  stateful 3D screening block, including the complete tie set and deterministic
+  row-order selection rule.
 
 Earlier versions of the plane, ETV, and 3D drivers did not meet this boundary.
 Their old outputs are not release evidence. The repaired public examples use a
@@ -123,6 +124,14 @@ When their dependencies are available, toolchain tests exercise selected:
 
 These are correctness/regression cases at stated sizes. They do not support a
 general timing, memory, scaling, arbitrary-CAD, or package-life claim.
+
+Performance measurements are a separate evidence type. The study definition,
+complete sanitized process records, environment inventory, and summaries for the distributed
+electrothermal solver are kept under
+[`benchmarks/solver_scaling`](../benchmarks/solver_scaling/). A scaling table
+supports only its recorded revision, matrix/problem size, solver options,
+hardware, rank/thread placement, timed interval, and repeat policy; it does not
+extend the correctness tests to unmeasured configurations.
 
 ## TSV local/device evidence
 

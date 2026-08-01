@@ -1,0 +1,63 @@
+{
+  "absolute_tolerance": 1e-09,
+  "relative_tolerance": 1e-05,
+  "expected": {
+    "example": "solder_3d_cycle",
+    "input_provenance": {
+      "representative_elastic_modulus_MPa": 43000.0,
+      "representative_poisson_ratio": 0.4
+    },
+    "configuration": {
+      "mesh_elements_xyz": [3, 3, 2],
+      "block_dimensions_mm": [0.1, 0.1, 0.1],
+      "n_elements": 18,
+      "temperature_C": [-40.0, 125.0],
+      "cycle_period_s": 1600.0,
+      "cycles": 1,
+      "increments_per_cycle": 8,
+      "delta_alpha_per_K": 1.44e-05,
+      "L_D_over_h": 6.0
+    },
+    "results": {
+      "dW_element_MPa": [
+        0.320535583183,
+        0.38902132811,
+        0.320535583183,
+        0.320535583272,
+        0.389021328227,
+        0.320535583272,
+        0.320535583183,
+        0.38902132811,
+        0.320535583183,
+        0.3205356097,
+        0.389021354837,
+        0.3205356097,
+        0.320535609543,
+        0.389021354702,
+        0.320535609543,
+        0.3205356097,
+        0.389021354837,
+        0.3205356097
+      ],
+      "dW_peak_MPa": 0.389021354837,
+      "dW_mean_MPa": 0.34336417811,
+      "peak_to_mean": 1.13297012221,
+      "engineering_shear_range": 0.014256
+    },
+    "solver_evidence": {
+      "all_increments_accepted": true
+    }
+  },
+  "bounds": [
+    {
+      "path": "solver_evidence.max_newton_iterations",
+      "minimum_inclusive": 1,
+      "maximum_inclusive": 20
+    },
+    {
+      "path": "solver_evidence.max_final_residual_fraction_of_acceptance_limit",
+      "minimum_inclusive": 0.0,
+      "maximum_exclusive": 1.0
+    }
+  ]
+}

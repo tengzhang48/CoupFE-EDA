@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "input_role": "Regression oracle read only when run.py is called with --check",
+  "configuration": "3x2 Quad4, one -40 to 125 to -40 C cycle, 12 increments, 1600 s",
+  "metrics": [
+    {
+      "path": "inputs.representative_elastic_modulus_MPa",
+      "value": 30000.0,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.representative_poisson_ratio",
+      "value": 0.4,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "result.dW_last_MPa",
+      "value": 0.33188439070681297,
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "result.imposed_shear_range",
+      "value": 0.0198,
+      "absolute_tolerance": 1e-14
+    },
+    {
+      "path": "result.element_count",
+      "value": 6,
+      "absolute_tolerance": 0
+    },
+    {
+      "path": "solver.max_iterations",
+      "value": 7,
+      "absolute_tolerance": 0
+    }
+  ],
+  "bounds": [
+    {
+      "path": "solver.max_residual_fraction_of_acceptance_limit",
+      "maximum_exclusive": 1.0
+    }
+  ],
+  "current_limits": "Deterministic idealized-example regression; not experimental or package-life validation."
+}

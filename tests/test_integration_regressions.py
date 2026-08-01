@@ -4,10 +4,218 @@ from __future__ import annotations
 
 import ast
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
 import pytest
+
+
+@pytest.mark.parametrize(
+    "example",
+    [
+        "solder_plane_cycle",
+        "etv_partitioned_cycle",
+        "solder_3d_cycle",
+        "design_linked_solder_screening",
+    ],
+)
+def test_guided_stateful_example_matches_retained_oracle(example):
+    """The public runner must execute read-only and accept its retained result."""
+    repository = Path(__file__).resolve().parents[1]
+    runner = repository / "examples" / example / "run.py"
+    before = {
+        path.relative_to(runner.parent): (path.stat().st_size, path.stat().st_mtime_ns)
+        for path in runner.parent.iterdir()
+        if path.is_file()
+    }
+    process = subprocess.run(
+        [sys.executable, str(runner), "--check"],
+        cwd=repository,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert process.returncode == 0, process.stderr or process.stdout
+    record = json.loads(process.stdout)
+    verification = record.get("verification", record.get("check"))
+    assert verification["passed"] is True
+    if example in {"solder_3d_cycle", "design_linked_solder_screening"}:
+        field = np.asarray(record["results"]["dW_element_MPa"], dtype=float)
+        assert len(field) == record["configuration"]["n_elements"]
+        assert np.all(np.isfinite(field))
+        assert np.all(field >= 0.0)
+        assert float(np.max(field)) == pytest.approx(
+            record["results"]["dW_peak_MPa"], rel=1.0e-10, abs=1.0e-12
+        )
+        assert float(np.mean(field)) == pytest.approx(
+            record["results"]["dW_mean_MPa"], rel=1.0e-10, abs=1.0e-12
+        )
+    after = {
+        path.relative_to(runner.parent): (path.stat().st_size, path.stat().st_mtime_ns)
+        for path in runner.parent.iterdir()
+        if path.is_file()
+    }
+    assert after == before
+
+
+def test_scaling_harness_retains_bound_run_and_rejects_bad_machine_record(
+    tmp_path, monkeypatch
+):
+    """Scaling records must preserve launch metadata and fail on ambiguous output."""
+    from types import SimpleNamespace
+
+    from eda_multiphysics import scaling_bench
+
+    commands = []
+    launch_kwargs = []
+
+    def completed(command, **kwargs):
+        commands.append(command)
+        launch_kwargs.append(kwargs)
+        return SimpleNamespace(
+            returncode=0,
+            stdout="solver output\nSCALEFS 18 4 0.1250 7\n",
+            stderr="rank binding recorded\n",
+        )
+
+    monkeypatch.setattr(scaling_bench.subprocess, "run", completed)
+    run_directory = tmp_path / "runs"
+    run_directory.mkdir()
+    record = scaling_bench.run_one(
+        2,
+        4,
+        1,
+        run_directory,
+        open_mpi=True,
+        bind_cores=True,
+        cpu_list="32-35",
+    )
+    assert record["status"] == "passed"
+    assert record["observed"] == {
+        "ndof": 18,
+        "ranks": 4,
+        "wall_seconds": 0.125,
+        "last_ksp_iterations": 7,
+    }
+    assert commands[0][:4] == [
+        "mpirun",
+        "--rankfile",
+        str(run_directory / "rank-0004-repeat-001.rankfile.txt"),
+        "--report-bindings",
+    ]
+    assert (run_directory / "rank-0004-repeat-001.rankfile.txt").read_text() == (
+        "rank 0=localhost slot=32\n"
+        "rank 1=localhost slot=33\n"
+        "rank 2=localhost slot=34\n"
+        "rank 3=localhost slot=35\n"
+    )
+    assert record["command"][:4] == [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0004-repeat-001.rankfile.txt",
+        "--report-bindings",
+    ]
+    assert record["rankfile"]["path"] == "runs/rank-0004-repeat-001.rankfile.txt"
+    assert (run_directory / "rank-0004-repeat-001.stdout.txt").is_file()
+    assert (run_directory / "rank-0004-repeat-001.stderr.txt").is_file()
+    for key in scaling_bench._FORCED_SINGLE_THREAD_KEYS:
+        assert launch_kwargs[0]["env"][key] == "1"
+    scrubbed = scaling_bench._redact(
+        f"{Path.home()} {scaling_bench.platform.node()} ACCESS_TOKEN=example-secret"
+    )
+    assert str(Path.home()) not in scrubbed
+    if scaling_bench.platform.node():
+        assert scaling_bench.platform.node() not in scrubbed
+    assert "example-secret" not in scrubbed
+
+    with pytest.raises(ValueError, match="exactly one SCALEFS"):
+        scaling_bench._parse_scalefs(
+            "SCALEFS 18 4 0.1 7\nSCALEFS 18 4 0.2 7\n", 18, 4
+        )
+    with pytest.raises(ValueError, match="does not match expected"):
+        scaling_bench._parse_scalefs("SCALEFS 20 4 0.1 7\n", 18, 4)
+    with pytest.raises(ValueError, match="does not match requested"):
+        scaling_bench._parse_scalefs("SCALEFS 18 2 0.1 7\n", 18, 4)
+    with pytest.raises(scaling_bench.argparse.ArgumentTypeError, match="ascending order"):
+        scaling_bench._rank_list("4,2")
+    assert scaling_bench._cpu_list("32-35,40") == "32-35,40"
+    assert scaling_bench._cpu_list_size("32-35,40") == 5
+    assert scaling_bench._expand_cpu_list("32-35,40") == [32, 33, 34, 35, 40]
+    with pytest.raises(scaling_bench.argparse.ArgumentTypeError, match="ascending"):
+        scaling_bench._cpu_list("35-32")
+
+    def failed(_command, **_kwargs):
+        return SimpleNamespace(returncode=9, stdout="partial output\n", stderr="failure\n")
+
+    monkeypatch.setattr(scaling_bench.subprocess, "run", failed)
+    with pytest.raises(scaling_bench.BenchmarkRunError, match="status 9") as error:
+        scaling_bench.run_one(2, 1, 2, run_directory)
+    assert error.value.record["status"] == "failed"
+    assert (run_directory / "rank-0001-repeat-002.stdout.txt").read_text() == (
+        "partial output\n"
+    )
+    assert (run_directory / "rank-0001-repeat-002.stderr.txt").read_text() == "failure\n"
+
+
+def test_scaling_manifest_matches_harness_and_json_is_strict():
+    """The public benchmark schema and release JSON parser fail closed."""
+    import importlib.util
+
+    from eda_multiphysics import scaling_bench
+
+    repository = Path(__file__).resolve().parents[1]
+    manifest = json.loads(
+        (repository / "benchmarks/solver_scaling/manifest.json").read_text()
+    )
+    assert manifest["driver"]["module"] == scaling_bench.DRIVER_MODULE
+    assert manifest["metric"]["name"] == (
+        "driver_reported_synchronized_max_rank_solve_wall_seconds"
+    )
+    assert manifest["solver_configuration"] == scaling_bench.SOLVER_CONFIGURATION
+    assert manifest["driver"]["machine_record_fields"][-1] == (
+        "last_ksp_iterations"
+    )
+
+    guard_path = repository / ".github/scripts/check_release_artifacts.py"
+    spec = importlib.util.spec_from_file_location("release_guard_for_test", guard_path)
+    guard = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(guard)
+    artifact = Path("test-artifact")
+    with pytest.raises(SystemExit, match="duplicate object key"):
+        guard._validate_text("duplicate.json", b'{"key": 1, "key": 2}', artifact)
+    with pytest.raises(SystemExit, match="non-finite JSON"):
+        guard._validate_text("nonfinite.json", b'{"key": NaN}', artifact)
+    sensitive_samples = [
+        "github_pat_" + "A" * 30,
+        "sk-" + "A" * 30,
+        "AKIA" + "A" * 16,
+        "Authorization: Bearer " + "A" * 30,
+        "-----BEGIN OPENSSH " + "PRIVATE KEY-----",
+    ]
+    for index, sample in enumerate(sensitive_samples):
+        with pytest.raises(SystemExit, match="credential material"):
+            guard._validate_text(
+                f"credential-{index}.txt", sample.encode(), artifact
+            )
+
+
+def test_solver_side_design_feedback_preserves_current_and_improves_case():
+    """The bounded design-loop case must compare at the same delivered current."""
+    from eda_multiphysics.design_loop_demo import compare_design
+
+    result = compare_design(nx=20, ny=4)
+    assert result["delivered_current_relative_difference"] < 1.0e-12
+    assert result["reinforced"]["peak_temperature"] < result["baseline"][
+        "peak_temperature"
+    ]
+    assert result["reinforced"]["voltage_drop"] < result["baseline"][
+        "voltage_drop"
+    ]
+    assert result["improved"] is True
+    assert "no live EDA database" in result["scope"]
 
 
 def test_repaired_stateful_fe_demonstrations_meet_residual_rule_and_report_scope():
@@ -162,6 +370,15 @@ def test_stateful_bvp_screening_preserves_design_identity():
     assert result["coordinate_frame"] == joints["coordinate_frame"]
     assert result["joint_geometry_fidelity"] == joints["geometry_fidelity"]
     assert result["joint_map_path"] == joints["path"]
+    maximum = float(np.max(joints["dnp"]))
+    tied = np.flatnonzero(
+        np.isclose(joints["dnp"], maximum, rtol=1.0e-12, atol=1.0e-12)
+    )
+    assert result["maximum_dnp_tie_count"] == len(tied)
+    assert result["maximum_dnp_tied_joint_ids"] == [
+        str(joints["joint_ids"][index]) for index in tied
+    ]
+    assert "first tied object" in result["critical_joint_selection_policy"]
     assert result["L_D"] == pytest.approx(float(joints["dnp"][critical]))
     assert result["ldnp_over_h"] == pytest.approx(result["L_D"] / 50.0)
     assert result["screening_height_um"] == pytest.approx(50.0)

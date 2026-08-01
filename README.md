@@ -1,48 +1,61 @@
 # CoupFE-EDA
 
-CoupFE-EDA is an experimental, CoupFE-based implementation for EDA-linked
-electrothermal and thermo-mechanical research. The current examples cover
-PDN/electrothermal handoffs, TSV stress, solder/package global-local studies,
-and design-object provenance. Evidence is limited to the tests, reference
-cases, and model scopes documented in this repository; this is not a signoff
-tool.
+CoupFE-EDA connects electronic-design data to finite-element and reliability
+models built on [CoupFE](https://github.com/tengzhang48/CoupFE). It includes PDN
+and electrothermal handoffs, TSV stress models, solder/package studies,
+generated meshes, distributed solver experiments, and provenance-preserving
+design adapters.
 
-AI agents assisted with implementation, documentation, and test development.
-Public claims are defined by checked-in source, tests, cited references, and
-engineering review; agent output by itself is not evidence.
+The repository is intended for reproducible research, teaching, and extension.
+Its examples use project-authored synthetic data or caller-supplied files; it is
+not an EDA signoff tool.
 
-The package consumes caller-supplied OpenROAD/OpenDB and PDNSim data through a
-versioned, file-based case format. A project-authored synthetic case keeps the
-integration path runnable without external design data. This repository shows
-one implementation built on CoupFE. Independent projects can use other finite
-element packages, coupling strategies, and data models; the checks here apply
-to this implementation and its stated inputs.
+This is one implementation built on CoupFE, not a prescription that every
+project use the same finite-element backend. Similar EDA-to-analysis workflows
+can be implemented with other FEM packages, coupling strategies, and data
+models. The repository shows the currently implemented possibilities and the
+evidence available for them.
 
-CoupFE-EDA is a downstream consumer of
-[CoupFE](https://github.com/tengzhang48/CoupFE). It uses the public operator
-contract (`residual`, `tangent`, `commit`, `newton_solve`, and
+The package provides a working foundation for traceable EDA data → analysis →
+back-annotation workflows: versioned file contracts, stable object identities,
+checked physics handoffs, and extension points. The bundled cases are starting
+examples, not a complete interface standard or signoff flow.
+
+CoupFE-EDA uses CoupFE's public operator contract (`residual`, `tangent`,
+`commit`, `newton_solve`, and
 `complex_step_tangent`) and does not modify CoupFE source. Mesh-aware adapters,
 including periodic face/node matching and relation construction, remain in the
 EDA package while generic affine constraints and finite-element operators remain
 in core.
 
-## Release scope
+## Explore the repository
 
-The release reports availability, evidence, input provenance, and qualification
-boundary separately. A single maturity label would hide important differences
-between a checked component, a synthetic integration example, and a
-real-device comparison.
+| Area | What belongs there | Start here |
+|---|---|---|
+| Code | Importable operators, solvers, mesh/data adapters, and command-line modules | [`eda_multiphysics/`](eda_multiphysics/) and the [API guide](docs/api.md) |
+| Examples | Runnable workflows with a README, fixed inputs, commands, and interpretable output | [`examples/`](examples/) and the [example catalog](EXAMPLES.md) |
+| Tests | Automated correctness, failure, provenance, and optional-toolchain checks | [`tests/`](tests/) and the [validation guide](docs/VALIDATION_GUIDE.md) |
+| Benchmarks | Fixed reference or performance studies with provenance, configurations, results, and interpretation | [`benchmarks/`](benchmarks/) |
 
-| Capability available now | Evidence included here | Qualification boundary |
+## Capabilities and current evidence
+
+The following analysis and integration paths are implemented now. The evidence
+column identifies the checks included in this repository; the final column
+states what still requires broader numerical or experimental validation.
+
+| Implemented capability | Evidence included here | Current limits |
 |---|---|---|
 | Analytic and component paths for PDN, heat transfer, electrothermal coupling, thermoelasticity, constitutive updates, and electromigration | Named equations, reference meshes, independent implementations, invariants, and broken controls | Applies only to the documented equations, meshes, tolerances, and parameter sets |
 | Synthetic PDN → temperature → stress → solder/EM example | Closed-form PDN field, exact power closure, provenance/hash checks, and separately checked downstream components | Bundled inputs are project-authored; the composed downstream result has no fabricated-device oracle or signoff claim |
 | Caller OpenDB/PDNSim case and back-annotation contracts | Parser/schema, stable-ID, unit/frame-transform, provenance, and back-annotation tests; the bundled exporter is reviewed but not executed by this suite | No bundled live OpenROAD round trip or qualification of caller-owned designs |
+| Solver-side design feedback | `case_thermal` back-annotation contracts and `design_loop_demo` same-current before/after invariant | Synthetic design change only; no live OpenROAD modification, DRC/timing rerun, or design optimization claim |
+| Generated compiled electrothermal and thermo-mechanical kernels | Weak-form code generation, compiled element checks, analytic references, and optional toolchain tests | Applies to the implemented weak forms/elements and tested toolchain; not a general code-generation or performance guarantee |
 | Generated profiled solder, six-region package, Hex8, and Tet4 paths | Topology, Jacobian/volume, interface, boundary-condition, multimaterial, patch, and generated-mesh checks | No imported production CAD, qualified package deck, or broad mesh-convergence claim |
-| Plane-strain SnPbAg `solder_joint_cycle` | Repaired numerical material tangent; every increment must satisfy Core's residual rule before one state commit | Idealized block and loading; reported energy is an example result, not package-life validation |
-| Partitioned SAC305 thermo-viscoplastic cycle in `etv_fe` | Backward-Euler lumped temperature plus spatial Anand increments that meet Core's residual rule; quasisteady comparison | Unit Taylor–Quinney conversion of top-layer work to uniform heat; not a monolithic phi-T-u element or device validation |
-| Multi-element `solder_joint_bvp_3d` and design-linked screening | Fail-closed 18-Hex8 dissipation field and retained design-object provenance | Idealized regular block; no crack-location, mesh/load-step-converged field, or predictive-life claim |
-| `etv_distributed_fs` serial-versus-rank path | Output agreement at size 24 with two and four ranks | No scaling or performance claim; other PETSc/MPI drivers require their own retained run records |
+| Local and periodic TSV-to-device path | Generated Cu/oxide/anisotropic-Si Tet4 mechanics, field recovery and Raman sampling, periodic relation construction, and stable-ID device mapping | Generated/synthetic checks only; source-equivalent boundaries, mesh/domain convergence, distributed periodic consumption, and experimental comparison remain open |
+| Plane-strain SnPbAg `solder_joint_cycle` | [Guided six-Quad4 cycle](examples/solder_plane_cycle/) with a retained result; numerical tangent, residual acceptance, and one state commit per increment | Idealized block and loading; reported energy is an example result, not package-life validation |
+| Partitioned SAC305 thermo-viscoplastic cycle in `etv_fe` | [Guided quasisteady/transient comparison](examples/etv_partitioned_cycle/) with retained results; spatial Anand increments meet Core's residual rule | Unit Taylor–Quinney conversion of top-layer work to uniform heat; not a monolithic phi-T-u element or device validation |
+| Multi-element `solder_joint_bvp_3d` and design-linked screening | [Guided 18-Hex8 cycle](examples/solder_3d_cycle/) and [design-linked screening](examples/design_linked_solder_screening/) with dissipation fields and retained object provenance | Idealized regular block; no crack-location, mesh/load-step-converged field, or predictive-life claim |
+| `etv_distributed_fs` serial-versus-rank path | Output agreement at size 24 with two and four ranks; benchmark harness and records are organized under [`benchmarks/solver_scaling/`](benchmarks/solver_scaling/) | A measured configuration describes that machine, revision, problem size, and rank set; it is not a general scalability guarantee |
 
 See [EXAMPLES.md](EXAMPLES.md) and
 [examples/REFERENCES.md](examples/REFERENCES.md) for entry-point evidence and
@@ -63,11 +76,23 @@ and verifies commit `454f73ce2de284262b214a2b37bd676c6aca3c0a`, rejects a dirty
 dependency checkout, installs both packages in editable mode, and checks the
 import location. The source URL, branch, checkout directory, and commit can be
 set with `COUPFE_URL`, `COUPFE_BRANCH`, `COUPFE_DIR`, and `COUPFE_REF`; changing
-the commit requires a new qualification run.
+the commit requires a new verification run.
 
 The default environment includes the scientific, mesh, MPI, and open-EDA Python
 dependencies. OpenROAD is installed separately or through the optional
 container.
+
+For a result-oriented starting point, run one of the documented workflows:
+
+```bash
+python examples/solder_plane_cycle/run.py --check
+python examples/etv_partitioned_cycle/run.py --check
+python examples/solder_3d_cycle/run.py --check
+python examples/design_linked_solder_screening/run.py --check
+```
+
+Each directory explains its inputs, output fields, references, and current
+limitations. See [EXAMPLES.md](EXAMPLES.md) for the complete catalog.
 
 ### Optional container
 
@@ -96,6 +121,9 @@ environment record is needed. See [CONTAINER.md](CONTAINER.md).
   stress → screening chain. Its graph voltage is checked against the fixture's
   closed-form field, while later links rely on separate component checks. The
   composed result is a demonstration.
+- `design_loop_demo.py` applies a solver-side synthetic strap change and checks
+  the before/after result at the same total current. It demonstrates a feedback
+  pattern without modifying a live OpenROAD database.
 
 No ORFS GCD deck, PDK, generated design database, or raw OpenROAD output is
 bundled. The project-authored fixture and caller-data boundary are documented in
@@ -114,6 +142,9 @@ bundled. The project-authored fixture and caller-data boundary are documented in
   constrained-block, or composite-cylinder references.
 - `mesh3d.py` provides generated TSV, layer-stack, profiled-joint, and conformal
   package geometry helpers. It is not a package-CAD interface.
+- `etv_kernel.py` and `thermomech_kernel.py` use CoupFE weak forms to generate
+  and compile the coupled element kernels exercised by the optional toolchain
+  and distributed paths.
 
 ### Solder and electro-thermo-viscoplastic studies
 
@@ -131,10 +162,25 @@ bundled. The project-authored fixture and caller-data boundary are documented in
 - `reliability_3d.py` demonstrates global parametric joint/package geometry,
   caller-supplied joint locations and provenance, and a calibration-specific
   global-local workflow. Caller joint dimensions do not currently set the FE
-  mesh dimensions. `critical_joint_bvp_screening` connects the maximum-DNP
-  design object to the idealized stateful block while retaining that boundary.
+  mesh dimensions. `critical_joint_bvp_screening` connects one maximum-DNP
+  design object to the idealized stateful block while retaining the full tie
+  set and deterministic row-order selection rule.
+
+The corresponding result-bearing workflows are
+[`solder_plane_cycle`](examples/solder_plane_cycle/),
+[`etv_partitioned_cycle`](examples/etv_partitioned_cycle/),
+[`solder_3d_cycle`](examples/solder_3d_cycle/), and
+[`design_linked_solder_screening`](examples/design_linked_solder_screening/).
+Their JSON oracles are numerical regression records for the stated inputs, not
+experimental validation data.
 
 ### TSV-to-device screening
+
+`tsv_local_3d.py` implements the generated local Cu/oxide/anisotropic-Si Tet4
+mechanics and recovery path. `periodic.py` owns mesh-aware opposite-face
+matching and emits generic affine relations consumed by Core. These paths keep
+mesh and EDA semantics in the application package; their current checks do not
+establish source-equivalent boundary conditions or experimental agreement.
 
 `examples/tsv_00_device_screening/` maps a classical Lamé far-field stress proxy
 onto synthetic, stable device IDs using cited piezoresistance equations. It emits
@@ -145,15 +191,16 @@ protrusion, measured Raman agreement, or a signoff keep-out zone.
 ### Distributed execution
 
 `etv_distributed_fs.py` includes the retained serial-versus-rank output check at
-size 24 with two and four ranks. The other PETSc/MPI modules and
-`scaling_bench.py` are research harnesses. Historical timing, speedup,
-efficiency, and large-problem records are not release evidence without raw
-output, machine inventory, and an environment record produced from the release
-revision.
+size 24 with two and four ranks. `scaling_bench.py` is the measurement harness;
+[`benchmarks/solver_scaling/`](benchmarks/solver_scaling/) holds its study
+definition, retained output, and interpretation. Historical development
+timings are kept separately from measurements reproduced from a named public
+revision. The other PETSc/MPI modules remain research drivers until they have
+equivalent records.
 
-## Evidence and references
+## Verification and references
 
-The release checks are separated by dependency needs:
+Verification entry points are separated by dependency needs:
 
 ```bash
 python -m eda_multiphysics.run       # self-contained component/reference gates
@@ -162,7 +209,7 @@ python -m pytest -q -m toolchain     # compiled, mesh, and PETSc/MPI checks
 ```
 
 Test totals are intentionally omitted here because they are regenerated during
-release qualification. A passing component check supports its named boundary;
+dated verification. A passing component check supports its named boundary;
 it does not qualify every composed workflow or caller dataset.
 
 The pytest toolchain tier does not run an OpenROAD/OpenDB or PDNSim round trip.
@@ -177,6 +224,10 @@ Useful records:
 - [Geometry guide](docs/GEOMETRY.md) — mesh and package geometry scope.
 - [Periodic MPC status](docs/PERIODIC_MPC_STATUS.md) — ownership and dependency
   boundary.
+- [API migrations](docs/API_MIGRATIONS.md) — corrected and renamed pre-release
+  interfaces.
+- [Project origins](docs/history/PROJECT_ORIGINS.md) — initial purpose and the
+  dated technical-history trail.
 - [Release evidence runbook](docs/RELEASE_EVIDENCE.md) — how to retain logs,
   environments, and artifact checksums.
 - [Third-party record](THIRD_PARTY.md) — software, data, and attribution.
@@ -194,8 +245,9 @@ Dockerfile / build.sh      optional container recipe
 setup.sh                   pinned CoupFE checkout and editable install
 EXAMPLES.md                runnable example catalog
 examples/REFERENCES.md     entry-point provenance and status
+benchmarks/                reference comparisons and retained performance studies
 skills/SKILL.md            contributor workflow for adding a checked example
-docs/                      theory, API, geometry, validation, and release records
+docs/                      theory, API, geometry, validation, and evidence guidance
 eda_multiphysics/          package source and synthetic fixture
 tests/                     regression and toolchain tests
 ```
@@ -216,6 +268,11 @@ Analytic, constitutive, and reliability models are credited at the point of use,
 in the [validation guide](docs/VALIDATION_GUIDE.md), and in the
 [entry-point reference map](examples/REFERENCES.md). Third-party names identify
 their contributions and do not imply endorsement.
+
+AI agents assisted with implementation, documentation, and test development.
+Checked-in source, executable tests, cited references, retained benchmark
+records, and engineering review—not agent output alone—define the public
+evidence.
 
 The external
 [ORFS GCD sanity design](https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts/tree/c9c22caf9bf9cfe46c5a4236c6ec7e7ae9863cc3/flow/designs/src/gcd)

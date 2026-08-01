@@ -14,7 +14,8 @@ sensitivity studies.
 Scope: the profiled-joint/package path is a global-local chain (elastic 3D FE
 for deformation plus a material-point viscoplastic mapping for dW/life). The
 separate ``critical_joint_bvp_screening`` path drives a regular stateful Hex8
-block from the maximum-DNP design object; it is not the profiled package mesh.
+block from one maximum-DNP design object and reports any tie set; it is not the
+profiled package mesh.
 N_f is calibration-specific.
 The measured-life gate is an in-sample calibration reproduction within +/-2x,
 not independent validation; the reported dW is not a mesh-convergence result.
@@ -359,12 +360,14 @@ def critical_joint_bvp_screening(
     dbu_per_um=None,
     joint_map_path=None,
 ):
-    """Connect the maximum-DNP design object to the stateful block example.
+    """Connect one maximum-DNP design object to the stateful block example.
 
     This retains source identity and the design-derived ``L_D`` while using the
     caller-supplied ``h_solder`` to form ``L_D/h`` for the regular Hex8 block in
     :func:`anand_3d.solder_joint_bvp_3d`.  Joint-map height metadata is retained
-    but does not currently set the block height.
+    but does not currently set the block height. Symmetric layouts can contain
+    several maximum-DNP objects; ties are reported and resolved by stable
+    joint-map row order.
     The Syed value is reported only as a calibration-specific screening output;
     it is not a package-life prediction.
     """
@@ -378,7 +381,13 @@ def critical_joint_bvp_screening(
         joint_map_path=joint_map_path,
         dbu_per_um=dbu_per_um,
     )
-    critical_index = int(np.argmax(joints["dnp"]))
+    maximum_dnp = float(np.max(joints["dnp"]))
+    tied_indices = np.flatnonzero(
+        np.isclose(joints["dnp"], maximum_dnp, rtol=1.0e-12, atol=1.0e-12)
+    )
+    # Joint-map row order is stable and therefore provides a deterministic,
+    # reviewable tie break for symmetric layouts.
+    critical_index = int(tied_indices[0])
     L_D = float(joints["dnp"][critical_index])
     result = solder_joint_bvp_3d(
         nx=nx,
@@ -406,6 +415,13 @@ def critical_joint_bvp_screening(
         "joint_geometry_fidelity": joints["geometry_fidelity"],
         "coordinate_frame": joints["coordinate_frame"],
         "joint_map_path": joints["path"],
+        "maximum_dnp_tie_count": int(len(tied_indices)),
+        "maximum_dnp_tied_joint_ids": [
+            str(joints["joint_ids"][index]) for index in tied_indices
+        ],
+        "critical_joint_selection_policy": (
+            "maximum DNP; first tied object in stable joint-map row order"
+        ),
         "Nf_screen_peak": 1.0 / (SYED_W * max(result["dW_peak"], 1.0e-30)),
     }
 

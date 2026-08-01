@@ -146,11 +146,36 @@ PUBLIC_BENCHMARK_FILES = {
         "tsv_raman_jiang2013",
     }
 } | {
+    "benchmarks/README.md",
+    "benchmarks/solver_scaling/README.md",
+    "benchmarks/solver_scaling/historical_unqualified.json",
+    "benchmarks/solver_scaling/historical_unqualified.md",
+    "benchmarks/solver_scaling/manifest.json",
+    "benchmarks/solver_scaling/petsc_coo_gamg_reproducer.py",
     "benchmarks/tsv_release_scorecard.json",
 }
-PUBLIC_DOC_FILES = {
+PUBLIC_HISTORY_FILES = {
+    "docs/history/PROJECT_ORIGINS.md",
+    "docs/history/README.md",
+    "docs/history/audits/code_examples_review_evidence_snapshot.md",
+    "docs/history/audits/code_examples_review_snapshot.md",
+    "docs/history/audits/tsv_physics_audit_snapshot.md",
+    "docs/history/audits/validation_assessment_snapshot.md",
+    "docs/history/development/electro_thermo_viscoplastic_coupling_plan_snapshot.md",
+    "docs/history/development/external_collaboration_brief_snapshot.md",
+    "docs/history/development/lessons_learned_snapshot.md",
+    "docs/history/development/open_source_eda_multiphysics_integration_plan_snapshot.md",
+    "docs/history/development/open_source_eda_multiphysics_literature_survey_snapshot.md",
+    "docs/history/development/periodic_boundary_condition_plan_snapshot.md",
+    "docs/history/development/refactor_contract_snapshot.md",
+    "docs/history/development/tsv_anisotropic_3d_plan_snapshot.md",
+    "docs/history/development/tsv_device_validation_release_plan_snapshot.md",
+    "docs/history/results/eda_multiphysics_results_snapshot.md",
+}
+PUBLIC_DOC_FILES = PUBLIC_HISTORY_FILES | {
     f"docs/{name}"
     for name in {
+        "API_MIGRATIONS.md",
         "COMPONENTS.md",
         "GEOMETRY.md",
         "LICENSE.md",
@@ -188,6 +213,18 @@ PUBLIC_DOC_FILES = {
 }
 PUBLIC_EXAMPLE_FILES = {
     "examples/REFERENCES.md",
+    "examples/design_linked_solder_screening/README.md",
+    "examples/design_linked_solder_screening/expected_results.json",
+    "examples/design_linked_solder_screening/run.py",
+    "examples/etv_partitioned_cycle/README.md",
+    "examples/etv_partitioned_cycle/expected_results.json",
+    "examples/etv_partitioned_cycle/run.py",
+    "examples/solder_3d_cycle/README.md",
+    "examples/solder_3d_cycle/expected_results.json",
+    "examples/solder_3d_cycle/run.py",
+    "examples/solder_plane_cycle/README.md",
+    "examples/solder_plane_cycle/expected_results.json",
+    "examples/solder_plane_cycle/run.py",
     "examples/tsv_00_device_screening/README.md",
     "examples/tsv_00_device_screening/case.json",
     "examples/tsv_00_device_screening/device_sites.csv",
@@ -569,6 +606,50 @@ def _sensitive_fragments() -> tuple[str, ...]:
     )
 
 
+def _sensitive_patterns() -> tuple[tuple[str, re.Pattern[str]], ...]:
+    return (
+        (
+            "github-fine-grained-token",
+            re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b"),
+        ),
+        ("openai-api-key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")),
+        ("aws-access-key-id", re.compile(r"\bAKIA[A-Z0-9]{16}\b")),
+        (
+            "bearer-token",
+            re.compile(r"\bBearer[ \t]+[A-Za-z0-9._~+/=-]{20,}\b", re.IGNORECASE),
+        ),
+        (
+            "private-key-banner",
+            re.compile(
+                r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
+                re.IGNORECASE,
+            ),
+        ),
+    )
+
+
+def _validate_json_text(text: str, name: str, artifact: Path) -> None:
+    def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate object key {key!r}")
+            result[key] = value
+        return result
+
+    def reject_constant(value: str) -> None:
+        raise ValueError(f"non-finite JSON constant {value!r}")
+
+    try:
+        json.loads(
+            text,
+            object_pairs_hook=unique_object,
+            parse_constant=reject_constant,
+        )
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise SystemExit(f"{artifact.name}:{name} is not strict JSON: {exc}") from exc
+
+
 def _validate_text(name: str, payload: bytes, artifact: Path) -> None:
     path = PurePosixPath(name)
     if path.suffix.casefold() not in TEXT_SUFFIXES:
@@ -578,7 +659,13 @@ def _validate_text(name: str, payload: bytes, artifact: Path) -> None:
     except UnicodeDecodeError as exc:
         raise SystemExit(f"{artifact.name}:{name} is not valid UTF-8 text") from exc
 
+    if path.suffix.casefold() == ".json":
+        _validate_json_text(text, name, artifact)
+
     hits = [fragment for fragment in _sensitive_fragments() if fragment in text]
+    hits.extend(
+        label for label, pattern in _sensitive_patterns() if pattern.search(text)
+    )
     if re.search(r"[\w.+-]+@(?:gmail\.com|syr\.edu)\b", text, flags=re.IGNORECASE):
         hits.append("personal-email-address")
     if hits:

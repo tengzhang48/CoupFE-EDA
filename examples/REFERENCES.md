@@ -41,7 +41,7 @@ performance signoff.
 | `python -m eda_multiphysics.etv_fieldsplit` | Generated coupled system | Direct/serial comparison code and iteration controls are present | Retain a current-revision solve record before publishing a result |
 | `python -m eda_multiphysics.etv_distributed` | Generated coupled system | Serial-versus-MPI comparison code is present | Retain current-revision rank output before publishing a result |
 | `python -m eda_multiphysics.etv_distributed_fs` | Generated coupled system | Serial-versus-rank output checks at size 24 with two and four ranks | Evidence is limited to tested output agreement; no scaling claim |
-| `python -m eda_multiphysics.scaling_bench` | New measurements from the local MPI machine/environment | Machine-readable `SCALEFS` output for requested ranks | Retain raw output and environment data before publishing timings |
+| `python -m eda_multiphysics.scaling_bench` | New measurements from the local MPI machine/environment | Machine-readable `SCALEFS` output for requested ranks | Retain complete sanitized process output and environment data before publishing timings |
 | `python -m eda_multiphysics.etv_kernel` | CoupFE weak form and generated local build products | Element residual/tangent and self-heating checks | Applies to the qualified compiled toolchain |
 | `python -m eda_multiphysics.thermomech_kernel` | CoupFE weak form and generated local build products | Free-expansion identities and toolchain checks | Applies to the qualified compiled toolchain |
 | `python -m eda_multiphysics.etv_fe` | Generated Quad4 mesh and constitutive parameters | Steady phi/T analytic and staggered comparisons; partitioned lumped-temperature/spatial-mechanics cycle with fail-closed increments | The cycle is not a monolithic phi-T-u element or device validation |
@@ -51,6 +51,10 @@ performance signoff.
 | `python -m eda_multiphysics.solder_joint` | Checked-in Anand parameters and generated Quad4 mesh | Tensor return-map saturation, affine patch, and a six-Quad4 cold→hot→cold cycle whose increments meet Core's residual rule | Top-layer-average energy output is an idealized example, not package-life validation |
 | `python -m eda_multiphysics.creep` | Checked-in Anand parameters and imposed stress histories | Zero-stress, saturation, and stress-relaxation identities | Constitutive checks |
 | `python -m eda_multiphysics.electromigration` | Checked-in Cu parameters | Black acceleration relation and Blech published range | Screening-equation checks; no interconnect MTTF signoff |
+| `python examples/solder_plane_cycle/run.py` | Project-authored six-Quad4 block, thermal-mismatch history, and checked-in SnPbAg parameters | Retained cycle-energy fields, Core residual acceptance, and one state commit per accepted increment; optional `--check` reads the local JSON oracle | Guided idealized example; not stabilized-cycle, crack, package-life, or experimental validation |
+| `python examples/etv_partitioned_cycle/run.py` | Project-authored four-Quad4 block, electrical/thermal assumptions, and checked-in SAC305 parameters | Retained slow/fast quasisteady-versus-lumped-transient results, residual acceptance, and local JSON oracle | Guided partitioned-model sensitivity example; not a monolithic `phi-T-u` or measured-device result |
+| `python examples/solder_3d_cycle/run.py` | Project-authored regular 18-Hex8 block, idealized thermal-mismatch history, and checked-in SAC305 parameters | Retained element dissipation field, peak/mean, residual acceptance, and local JSON oracle | Guided field example; not mesh/load-step-convergence, crack-location, predictive-life, or experimental validation |
+| `python examples/design_linked_solder_screening/run.py` | Project-authored synthetic joint map plus an idealized regular 18-Hex8 block; `L_D` and stable identity come from the map while solder height is a study input | Retained selected-object provenance, dissipation field, calibration-specific Syed screen, residual acceptance, and local JSON oracle | Guided handoff example; mapped joint geometry is not reproduced and the screen is not predictive package life |
 | `python examples/tsv_00_device_screening/run.py` | Runtime input is 32 synthetic device sites from `device_sites.csv`; geometry, load, material coefficients, and threshold are fixed in code and recorded in JSON files | Ryu et al. piezoresistance equations, a Lamé far-field stress proxy, and deterministic metrics in `expected_metrics.json` | Identity-preserving mapping example; it does not establish Raman, delay, protrusion, or signoff-KOZ results |
 
 ## Stateful-example repair record
@@ -93,6 +97,7 @@ files are reviewable records:
   metadata, mesh matching, and relation construction.
 - **Geometry:** generated Tet4 cases are checked at tested resolutions. Imported
   STEP/BREP data and broader mesh/domain convergence are not qualified.
-- **Scaling:** historical timing, speedup, efficiency, problem-size, and rank
-  records are excluded from release evidence until reproduced with retained raw
-  output and an environment record on the release revision.
+- **Scaling:** [`benchmarks/solver_scaling/`](../benchmarks/solver_scaling/)
+  separates historical development tables from reproducible current-revision
+  measurements. Each retained result applies only to its recorded problem,
+  solver, rank/thread placement, environment, and hardware.

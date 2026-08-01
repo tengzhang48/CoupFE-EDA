@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "status": "historical_unqualified",
+  "transcribed_from_repository_snapshot": "f961f5f",
+  "source_documents_at_snapshot": [
+    "docs/capabilities.md",
+    "eda_multiphysics/DISTRIBUTED.md",
+    "docs/lessons_learned.md"
+  ],
+  "recovery_search": {
+    "date_utc": "2026-08-01",
+    "locations": [
+      "current release worktree and full Git history",
+      "all branches and history in the attached original CoupFE-EDA repository",
+      "attached companion CoupFE-EDA checkout",
+      "project coordination and agent-note repositories"
+    ],
+    "result": "The tables, descriptive prose, and a generated scaling figure were found; no per-run stdout/stderr, machine inventory, or repeat records were found."
+  },
+  "missing_for_qualification": [
+    "raw stdout and stderr",
+    "hardware and topology inventory",
+    "exact runtime environment",
+    "rank placement and allocation record",
+    "repeat policy and per-run samples"
+  ],
+  "interpretation": "Rerun targets only; not current-revision performance evidence.",
+  "records": [
+    {
+      "driver": "eda_multiphysics.pdn_distributed",
+      "description": "distributed PDN observations",
+      "rows": [
+        {
+          "case": "grid 120 x 120",
+          "nodes": 14400,
+          "edges": 28560,
+          "ranks": [1, 2, 4],
+          "reported_iterations": [13, 13, 12],
+          "reported_wall_seconds_endpoints": [0.13, 0.07],
+          "reported_serial_mpi_difference_approx": 3e-11
+        },
+        {
+          "case": "grid 400 x 400",
+          "nodes": 160000,
+          "edges": 319200,
+          "ranks": [1, 2, 4],
+          "reported_iterations": [16, 15, 15],
+          "reported_wall_seconds_endpoints": [1.57, 0.67],
+          "reported_serial_mpi_difference_approx": 3e-11
+        },
+        {
+          "case": "grid 1000 x 1000",
+          "nodes": 1000000,
+          "edges": 1998000,
+          "ranks": [4],
+          "reported_iterations": [18],
+          "reported_wall_seconds": [4.3],
+          "reported_serial_mpi_difference_approx": 9e-11
+        },
+        {
+          "case": "external AES-derived PDN, input not bundled",
+          "nodes": 3089,
+          "edges": 3447,
+          "ranks": [1, 2],
+          "reported_iterations": [20, 16],
+          "reported_wall_seconds": [0.02],
+          "reported_serial_mpi_difference_approx": 3e-11
+        }
+      ]
+    },
+    {
+      "driver": "eda_multiphysics.etv_distributed",
+      "description": "132,098-DOF 2D Quad4 ASM/GMRES observations",
+      "ndof": 132098,
+      "ranks": [1, 2, 4, 8],
+      "reported_wall_seconds": [55.2, 36.2, 19.3, 10.5],
+      "reported_speedup_from_first_rank": [1.0, 1.52, 2.86, 5.26],
+      "reported_ksp_iterations": [232, 350, 341, 336]
+    },
+    {
+      "driver": "eda_multiphysics.etv_distributed",
+      "description": "526,338-DOF 2D Quad4 ASM/GMRES observations",
+      "ndof": 526338,
+      "ranks": [8, 16, 32],
+      "reported_wall_seconds": [88.8, 47.4, 27.8],
+      "reported_speedup_from_first_rank": [1.0, 1.87, 3.19],
+      "reported_ksp_iterations": [1121, 1363, 1263],
+      "reported_serial_mpi_difference_approx": 5.2e-11
+    },
+    {
+      "driver": "eda_multiphysics.etv_fieldsplit",
+      "description": "serial 2D FieldSplit/GAMG problem-size iteration observations",
+      "ndof": [33000, 132000, 296000, 526000],
+      "reported_fieldsplit_ksp_iterations": [16, 17, 17, 19],
+      "reported_asm_ksp_iterations": [null, 340, null, 1200]
+    },
+    {
+      "driver": "eda_multiphysics.etv_distributed_fs",
+      "description": "4,999,122-DOF 2D Quad4 FieldSplit/GAMG observations",
+      "n": 1580,
+      "ndof": 4999122,
+      "ranks": [4, 8, 16, 32, 48],
+      "reported_wall_seconds": [87.7, 48.3, 26.1, 18.2, 14.7],
+      "reported_speedup_from_first_rank": [1.0, 1.81, 3.36, 4.8, 5.98],
+      "reported_last_ksp_iterations": [18, 19, 18, 18, 18],
+      "reported_serial_mpi_difference_approx": 1e-16
+    },
+    {
+      "driver": "eda_multiphysics.etv_3d",
+      "description": "serial synthetic-cube Hex8 FieldSplit/GAMG size observations",
+      "ndof": [9800, 31000, 72000, 138000, 235000],
+      "reported_ksp_iterations": [16, 17, 17, 17, 17],
+      "reported_solve_wall_seconds": [0.07, 0.25, 0.62, 1.24, 2.37],
+      "reported_microseconds_per_dof": [7.4, 7.9, 8.6, 9.0, 10.1]
+    },
+    {
+      "driver": "eda_multiphysics.thermomech_tsv",
+      "description": "serial generated-TSV displacement/temperature FieldSplit observations",
+      "ndof": [16000, 23000, 49000, 89000, 145000],
+      "reported_ksp_iterations": [20, 19, 17, 21, 20],
+      "reported_solve_wall_seconds": [2.7, 1.9, 5.2, 14.6, 19.1],
+      "reported_near_nullspace_ablation_iterations": {
+        "without_rigid_body_modes_approx": 565,
+        "with_rigid_body_modes_approx": 21
+      }
+    },
+    {
+      "driver": "eda_multiphysics.etv_distributed_fs",
+      "description": "owned-row CSR assembly-path observation at n=350 and four ranks",
+      "reported_python_stamp_wall_seconds": 0.55,
+      "reported_batched_owned_row_csr_wall_seconds": 0.074,
+      "reported_ratio": 7.4
+    },
+    {
+      "driver": "eda_multiphysics.thermomech_3d",
+      "description": "serial direct-solve fill-in observation",
+      "reported_endpoints": [
+        {"ndof": 15000, "solve_wall_seconds": 4.2},
+        {"ndof": 62000, "solve_wall_seconds": 95.0}
+      ]
+    }
+  ]
+}

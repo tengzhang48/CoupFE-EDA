@@ -206,18 +206,20 @@ items are described in [Validation guide](VALIDATION_GUIDE.md) and
 - S. Timoshenko and J. N. Goodier, *Theory of Elasticity*, Art. 152.
 - Choi et al., “Thermal Stress Analysis of Through-Silicon Via,” *Materials*
   14(18):5226, 2021.
-- Motalab, Cai, Suhling, and Lall, “A Study of Anand Constitutive Model
-  Constants for SAC305 Solder,” ITherm 2012; Motalab, Auburn dissertation,
-  2013.
-- Cheng et al., “Viscoplastic Constitutive Relation of Solder Alloys,”
-  *Soldering & Surface Mount Technology* 12(2), 2000.
+- Motalab, Cai, Suhling, and Lall, “Determination of Anand Constants for SAC
+  Solders Using Stress-Strain or Creep Data,” ITherm 2012, pp. 910–922,
+  doi:10.1109/ITHERM.2012.6231522; Motalab, Auburn dissertation, 2013.
+- Cheng, Wang, Chen, Wilde, and Becker, “Viscoplastic Anand model for solder
+  alloys and its application,” *Soldering & Surface Mount Technology* 12(2),
+  31–36, 2000, doi:10.1108/09540910010331428.
 - Syed, “Accumulated Creep Strain and Energy Density Based Thermal Fatigue Life
   Prediction Models for SnAgCu Solder Joints,” ECTC 2004.
 - Darveaux, “Effect of Simulation Methodology on Solder Joint Crack Growth
   Model and Thermal Fatigue Life Prediction,” *Advancing Microelectronics*,
   2000.
-- Dandu et al., “Current Crowding in Interconnects,” *Microelectronics
-  Reliability* 50(4):547, 2010.
+- Dandu, Fan, Liu, and Diao, “Finite element modeling on electromigration of
+  solder joints in wafer level packages,” *Microelectronics Reliability*
+  50(4), 547–555, 2010, doi:10.1016/j.microrel.2009.12.003.
 - Black, “Electromigration — A Brief Survey and Some Recent Results,” *IEEE
   Transactions on Electron Devices*, 1969.
 - Blech, “Electromigration in Thin Aluminum Films on Titanium Nitride,”

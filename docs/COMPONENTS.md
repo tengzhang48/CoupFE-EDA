@@ -14,7 +14,8 @@ for the evidence boundary of each path.
 | Reliability handoff | `joint_map`, `reliability_3d`, `reliability_pipeline`, `electromigration` | Stable design objects, generated package/joint meshes, calibration mappings, and composed synthetic screening |
 | Geometry and mesh adapters | `mesh3d`, `tet_element`, `periodic` | Gmsh-generated regions, mesh checks, native Core Tet4 lookup, and EDA-owned periodic matching |
 | TSV local/device path | `tsv_local_3d`, `tsv_device`, `tsv_validation` | Anisotropic local mechanics, field recovery, Raman/device transformations, manifests, and fail-closed status evaluation |
-| Distributed experiments | `etv_distributed`, `etv_distributed_fs`, `etv_fieldsplit`, `pdn_distributed`, `scaling_bench` | PETSc/MPI implementations and checked-size comparison utilities |
+| Distributed solvers | `etv_distributed`, `etv_distributed_fs`, `etv_fieldsplit`, `pdn_distributed` | PETSc/MPI implementations and checked-size comparison utilities |
+| Performance measurement | `scaling_bench`; `benchmarks/solver_scaling/` | Repeat-aware FieldSplit measurement harness plus retained current and historical records |
 | Test entry points | `gates`, `run`, `validate`; `tests/` | Analytic, comparison, invariant, interface, provenance, and optional-toolchain checks |
 
 ## Ownership boundary

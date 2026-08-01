@@ -47,6 +47,19 @@ Use `docs/COMPONENTS.md` and `docs/api.md` for component and API boundaries,
 `docs/GEOMETRY.md` for mesh contracts, `docs/capabilities.md` for current scope,
 and `docs/VALIDATION_GUIDE.md` and `docs/RELEASE_EVIDENCE.md` for evidence.
 
+Keep repository roles distinct:
+
+- `eda_multiphysics/` contains reusable implementation and command-line modules;
+- `examples/` contains guided workflows with documented inputs, readable
+  outputs, references, and limitations;
+- `tests/` contains automated pass/fail checks; and
+- `benchmarks/` contains fixed reference or performance studies with retained
+  configurations, provenance, complete sanitized process records, summaries,
+  and interpretation.
+
+A guided example can carry a tolerant JSON regression oracle. That does not
+make it a performance benchmark or an experimental validation dataset.
+
 ## Evidence and claims
 
 Classify each result before describing it:
@@ -76,6 +89,14 @@ For every quantitative statement, retain or cite:
 Use words such as “passes this check,” “agrees within the stated tolerance,” or
 “demonstrated for this case.” Avoid turning one case into a general capability
 or performance claim.
+
+Do not equate an unlocated record with a failed computation. Before removing or
+withholding an existing workflow, search the current tree, Git history and
+branches, coordination notes, known worktrees, and authorized attached
+storage. Inspect the implementation and rerun the documented case when its
+inputs and dependencies are available. Preserve incomplete old observations as
+explicitly historical/unqualified records; call a case failed only when a
+concrete check reproduces the failure.
 
 ## Adding or changing a workflow
 
@@ -218,6 +239,16 @@ Performance statements require a retained benchmark script, hardware and
 software environment, problem size, rank/thread settings, warm-up policy,
 timings, and accuracy comparison. Unretained timings may guide research but
 should not appear as current release claims.
+
+Write each scaling sweep to a new directory. Retain every subprocess command,
+complete sanitized stdout/stderr record, exit status, source/Core identities,
+dirty-state status,
+machine and software inventory, and a machine-readable summary. Fail if a rank
+run is incomplete or its `SCALEFS` line is malformed. Report the aggregation
+rule and the timed interval; do not silently mix process startup, mesh/kernel
+construction, and solve wall time. Keep historical tables without complete
+process records in an explicitly unqualified file, separate from current
+measurements.
 
 ## Risk-proportional testing
 
