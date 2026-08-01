@@ -1,0 +1,15 @@
+{
+  "benchmark_driver": "eda_multiphysics.etv_distributed_fs",
+  "captured_utc": "2026-08-01T12:27:31.039973Z",
+  "coupfe_core": {
+    "commit": "454f73ce2de284262b214a2b37bd676c6aca3c0a",
+    "dirty": false
+  },
+  "coupfe_eda": {
+    "commit": "5d34894e05b597baba3dcffaad0b2f097b2f7117",
+    "dirty": false
+  },
+  "metric_grain": "one fixed-size coupled solve per rank count and repeat",
+  "schema_version": 1,
+  "source_paths_recorded": false
+}

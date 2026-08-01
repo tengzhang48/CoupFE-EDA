@@ -140,12 +140,15 @@ run_manifest.json       fixed input, ranks, repeats, and metric grain
 summary.json            status, every sample, medians, ranges, and speedups
 table.md                human-readable view of the same summary
 runs/
+  rank-####-repeat-###.rankfile.txt
   rank-####-repeat-###.stdout.txt
   rank-####-repeat-###.stderr.txt
 ```
 
-With Open MPI, `--bind-cores` adds `--bind-to core --map-by core
---report-bindings`; the per-run stderr records then retain the actual mapping.
+With Open MPI, `--bind-cores` uses core mapping and retains
+`--report-bindings`. When `--cpu-list` is also supplied, the harness instead
+generates an explicit one-processor-per-rank rankfile for every launch. The
+per-run stderr records retain the actual mapping in either case.
 The current protocol discards no warm-up: every fresh launch is retained and
 included in the median and range.
 
@@ -156,8 +159,30 @@ credential forms. Review a bundle before publishing it; automatic scrubbing
 does not replace human review.
 
 The static benchmark definition is in
-`benchmarks/solver_scaling/manifest.json`. No current hardware-scaling bundle
-is committed in this repository.
+`benchmarks/solver_scaling/manifest.json`.
+
+### Current retained local measurement
+
+The reviewed
+[`current_526338dof_20260801`](../benchmarks/solver_scaling/current_526338dof_20260801/)
+bundle contains a fixed 526,338-DOF sweep on a single nonexclusive 64-vCPU KVM
+guest:
+
+| MPI ranks | 1 | 2 | 4 | 8 |
+|---|---:|---:|---:|---:|
+| Repeats | 3 | 3 | 3 | 3 |
+| Median wall (s) | 26.0718 | 14.2711 | 7.29017 | 3.93986 |
+| Wall range (s) | 25.9295–26.1043 | 13.9319–14.8189 | 7.26777–7.37178 | 3.89778–3.96028 |
+| Speedup from 1-rank median | 1.00× | 1.83× | 3.58× | 6.62× |
+| Last-step KSP iterations | 12 | 12 | 12 | 13 |
+
+The source states were clean at CoupFE-EDA `5d34894e` and pinned Core
+`454f73ce`. Ranks were bound one per selected virtual processor, and every
+launch returned successfully with one accepted machine record. The VM was not
+an exclusive physical-core allocation, and Open MPI reported shared-memory
+fallback warnings. The bundle therefore supports only this local solver-region
+observation; it does not qualify another machine, a larger rank count, total
+application runtime, or memory scaling.
 
 ## Historical observations—not current evidence
 

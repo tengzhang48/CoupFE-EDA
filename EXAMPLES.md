@@ -99,12 +99,15 @@ independent lifetime validation.
 | `mpirun -n 2 python -m eda_multiphysics.pdn_distributed 400 --direct` | Available distributed synthetic-PDN driver; publish a result only with current-revision rank output | 🟠 |
 | `python -m eda_multiphysics.etv_fieldsplit` | Available serial FieldSplit driver; needs a retained current-revision solve record | 🟠 |
 | `mpirun -n 2 python -m eda_multiphysics.etv_distributed` | Available ASM distributed driver; needs retained rank output | 🟠 |
-| `python -m eda_multiphysics.scaling_bench --n 512 --ranks 1,2,4,8 --repeats 3 --bind-cores --output-dir <new-directory>` | Writes a retained strong-scaling bundle with complete sanitized rank streams, rank binding, and environment/provenance data | 🟠 |
+| `python -m eda_multiphysics.scaling_bench --n 512 --ranks 1,2,4,8 --repeats 3 --bind-cores --cpu-list <processors> --output-dir <new-directory>` | Writes a retained fixed-size rank-sweep bundle with complete sanitized rank streams, explicit rank binding, and environment/provenance data | 🟠 |
 
 Scaling is a benchmark, not an example or correctness test. See
 [`benchmarks/solver_scaling/`](benchmarks/solver_scaling/) for the study
 definition, current retained measurements, and separately labeled historical
-records.
+records. The reviewed
+[`current_526338dof_20260801`](benchmarks/solver_scaling/current_526338dof_20260801/)
+bundle reports a bounded 1/2/4/8-rank measurement on one nonexclusive KVM
+guest; it is not a general performance claim.
 
 ## Individual component checks
 

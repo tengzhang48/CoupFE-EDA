@@ -1,0 +1,67 @@
+  Generated: [repository]/eda_multiphysics/_etk_fs_r3/et_quad4.for
+  Material:  ElectroThermalMaterial
+  Fields:    phi, T
+  Element:   Quad4
+  Backend:   abaqus_uel
+  NDOFEL:    8
+  F-bar:     False
+  Tangent blocks: 10
+  Generated: [repository]/eda_multiphysics/_etk_fs_r0/et_quad4.for
+  Material:  ElectroThermalMaterial
+  Fields:    phi, T
+  Element:   Quad4
+  Backend:   abaqus_uel
+  NDOFEL:    8
+  F-bar:     False
+  Tangent blocks: 10
+  Generated: [repository]/eda_multiphysics/_etk_fs_r1/et_quad4.for
+  Material:  ElectroThermalMaterial
+  Fields:    phi, T
+  Element:   Quad4
+  Backend:   abaqus_uel
+  NDOFEL:    8
+  F-bar:     False
+  Generated: [repository]/eda_multiphysics/_etk_fs_r6/et_quad4.for
+  Tangent blocks: 10
+  Material:  ElectroThermalMaterial
+  Fields:    phi, T
+  Element:   Quad4
+  Backend:   abaqus_uel
+  Generated: [repository]/eda_multiphysics/_etk_fs_r2/et_quad4.for
+  Material:  ElectroThermalMaterial
+  Fields:    phi, T
+  NDOFEL:    8
+  F-bar:     False
+  Tangent blocks: 10
+  Element:   Quad4
+  Backend:   abaqus_uel
+  NDOFEL:    8
+  F-bar:     False
+  Tangent blocks: 10
+  Generated: [repository]/eda_multiphysics/_etk_fs_r7/et_quad4.for
+  Material:  ElectroThermalMaterial
+  Fields:    phi, T
+  Element:   Quad4
+  Backend:   abaqus_uel
+  NDOFEL:    8
+  F-bar:     False
+  Tangent blocks: 10
+  Generated: [repository]/eda_multiphysics/_etk_fs_r5/et_quad4.for
+  Material:  ElectroThermalMaterial
+  Generated: [repository]/eda_multiphysics/_etk_fs_r4/et_quad4.for
+  Material:  ElectroThermalMaterial
+  Fields:    phi, T
+  Element:   Quad4
+  Backend:   abaqus_uel
+  NDOFEL:    8
+  F-bar:     False
+  Fields:    phi, T
+  Element:   Quad4
+  Backend:   abaqus_uel
+  NDOFEL:    8
+  F-bar:     False
+  Tangent blocks: 10
+  Tangent blocks: 10
+DISTRIBUTED FieldSplit coupled electro-thermal | 512x512 = 526,338 DOF | 8 rank(s) | my_ne=32832
+  synchronized max-rank wall=3.89778s | Newton steps=6 | KSP iters/step=[15, 12, 12, 11, 12, 13] | peak dT=0.9762
+SCALEFS 526338 8 3.89778087 13

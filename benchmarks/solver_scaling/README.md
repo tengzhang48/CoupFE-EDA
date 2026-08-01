@@ -5,6 +5,9 @@ This directory defines the fixed-size rank sweep for
 
 - `manifest.json` defines the driver, input-to-DOF relation, measured region,
   required run records, and acceptance checks.
+- `current_526338dof_20260801/` contains a reviewed, current-revision local
+  1/2/4/8-rank sweep with every repeat, stream, rankfile, and environment/source
+  record.
 - `historical_unqualified.md` presents all recovered solver/scaling tables and
   their original technical interpretation in one readable record.
 - `historical_unqualified.json` preserves transcribed development-era numbers
@@ -20,8 +23,14 @@ found the tables, explanatory prose, and a generated plot, but no per-run
 stdout/stderr, machine inventory, or repeat record. The work is therefore kept
 visible and explicitly bounded rather than removed.
 
-No current timing bundle is committed here. Generate a new bundle outside the
-source checkout so failed or unreviewed run products do not enter the package:
+The current retained measurement is documented in
+[`current_526338dof_20260801/`](current_526338dof_20260801/). Its 526,338-DOF
+solve went from a 26.0718-second 1-rank median to a 3.93986-second 8-rank median,
+or 6.62× speedup, on one nonexclusive 64-vCPU KVM guest. This is a bounded local
+measurement, not a general scalability statement.
+
+Generate additional bundles outside the source checkout so failed or
+unreviewed run products do not enter the package:
 
 ```bash
 OMP_NUM_THREADS=1 OMP_PROC_BIND=true OMP_PLACES=cores \

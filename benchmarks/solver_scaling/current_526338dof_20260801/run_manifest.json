@@ -1,0 +1,44 @@
+{
+  "configuration": {
+    "driver": "eda_multiphysics.etv_distributed_fs",
+    "expected_ndof": 526338,
+    "forced_single_thread_environment": {
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1"
+    },
+    "kernel_protocol": "fresh per-rank generated-kernel build before the synchronized timed region of every launch",
+    "launcher_scope": "single launcher-visible host; no hostfile arguments",
+    "mpi_cpu_list": "48-55",
+    "mpi_rank_binding": "Open MPI: retained explicit rankfile, one selected processor per rank, plus --report-bindings",
+    "n": 512,
+    "oversubscribed": false,
+    "rank_order": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "repeats_per_rank": 3,
+    "solver_configuration": {
+      "linear": {
+        "ksp": "gmres",
+        "maximum_iterations": 500,
+        "preconditioner": "additive fieldsplit with GAMG per scalar field",
+        "relative_tolerance": 1e-10
+      },
+      "nonlinear": {
+        "convergence_metric": "maximum absolute solution increment",
+        "convergence_tolerance": 1e-11,
+        "maximum_steps": 8
+      }
+    },
+    "timeout_seconds_per_launch": 3600,
+    "warmup_policy": "no discarded warm-ups; every fresh launch is retained and aggregated"
+  },
+  "created_utc": "2026-08-01T12:27:30.743522Z",
+  "metric_grain": "one fixed-size coupled solve per rank count and repeat",
+  "schema_version": 1
+}

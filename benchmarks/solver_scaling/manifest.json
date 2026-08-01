@@ -80,8 +80,27 @@
     "run_manifest.json",
     "summary.json",
     "table.md",
+    "runs/rank-####-repeat-###.rankfile.txt",
     "runs/rank-####-repeat-###.stdout.txt",
     "runs/rank-####-repeat-###.stderr.txt"
   ],
-  "current_retained_measurements": []
+  "current_retained_measurements": [
+    {
+      "path": "current_526338dof_20260801",
+      "captured_utc": "2026-08-01T12:27:31.039973Z",
+      "status": "complete",
+      "problem_n": 512,
+      "ndof": 526338,
+      "ranks": [
+        1,
+        2,
+        4,
+        8
+      ],
+      "repeats_per_rank": 3,
+      "machine_scope": "single nonexclusive KVM virtual machine",
+      "coupfe_eda_commit": "5d34894e05b597baba3dcffaad0b2f097b2f7117",
+      "coupfe_core_commit": "454f73ce2de284262b214a2b37bd676c6aca3c0a"
+    }
+  ]
 }

@@ -1,0 +1,72 @@
+{
+  "captured_utc": "2026-08-01T12:27:30.750294Z",
+  "compilers": {
+    "c_compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "fortran_compiler": "GNU Fortran (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "mpi_c_wrapper": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+  },
+  "cpu_topology": {
+    "architecture": "x86_64",
+    "cores_per_socket": "1",
+    "cpu_model": "AMD EPYC-Milan Processor",
+    "hypervisor_vendor": "KVM",
+    "launcher_process_available_cpu_count": 64,
+    "logical_cpu_count": 64,
+    "logical_cpu_count_reported": "64",
+    "numa_nodes": "1",
+    "physical_memory_bytes": 263886409728,
+    "sockets": "64",
+    "threads_per_core": "1",
+    "virtualization_type": "full"
+  },
+  "environment_policy": "allowlisted thread/allocation settings only; paths, the complete environment, host name, scheduler job identifiers, and credentials are not retained",
+  "hostname_recorded": false,
+  "launcher_scope": "single launcher-visible host; no hostfile arguments",
+  "machine_label": "cpu-vm-kvm-single-vm-nonexclusive",
+  "mpi_launcher_version": "mpirun (Open MPI) 4.1.6\n\nReport bugs to http://www.open-mpi.org/community/help/",
+  "mpi_library_version": "Open MPI v4.1.6, package: Open MPI conda@a8b5c2e64a2a Distribution, ident: 4.1.6, repo rev: v4.1.6, Sep 30, 2023\u0000",
+  "operating_system": {
+    "architecture": "x86_64",
+    "kernel_release": "7.0.0-28-generic",
+    "system": "Linux"
+  },
+  "packages": {
+    "coupfe": "0.0.1",
+    "coupfe-eda": "0.1.0",
+    "mpi4py": "4.1.2",
+    "numpy": "1.26.4",
+    "petsc4py": "3.18.4",
+    "scipy": "1.15.2"
+  },
+  "petsc_version": {
+    "authorinfo": [
+      "The PETSc Team",
+      "petsc-maint@mcs.anl.gov",
+      "https://petsc.org/"
+    ],
+    "date": "Jan 30, 2023",
+    "index_bytes": 4,
+    "index_type": "int32",
+    "major": 3,
+    "minor": 18,
+    "release": true,
+    "scalar_bytes": 8,
+    "scalar_type": "float64",
+    "subminor": 4
+  },
+  "python": {
+    "implementation": "CPython",
+    "version": "3.10.8"
+  },
+  "schema_version": 1,
+  "thread_environment": {
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OMP_PLACES": "cores",
+    "OMP_PROC_BIND": "true",
+    "OPENBLAS_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1"
+  },
+  "thread_environment_note": "the harness forces common OpenMP/BLAS/NumExpr thread controls to 1 for every launch"
+}

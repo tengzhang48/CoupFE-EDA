@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import subprocess
 import sys
@@ -200,6 +201,57 @@ def test_scaling_manifest_matches_harness_and_json_is_strict():
             guard._validate_text(
                 f"credential-{index}.txt", sample.encode(), artifact
             )
+
+
+def test_current_scaling_bundle_is_complete_and_self_consistent():
+    """The published local sweep must retain and bind every accepted launch."""
+    from eda_multiphysics import scaling_bench
+
+    repository = Path(__file__).resolve().parents[1]
+    bundle = (
+        repository
+        / "benchmarks"
+        / "solver_scaling"
+        / "current_526338dof_20260801"
+    )
+    summary = json.loads((bundle / "summary.json").read_text())
+    provenance = json.loads((bundle / "provenance.json").read_text())
+    assert summary["status"] == "complete"
+    assert summary["error"] is None
+    assert summary["configuration"]["rank_order"] == [1, 2, 4, 8]
+    assert summary["configuration"]["repeats_per_rank"] == 3
+    assert len(summary["runs"]) == 12
+    assert provenance["coupfe_eda"] == {
+        "commit": "5d34894e05b597baba3dcffaad0b2f097b2f7117",
+        "dirty": False,
+    }
+    assert provenance["coupfe_core"] == {
+        "commit": "454f73ce2de284262b214a2b37bd676c6aca3c0a",
+        "dirty": False,
+    }
+
+    for record in summary["runs"]:
+        assert record["status"] == "passed"
+        assert record["returncode"] == 0
+        assert record["timed_out"] is False
+        ranks = record["requested_ranks"]
+        for stream in ("rankfile", "stdout", "stderr"):
+            metadata = record[stream]
+            data = (bundle / metadata["path"]).read_bytes()
+            assert len(data) == metadata["bytes"]
+            assert hashlib.sha256(data).hexdigest() == metadata["sha256"]
+        rankfile = (bundle / record["rankfile"]["path"]).read_text().splitlines()
+        assert rankfile == [
+            f"rank {rank}=localhost slot={48 + rank}" for rank in range(ranks)
+        ]
+        stdout = (bundle / record["stdout"]["path"]).read_text()
+        assert stdout.count("SCALEFS ") == 1
+        assert scaling_bench._parse_scalefs(stdout, 526338, ranks) == record["observed"]
+
+    expected_table = scaling_bench.markdown_table(
+        summary["runs"], summary["configuration"]["rank_order"]
+    )
+    assert (bundle / "table.md").read_text() == expected_table + "\n"
 
 
 def test_solver_side_design_feedback_preserves_current_and_improves_case():

@@ -1,0 +1,11 @@
+  Generated: [repository]/eda_multiphysics/_etk_fs_r0/et_quad4.for
+  Material:  ElectroThermalMaterial
+  Fields:    phi, T
+  Element:   Quad4
+  Backend:   abaqus_uel
+  NDOFEL:    8
+  F-bar:     False
+  Tangent blocks: 10
+DISTRIBUTED FieldSplit coupled electro-thermal | 512x512 = 526,338 DOF | 1 rank(s) | my_ne=262144
+  synchronized max-rank wall=25.9295s | Newton steps=6 | KSP iters/step=[15, 11, 11, 10, 11, 12] | peak dT=0.9762
+SCALEFS 526338 1 25.9294632 12

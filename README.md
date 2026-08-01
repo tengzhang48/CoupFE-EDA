@@ -55,7 +55,7 @@ states what still requires broader numerical or experimental validation.
 | Plane-strain SnPbAg `solder_joint_cycle` | [Guided six-Quad4 cycle](examples/solder_plane_cycle/) with a retained result; numerical tangent, residual acceptance, and one state commit per increment | Idealized block and loading; reported energy is an example result, not package-life validation |
 | Partitioned SAC305 thermo-viscoplastic cycle in `etv_fe` | [Guided quasisteady/transient comparison](examples/etv_partitioned_cycle/) with retained results; spatial Anand increments meet Core's residual rule | Unit Taylor–Quinney conversion of top-layer work to uniform heat; not a monolithic phi-T-u element or device validation |
 | Multi-element `solder_joint_bvp_3d` and design-linked screening | [Guided 18-Hex8 cycle](examples/solder_3d_cycle/) and [design-linked screening](examples/design_linked_solder_screening/) with dissipation fields and retained object provenance | Idealized regular block; no crack-location, mesh/load-step-converged field, or predictive-life claim |
-| `etv_distributed_fs` serial-versus-rank path | Output agreement at size 24 with two and four ranks; benchmark harness and records are organized under [`benchmarks/solver_scaling/`](benchmarks/solver_scaling/) | A measured configuration describes that machine, revision, problem size, and rank set; it is not a general scalability guarantee |
+| `etv_distributed_fs` serial-versus-rank path | Output agreement at size 24 with two and four ranks; [reviewed 526,338-DOF local sweep](benchmarks/solver_scaling/current_526338dof_20260801/) at 1/2/4/8 ranks with three repeats (26.0718 s to 3.93986 s median, 6.62×) | The timing describes one nonexclusive KVM guest, revision, problem, solver region, and rank set; it is not a general scalability guarantee |
 
 See [EXAMPLES.md](EXAMPLES.md) and
 [examples/REFERENCES.md](examples/REFERENCES.md) for entry-point evidence and
@@ -193,7 +193,8 @@ protrusion, measured Raman agreement, or a signoff keep-out zone.
 `etv_distributed_fs.py` includes the retained serial-versus-rank output check at
 size 24 with two and four ranks. `scaling_bench.py` is the measurement harness;
 [`benchmarks/solver_scaling/`](benchmarks/solver_scaling/) holds its study
-definition, retained output, and interpretation. Historical development
+definition, a reviewed current-revision 526,338-DOF local rank sweep, complete
+retained streams, and its interpretation boundary. Historical development
 timings are kept separately from measurements reproduced from a named public
 revision. The other PETSc/MPI modules remain research drivers until they have
 equivalent records.

@@ -1,0 +1,25 @@
+[[host]:1297510] MCW rank 0 bound to socket 48[core 48[hwt 0]]: [.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.][B][.][.][.][.][.][.][.][.][.][.][.][.][.][.][.]
+--------------------------------------------------------------------------
+A requested component was not found, or was unable to be opened.  This
+means that this component is either not installed or is unable to be
+used on your system (e.g., sometimes this means that shared libraries
+that the component requires are unable to be found/loaded).  Note that
+PMIX stopped checking at the first component that it did not find.
+
+Host:      [host]
+Framework: gds
+Component: shmem
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+A requested component was not found, or was unable to be opened.  This
+means that this component is either not installed or is unable to be
+used on your system (e.g., sometimes this means that shared libraries
+that the component requires are unable to be found/loaded).  Note that
+PMIX stopped checking at the first component that it did not find.
+
+Host:      [host]
+Framework: gds
+Component: shmem
+--------------------------------------------------------------------------
+

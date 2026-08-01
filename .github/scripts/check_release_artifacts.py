@@ -137,7 +137,27 @@ PUBLIC_GITHUB_FILES = {
     ".github/scripts/smoke_wheel.py",
     ".github/workflows/fast-ci.yml",
 }
-PUBLIC_BENCHMARK_FILES = {
+CURRENT_SOLVER_SCALING_FILES = {
+    f"benchmarks/solver_scaling/current_526338dof_20260801/{name}"
+    for name in {
+        "README.md",
+        "environment.json",
+        "provenance.json",
+        "run_manifest.json",
+        "summary.json",
+        "table.md",
+    }
+} | {
+    (
+        "benchmarks/solver_scaling/current_526338dof_20260801/runs/"
+        f"rank-{rank:04d}-repeat-{repeat:03d}.{suffix}.txt"
+    )
+    for rank in (1, 2, 4, 8)
+    for repeat in (1, 2, 3)
+    for suffix in ("rankfile", "stderr", "stdout")
+}
+
+PUBLIC_BENCHMARK_FILES = CURRENT_SOLVER_SCALING_FILES | {
     f"benchmarks/{name}/manifest.json"
     for name in {
         "tsv_curvature_ryu2012",

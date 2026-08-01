@@ -1,0 +1,673 @@
+{
+  "aggregate": [
+    {
+      "last_ksp_iterations": {
+        "maximum": 12,
+        "minimum": 12,
+        "samples": [
+          12,
+          12,
+          12
+        ]
+      },
+      "ndof": 526338,
+      "ranks": 1,
+      "repeat_count": 3,
+      "speedup_from_smallest_rank_median": 1.0,
+      "wall_seconds": {
+        "maximum": 26.1042811,
+        "median": 26.0718019,
+        "minimum": 25.9294632,
+        "samples": [
+          25.9294632,
+          26.0718019,
+          26.1042811
+        ]
+      }
+    },
+    {
+      "last_ksp_iterations": {
+        "maximum": 12,
+        "minimum": 12,
+        "samples": [
+          12,
+          12,
+          12
+        ]
+      },
+      "ndof": 526338,
+      "ranks": 2,
+      "repeat_count": 3,
+      "speedup_from_smallest_rank_median": 1.8268904509556243,
+      "wall_seconds": {
+        "maximum": 14.8189108,
+        "median": 14.2711359,
+        "minimum": 13.9319047,
+        "samples": [
+          13.9319047,
+          14.8189108,
+          14.2711359
+        ]
+      }
+    },
+    {
+      "last_ksp_iterations": {
+        "maximum": 12,
+        "minimum": 12,
+        "samples": [
+          12,
+          12,
+          12
+        ]
+      },
+      "ndof": 526338,
+      "ranks": 4,
+      "repeat_count": 3,
+      "speedup_from_smallest_rank_median": 3.5762978085152373,
+      "wall_seconds": {
+        "maximum": 7.37177914,
+        "median": 7.29016522,
+        "minimum": 7.26776633,
+        "samples": [
+          7.26776633,
+          7.37177914,
+          7.29016522
+        ]
+      }
+    },
+    {
+      "last_ksp_iterations": {
+        "maximum": 13,
+        "minimum": 13,
+        "samples": [
+          13,
+          13,
+          13
+        ]
+      },
+      "ndof": 526338,
+      "ranks": 8,
+      "repeat_count": 3,
+      "speedup_from_smallest_rank_median": 6.617448914870747,
+      "wall_seconds": {
+        "maximum": 3.96027512,
+        "median": 3.93985692,
+        "minimum": 3.89778087,
+        "samples": [
+          3.89778087,
+          3.96027512,
+          3.93985692
+        ]
+      }
+    }
+  ],
+  "configuration": {
+    "driver": "eda_multiphysics.etv_distributed_fs",
+    "expected_ndof": 526338,
+    "forced_single_thread_environment": {
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1"
+    },
+    "kernel_protocol": "fresh per-rank generated-kernel build before the synchronized timed region of every launch",
+    "launcher_scope": "single launcher-visible host; no hostfile arguments",
+    "mpi_cpu_list": "48-55",
+    "mpi_rank_binding": "Open MPI: retained explicit rankfile, one selected processor per rank, plus --report-bindings",
+    "n": 512,
+    "oversubscribed": false,
+    "rank_order": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "repeats_per_rank": 3,
+    "solver_configuration": {
+      "linear": {
+        "ksp": "gmres",
+        "maximum_iterations": 500,
+        "preconditioner": "additive fieldsplit with GAMG per scalar field",
+        "relative_tolerance": 1e-10
+      },
+      "nonlinear": {
+        "convergence_metric": "maximum absolute solution increment",
+        "convergence_tolerance": 1e-11,
+        "maximum_steps": 8
+      }
+    },
+    "timeout_seconds_per_launch": 3600,
+    "warmup_policy": "no discarded warm-ups; every fresh launch is retained and aggregated"
+  },
+  "error": null,
+  "interpretation": "Local measurement only. A public performance statement additionally requires physical cores, a stable allocation, adequate repeats, reviewed retained records, and appropriate problem-size and rank coverage.",
+  "metric": {
+    "aggregation": "median; minimum, maximum, and every sample retained",
+    "grain": "one fixed-size coupled solve per rank count and repeat",
+    "name": "driver_reported_synchronized_max_rank_solve_wall_seconds",
+    "rank_aggregation": "maximum synchronized MPI wall time across ranks",
+    "unit": "seconds"
+  },
+  "runs": [
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0001-repeat-001.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "1",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:28:01.862480Z",
+      "observed": {
+        "last_ksp_iterations": 12,
+        "ndof": 526338,
+        "ranks": 1,
+        "wall_seconds": 25.9294632
+      },
+      "rankfile": {
+        "bytes": 25,
+        "path": "runs/rank-0001-repeat-001.rankfile.txt",
+        "sha256": "c1a2b439571b9e8971666e4349fdfcd9088770613012ccfe3de6f54a5a463963"
+      },
+      "repeat": 1,
+      "requested_n": 512,
+      "requested_ranks": 1,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:27:31.057405Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 1357,
+        "path": "runs/rank-0001-repeat-001.stderr.txt",
+        "sha256": "97998d7a1d4a923fdb632e2ebf62f13f30721da179099cd417340c953e148ee9"
+      },
+      "stdout": {
+        "bytes": 464,
+        "path": "runs/rank-0001-repeat-001.stdout.txt",
+        "sha256": "157db8f4cd4912675834d6ff95be6bc7a824401ec2f3f00fee521dd40756bfee"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0001-repeat-002.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "1",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:28:32.766254Z",
+      "observed": {
+        "last_ksp_iterations": 12,
+        "ndof": 526338,
+        "ranks": 1,
+        "wall_seconds": 26.0718019
+      },
+      "rankfile": {
+        "bytes": 25,
+        "path": "runs/rank-0001-repeat-002.rankfile.txt",
+        "sha256": "c1a2b439571b9e8971666e4349fdfcd9088770613012ccfe3de6f54a5a463963"
+      },
+      "repeat": 2,
+      "requested_n": 512,
+      "requested_ranks": 1,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:28:01.863731Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 1357,
+        "path": "runs/rank-0001-repeat-002.stderr.txt",
+        "sha256": "2422d3d42979c4b6ad1f213c3388b37d48b5636347fecd77c087a1a6136c2656"
+      },
+      "stdout": {
+        "bytes": 464,
+        "path": "runs/rank-0001-repeat-002.stdout.txt",
+        "sha256": "acde1cb57500eccb8ba9a14c40f465a3d3d2cd046bb81a0bb5fa89cbc061c89b"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0001-repeat-003.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "1",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:29:03.678574Z",
+      "observed": {
+        "last_ksp_iterations": 12,
+        "ndof": 526338,
+        "ranks": 1,
+        "wall_seconds": 26.1042811
+      },
+      "rankfile": {
+        "bytes": 25,
+        "path": "runs/rank-0001-repeat-003.rankfile.txt",
+        "sha256": "c1a2b439571b9e8971666e4349fdfcd9088770613012ccfe3de6f54a5a463963"
+      },
+      "repeat": 3,
+      "requested_n": 512,
+      "requested_ranks": 1,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:28:32.767789Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 1357,
+        "path": "runs/rank-0001-repeat-003.stderr.txt",
+        "sha256": "df0928da9abd6d3e1d0caf06b77e6a0e4ee2979728ef623871dd7070af6e1658"
+      },
+      "stdout": {
+        "bytes": 464,
+        "path": "runs/rank-0001-repeat-003.stdout.txt",
+        "sha256": "0dd3b3622951b3a0baf15c81c521aee96d527259cfef66e2c6f01ce3cd61ae0b"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0002-repeat-001.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "2",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:29:22.411012Z",
+      "observed": {
+        "last_ksp_iterations": 12,
+        "ndof": 526338,
+        "ranks": 2,
+        "wall_seconds": 13.9319047
+      },
+      "rankfile": {
+        "bytes": 50,
+        "path": "runs/rank-0002-repeat-001.rankfile.txt",
+        "sha256": "13f1c316569be92e227c7c19fbfb8d6dc4340bb856b3e59e04b67021fbf5637b"
+      },
+      "repeat": 1,
+      "requested_n": 512,
+      "requested_ranks": 2,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:29:03.680397Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 3390,
+        "path": "runs/rank-0002-repeat-001.stderr.txt",
+        "sha256": "f0fd0f2e77e49cb11419f2016ca025303699297e53846e7688cb0f27c8e61ffa"
+      },
+      "stdout": {
+        "bytes": 685,
+        "path": "runs/rank-0002-repeat-001.stdout.txt",
+        "sha256": "0cad8af326b0ca1e129356469898e1d30dd3f01c633031468e2856dc435b0633"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0002-repeat-002.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "2",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:29:42.086303Z",
+      "observed": {
+        "last_ksp_iterations": 12,
+        "ndof": 526338,
+        "ranks": 2,
+        "wall_seconds": 14.8189108
+      },
+      "rankfile": {
+        "bytes": 50,
+        "path": "runs/rank-0002-repeat-002.rankfile.txt",
+        "sha256": "13f1c316569be92e227c7c19fbfb8d6dc4340bb856b3e59e04b67021fbf5637b"
+      },
+      "repeat": 2,
+      "requested_n": 512,
+      "requested_ranks": 2,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:29:22.413087Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 3390,
+        "path": "runs/rank-0002-repeat-002.stderr.txt",
+        "sha256": "9187bc4dd1d8da9bf50f5a3ba9741b3ba12fbce0de738b9972062b8ca8968e9a"
+      },
+      "stdout": {
+        "bytes": 685,
+        "path": "runs/rank-0002-repeat-002.stdout.txt",
+        "sha256": "d4e90c603ecbcbfe6f653bb48a704f373c0227fa5b643d90dec20dc134bba32c"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0002-repeat-003.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "2",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:30:01.173706Z",
+      "observed": {
+        "last_ksp_iterations": 12,
+        "ndof": 526338,
+        "ranks": 2,
+        "wall_seconds": 14.2711359
+      },
+      "rankfile": {
+        "bytes": 50,
+        "path": "runs/rank-0002-repeat-003.rankfile.txt",
+        "sha256": "13f1c316569be92e227c7c19fbfb8d6dc4340bb856b3e59e04b67021fbf5637b"
+      },
+      "repeat": 3,
+      "requested_n": 512,
+      "requested_ranks": 2,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:29:42.088545Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 2994,
+        "path": "runs/rank-0002-repeat-003.stderr.txt",
+        "sha256": "2919b3f9951f8b6cd2eee444e2e518ab95e6b9c0647c0fd154d41c8c53f421ce"
+      },
+      "stdout": {
+        "bytes": 685,
+        "path": "runs/rank-0002-repeat-003.stdout.txt",
+        "sha256": "efc085ea08ea8620cd8701aa7fef8f2dd1be5b34279d2193dd46085f480cdff6"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0004-repeat-001.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "4",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:30:13.258552Z",
+      "observed": {
+        "last_ksp_iterations": 12,
+        "ndof": 526338,
+        "ranks": 4,
+        "wall_seconds": 7.26776633
+      },
+      "rankfile": {
+        "bytes": 100,
+        "path": "runs/rank-0004-repeat-001.rankfile.txt",
+        "sha256": "23ec7cb4140ffa8c39b73fb0fb246289fbb8212cdeec0ea753fa4eb4f6699221"
+      },
+      "repeat": 1,
+      "requested_n": 512,
+      "requested_ranks": 4,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:30:01.176274Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 6247,
+        "path": "runs/rank-0004-repeat-001.stderr.txt",
+        "sha256": "a9be9035ce89122db093a12d860195930c8b6d5fbac9dffa4c5c6ec678ecdc4f"
+      },
+      "stdout": {
+        "bytes": 1126,
+        "path": "runs/rank-0004-repeat-001.stdout.txt",
+        "sha256": "37f67f0daa8d22d48b6fe837aa5fd2aaa1e176af8185bcb5002496289914d163"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0004-repeat-002.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "4",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:30:25.321353Z",
+      "observed": {
+        "last_ksp_iterations": 12,
+        "ndof": 526338,
+        "ranks": 4,
+        "wall_seconds": 7.37177914
+      },
+      "rankfile": {
+        "bytes": 100,
+        "path": "runs/rank-0004-repeat-002.rankfile.txt",
+        "sha256": "23ec7cb4140ffa8c39b73fb0fb246289fbb8212cdeec0ea753fa4eb4f6699221"
+      },
+      "repeat": 2,
+      "requested_n": 512,
+      "requested_ranks": 4,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:30:13.261421Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 6107,
+        "path": "runs/rank-0004-repeat-002.stderr.txt",
+        "sha256": "e66a06a16bd7a4f3b3b0ffdceef9bc1c6bc1bf22aa80a1f68b502e400053cb13"
+      },
+      "stdout": {
+        "bytes": 1126,
+        "path": "runs/rank-0004-repeat-002.stdout.txt",
+        "sha256": "60f61077d5abdef656a3fecf919f0add4575193b150c24145f304aaa89b4f100"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0004-repeat-003.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "4",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:30:37.311970Z",
+      "observed": {
+        "last_ksp_iterations": 12,
+        "ndof": 526338,
+        "ranks": 4,
+        "wall_seconds": 7.29016522
+      },
+      "rankfile": {
+        "bytes": 100,
+        "path": "runs/rank-0004-repeat-003.rankfile.txt",
+        "sha256": "23ec7cb4140ffa8c39b73fb0fb246289fbb8212cdeec0ea753fa4eb4f6699221"
+      },
+      "repeat": 3,
+      "requested_n": 512,
+      "requested_ranks": 4,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:30:25.324322Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 6238,
+        "path": "runs/rank-0004-repeat-003.stderr.txt",
+        "sha256": "b8d9010ac75ac649d9c44066fb4f917e2518474e377f6ac78f52633b7909c82b"
+      },
+      "stdout": {
+        "bytes": 1126,
+        "path": "runs/rank-0004-repeat-003.stdout.txt",
+        "sha256": "4d90c2d6cea23236028ebf7a092b6d63aa8c139181338f96236df456a8047577"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0008-repeat-001.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "8",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:30:46.137981Z",
+      "observed": {
+        "last_ksp_iterations": 13,
+        "ndof": 526338,
+        "ranks": 8,
+        "wall_seconds": 3.89778087
+      },
+      "rankfile": {
+        "bytes": 200,
+        "path": "runs/rank-0008-repeat-001.rankfile.txt",
+        "sha256": "d4188df6a2937fdcba045f280c008d5935a91ce97922df50b39e0666f31a2790"
+      },
+      "repeat": 1,
+      "requested_n": 512,
+      "requested_ranks": 8,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:30:37.315239Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 11929,
+        "path": "runs/rank-0008-repeat-001.stderr.txt",
+        "sha256": "a864bc93d0e00488b49290f0cf16dbf7eed05bed79fa8cf81c3349d327a1324b"
+      },
+      "stdout": {
+        "bytes": 2010,
+        "path": "runs/rank-0008-repeat-001.stdout.txt",
+        "sha256": "4c1129375955e77a844f58004da2c7fd24bae8f7e95fde431c0774dd8d7b1f52"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0008-repeat-002.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "8",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:30:55.240823Z",
+      "observed": {
+        "last_ksp_iterations": 13,
+        "ndof": 526338,
+        "ranks": 8,
+        "wall_seconds": 3.96027512
+      },
+      "rankfile": {
+        "bytes": 200,
+        "path": "runs/rank-0008-repeat-002.rankfile.txt",
+        "sha256": "d4188df6a2937fdcba045f280c008d5935a91ce97922df50b39e0666f31a2790"
+      },
+      "repeat": 2,
+      "requested_n": 512,
+      "requested_ranks": 8,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:30:46.141568Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 11649,
+        "path": "runs/rank-0008-repeat-002.stderr.txt",
+        "sha256": "3737119ec4195ef73aa3ccb5c32cc5cb816de3afaea86336783d7ba7521ecee3"
+      },
+      "stdout": {
+        "bytes": 2010,
+        "path": "runs/rank-0008-repeat-002.stdout.txt",
+        "sha256": "6201cad5ad8a53b93eb1585f5471167d3d2292f3e643e87c2ed032761de74753"
+      },
+      "timed_out": false
+    },
+    {
+      "command": [
+        "mpirun",
+        "--rankfile",
+        "runs/rank-0008-repeat-003.rankfile.txt",
+        "--report-bindings",
+        "-n",
+        "8",
+        "python",
+        "-m",
+        "eda_multiphysics.etv_distributed_fs",
+        "512"
+      ],
+      "finished_utc": "2026-08-01T12:31:04.309069Z",
+      "observed": {
+        "last_ksp_iterations": 13,
+        "ndof": 526338,
+        "ranks": 8,
+        "wall_seconds": 3.93985692
+      },
+      "rankfile": {
+        "bytes": 200,
+        "path": "runs/rank-0008-repeat-003.rankfile.txt",
+        "sha256": "d4188df6a2937fdcba045f280c008d5935a91ce97922df50b39e0666f31a2790"
+      },
+      "repeat": 3,
+      "requested_n": 512,
+      "requested_ranks": 8,
+      "returncode": 0,
+      "started_utc": "2026-08-01T12:30:55.244610Z",
+      "status": "passed",
+      "stderr": {
+        "bytes": 12183,
+        "path": "runs/rank-0008-repeat-003.stderr.txt",
+        "sha256": "81632b4f10dbf33a8b4a8e4c4fd323c01bf9e2b5961591999e99c4130885645a"
+      },
+      "stdout": {
+        "bytes": 2010,
+        "path": "runs/rank-0008-repeat-003.stdout.txt",
+        "sha256": "de0cd2dd4bb9886a8aabe42ab6e14b7a84bcf057c67e36df6a0319f537a1d3c9"
+      },
+      "timed_out": false
+    }
+  ],
+  "schema_version": 1,
+  "status": "complete",
+  "updated_utc": "2026-08-01T12:31:04.312833Z"
+}
