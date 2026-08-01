@@ -42,7 +42,7 @@ wheel checks, and applies the release-artifact guard. Execution stops at a
 failed command.
 
 The expected Core revision is read from `setup.sh`; for this candidate it is
-`454f73ce2de284262b214a2b37bd676c6aca3c0a`. The recorder checks the imported
+`e2f42ed5772850a0a23a2ce434f430c287eae5c8`. The recorder checks the imported
 root, Git revision, origin, and branch before treating the run as release mode.
 
 ## Audit mode

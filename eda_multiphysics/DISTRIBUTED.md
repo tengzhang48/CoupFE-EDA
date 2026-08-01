@@ -21,7 +21,30 @@ checks, example commands, and performance records serve different purposes:
 | `etv_distributed`/`etv_distributed_fs` validation modes | MPI result compared with an independent serial solve | Checked only for the documented small cases | Agreement is a correctness check, not a performance result |
 
 The documented Core baseline is revision
-`454f73ce2de284262b214a2b37bd676c6aca3c0a`.
+`e2f42ed5772850a0a23a2ce434f430c287eae5c8`.
+
+## Native element evaluation policy
+
+`etv_distributed` uses CoupFE's native generated electrothermal element and
+accepts an explicit callback policy:
+
+```bash
+OMP_NUM_THREADS=1 mpirun -n 4 \
+  python -m eda_multiphysics.etv_distributed 160 \
+  --element-evaluation split --validate
+```
+
+`joint` is the default and retains same-iterate fused R/K evaluation. `split`
+uses the native residual-only entry for Core's convergence and line-search
+callbacks while tangent callbacks still use joint R/K. `auto` is intentionally
+not accepted, so an invocation and its run record identify the requested path.
+The serial comparison uses the same native target and callback mode.
+
+`etv_distributed_fs` remains unchanged because its custom Newton loop requests
+one joint R/K assembly per iteration and has no residual-only line-search
+callback. Its retained scaling bundle was produced with Core `454f73ce` and
+continues to describe that historical revision. The new option has source and
+element-parity checks but no retained MPI timing or scaling claim.
 
 ## Requirements for distributed runs
 

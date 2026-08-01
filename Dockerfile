@@ -47,7 +47,7 @@ RUN echo "Installing OpenROAD: $OPENROAD_DEB_URL" && \
 # --- public CoupFE core (audited branch + exact commit) + CoupFE-EDA ---
 ARG COUPFE_URL=https://github.com/tengzhang48/CoupFE.git
 ARG COUPFE_BRANCH=main
-ARG COUPFE_REF=454f73ce2de284262b214a2b37bd676c6aca3c0a
+ARG COUPFE_REF=e2f42ed5772850a0a23a2ce434f430c287eae5c8
 RUN git clone --branch "$COUPFE_BRANCH" --single-branch "$COUPFE_URL" /opt/CoupFE && \
     git -C /opt/CoupFE cat-file -e "$COUPFE_REF^{commit}" && \
     git -C /opt/CoupFE merge-base --is-ancestor "$COUPFE_REF" "origin/$COUPFE_BRANCH" && \

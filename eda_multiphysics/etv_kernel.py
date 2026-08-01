@@ -1,10 +1,12 @@
 """Compiled (f2py) coupled electro-thermal Q4 element, via CoupFE's codegen.
 
 This is the CoupFE way to remove the Python assembly loop: the element weak form is written
-once in Python, `coupfe.codegen` translates it to a self-contained Fortran UEL (with the full
-coupled tangent emitted by complex step), and `build_element_kernel` f2py-compiles it. An
-`ElementGroup` then drives one BATCHED compiled call per assembly -- no per-element Python
-loop -- and `coupfe.assembly.distributed.solve_distributed` runs it on PETSc/MPI.
+once in Python, `coupfe.codegen` translates it to a self-contained Fortran element (with the
+full coupled tangent emitted by complex step), and `build_element_kernel` f2py-compiles it.
+The declaration can target either CoupFE's native runtime or the normal-static Abaqus UEL
+export path. An `ElementGroup` then drives one BATCHED compiled call per assembly -- no
+per-element Python loop -- and `coupfe.assembly.distributed.solve_distributed` runs it on
+PETSc/MPI.
 
 Two scalar fields per node (phi = electric potential, T = temperature), both transport-type:
     phi:  storage = 0,                    flux = sigma(T) grad(phi)        (-div sigma grad phi = 0)
@@ -18,7 +20,7 @@ from __future__ import annotations
 import numpy as np
 
 import coupfe.codegen as au
-from coupfe.codegen.generators.uel_gen import generate_uel
+from coupfe.codegen.generators.uel_gen import generate_element, generate_uel
 from coupfe.runtime.compiled_element import build_element_kernel
 
 PROP_ORDER = ("sigma0", "alpha", "k")     # runtime props array order
@@ -64,27 +66,39 @@ def _verify_state():
 
 
 def build_et_kernel(workdir, *, sigma0=3.0, alpha=0.0, k=1.5, element="Quad4",
-                    compile=True, verify=True):
+                    compile=True, verify=True, backend="abaqus_uel"):
     """Generate (and f2py-compile) the coupled electro-thermal kernel.
 
     `element="Quad4"` (2D), `"Hex8"` (3D), or `"Tet4"` (3D linear tet for gmsh arbitrary-CAD
     meshes, supplied natively by CoupFE core) -- the weak form is dimension-agnostic. Returns the
-    compiled module (or the .for path if compile=False). props at RUNTIME are (sigma0, alpha, k).
+    compiled module (or the .for path if compile=False). ``backend="abaqus_uel"`` preserves
+    the established export/compatibility path; ``backend="native"`` emits CoupFE's native
+    R/K and residual-only entries. Props at RUNTIME are (sigma0, alpha, k).
     """
+    workdir = str(workdir)
     ndim = 3 if element.lower().startswith(("hex", "tet")) else 2
     p = ElectroThermalProblem(ndim=ndim, sigma0=sigma0, alpha=alpha, k=k)
     if verify:
         p.verify(state=_verify_state(), verbose=False)     # complex-step vs FD tangent check
     tag = element.lower()
-    forp = f"{workdir}/et_{tag}.for"
+    if backend not in {"abaqus_uel", "native"}:
+        raise ValueError("backend must be 'abaqus_uel' or 'native'")
+    suffix = "" if backend == "abaqus_uel" else "_native"
+    forp = f"{workdir}/et_{tag}{suffix}.for"
     if tag.startswith("tet"):
         from .tet_element import TET4_CONFIG
-        generate_uel(p, forp, element_config=TET4_CONFIG, formulation="standard")
+        generation = dict(element_config=TET4_CONFIG, formulation="standard")
     else:
-        generate_uel(p, forp, element=element, formulation="standard")
+        generation = dict(element=element, formulation="standard")
+    if backend == "abaqus_uel":
+        generate_uel(p, forp, **generation)
+    else:
+        generate_element(p, forp, backend="native", **generation)
     if not compile:
         return forp
-    return build_element_kernel(forp, f"et_{tag}_kernel", workdir=workdir)
+    return build_element_kernel(
+        forp, f"et_{tag}{suffix}_kernel", workdir=workdir, backend=backend
+    )
 
 
 def main():

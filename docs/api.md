@@ -7,7 +7,7 @@ uses SI units; several EDA adapters use micrometres and record that choice in
 metadata.
 
 Install through `./setup.sh` so the package imports the tested CoupFE
-revision `454f73ce2de284262b214a2b37bd676c6aca3c0a`. A name-matched package from
+revision `e2f42ed5772850a0a23a2ce434f430c287eae5c8`. A name-matched package from
 an unrelated index is not an accepted substitute.
 
 ## Guided API examples
@@ -230,6 +230,28 @@ applies to its recorded revision, problem size, solver configuration, hardware,
 and rank/thread placement; it is not a general performance guarantee. The
 checked-size multi-rank regression covers `etv_distributed_fs`; the other
 distributed modules remain research drivers.
+
+### Native residual-only evaluation
+
+`build_et_kernel(..., backend="abaqus_uel")` retains the established
+normal-static export/compatibility target. `backend="native"` emits CoupFE's
+parallel native ABI, including joint R/K and residual-only entries. Native
+calls do not receive or emulate Abaqus `LFLAGS`.
+
+The research `etv_distributed` CLI accepts
+`--element-evaluation {joint,split}`. `joint` remains the default and preserves
+Core's same-iterate fused R/K path. `split` passes
+`CompiledElement.element_r_batch` to Core's distributed solver for
+residual-only convergence and line-search callbacks; tangent callbacks still
+use `element_rk_batch`. There is deliberately no `auto` policy: a requested
+mode is explicit, and unsupported split construction fails.
+
+This option is not added to `etv_distributed_fs`. That custom FieldSplit loop
+requests one joint R/K assembly per Newton step and has no separate line-search
+or residual-only callback sequence to optimize. The retained scaling bundle
+therefore remains a record of its original joint path, not evidence about the
+new option. Any performance comparison requires a matched rerun with the Core
+and EDA revisions, problem, solver, rank placement, and callback mode recorded.
 
 ## Solver contract
 

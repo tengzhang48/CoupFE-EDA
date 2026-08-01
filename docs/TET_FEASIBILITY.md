@@ -2,7 +2,7 @@
 
 CoupFE-EDA uses native Tet4 support from Core for generated curved and
 multi-region examples. The pinned dependency is
-`454f73ce2de284262b214a2b37bd676c6aca3c0a`.
+`e2f42ed5772850a0a23a2ce434f430c287eae5c8`.
 
 ## Ownership
 

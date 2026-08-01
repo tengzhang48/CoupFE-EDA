@@ -24,7 +24,7 @@ docker run --rm -it coupfe-eda
 | OpenROAD | `v2.0-17598-ga008522d8` (2024-12-14) | URL and SHA-256 pinned |
 | yosys, PETSc, mpi4py, gmsh | conda-forge solve | Record resolved versions for each release |
 | volare | rolling pip dependency | Open-PDK manager |
-| CoupFE | `454f73ce2de284262b214a2b37bd676c6aca3c0a` | Must be reachable from public `main` |
+| CoupFE | `e2f42ed5772850a0a23a2ce434f430c287eae5c8` | Must be reachable from public `main` |
 
 Inspect a built image:
 
@@ -67,7 +67,7 @@ git ls-remote https://github.com/tengzhang48/CoupFE.git \
 |---|---|---|
 | `COUPFE_URL` | `https://github.com/tengzhang48/CoupFE.git` | Public core source |
 | `COUPFE_BRANCH` | `main` | Branch required to contain the pin |
-| `COUPFE_REF` | `454f73ce2de284262b214a2b37bd676c6aca3c0a` | Exact qualified core commit |
+| `COUPFE_REF` | `e2f42ed5772850a0a23a2ce434f430c287eae5c8` | Exact qualified core commit |
 | `TAG` | `coupfe-eda` | Image tag |
 | `OPENROAD_DEB_URL` | pinned 2024-12-14 asset | Override together with its digest |
 | `OPENROAD_DEB_SHA256` | pinned SHA-256 | Digest for the OpenROAD asset |
@@ -109,7 +109,7 @@ MPICH does not accept the OpenMPI-only `--oversubscribe` or
 
 The periodic mechanics path depends on generic affine MPC and native Tet4 in
 the qualified Core release root. The image clones public `main`, checks
-that exact commit `454f73ce2de284262b214a2b37bd676c6aca3c0a` is its ancestor,
+that exact commit `e2f42ed5772850a0a23a2ce434f430c287eae5c8` is its ancestor,
 and checks out the commit detached. This avoids SSH aliases, credentials, mutable
 branch-tip installs, and accidental resolution of an unrelated `coupfe`
 package from PyPI.

@@ -7,7 +7,7 @@ and design-object provenance. Evidence is limited to the tests, reference
 cases, and model scopes documented below; this is not a signoff tool.
 
 The tested Core revision is
-`454f73ce2de284262b214a2b37bd676c6aca3c0a`. Geometry-specific matching and
+`e2f42ed5772850a0a23a2ce434f430c287eae5c8`. Geometry-specific matching and
 periodic adapters remain in this repository; Core supplies mesh-agnostic finite
 element and affine-constraint primitives.
 
@@ -27,7 +27,7 @@ element and affine-constraint primitives.
 | Solder constitutive models | Anand material-point integrations, plane-strain SnPbAg and three-dimensional SAC305 operators, prescribed cycles, and small stateful block examples | Saturation, transient comparison, patch tests, fail-closed increment residuals, one accepted-state commit, zero-swing controls, an in-sample published calibration tie point, and four [guided result-bearing workflows](../EXAMPLES.md#guided-workflows-and-retained-example-results) |
 | Solder/package geometry | Generated cylinder/profile/package regions with stable design-map handoff plus a regular 18-Hex8 stateful screening block | Geometry/topology and elastic generated-mesh regressions; stateful increments meet Core's residual rule, but load-step/mesh convergence, crack location, and predictive life are not established |
 | Reliability mappings | Black/Blech screening, Syed/Darveaux mappings, and design-map propagation | Algebraic and handoff checks; life values remain calibration- and mission-profile-dependent |
-| Distributed execution | PETSc paths for PDN and selected coupled examples; repeat-aware `etv_distributed_fs` measurement harness | Retained serial-versus-MPI output comparison at size 24 plus the bounded records in [`benchmarks/solver_scaling`](../benchmarks/solver_scaling/); every timing applies only to its named revision, problem, environment, hardware, and rank/thread configuration |
+| Distributed execution | PETSc paths for PDN and selected coupled examples; explicit joint/split native evaluation in the `etv_distributed` research driver; repeat-aware `etv_distributed_fs` measurement harness | Retained serial-versus-MPI output comparison at size 24 plus the bounded records in [`benchmarks/solver_scaling`](../benchmarks/solver_scaling/); the retained FieldSplit record predates the split option, and every timing applies only to its named revision, problem, environment, hardware, and rank/thread configuration |
 | Tet4 path | Native Core Tet4 consumed on generated boxes, cylinders, and local package/TSV regions | Patch and generated-geometry regression cases; imported production CAD and broad convergence studies remain open |
 
 ## Coupled workflows

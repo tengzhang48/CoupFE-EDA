@@ -36,10 +36,10 @@ performance signoff.
 | `python -m eda_multiphysics.thermomech_3d` | Generated Hex8 block | Homogeneous free expansion and constrained-block control | Applies to tested generated meshes |
 | `python -m eda_multiphysics.thermomech_tsv` | Generated Cu/Si via | Plane-strain composite-cylinder displacement and direct/FieldSplit agreement | Applies to tested generated meshes |
 | `python -m eda_multiphysics.tsv_3d` | Generated cylinder, annulus, and layer-stack meshes | Joule cylinder, composite-cylinder, and series-resistance references | Applies to tested generated meshes |
-| `python -m eda_multiphysics.tet_3d` | Generated all-tet box and cylinder meshes | Linear patch and `σV²/8k` self-heating checks | Applies to tested geometry with Core `454f73c`; imported CAD and broader convergence remain open |
+| `python -m eda_multiphysics.tet_3d` | Generated all-tet box and cylinder meshes | Linear patch and `σV²/8k` self-heating checks | Applies to tested geometry with Core `e2f42ed`; imported CAD and broader convergence remain open |
 | `python -m eda_multiphysics.etv_3d` | Generated Hex8 block | `σV²/8k` self-heating reference | Applies to the tested generated mesh |
 | `python -m eda_multiphysics.etv_fieldsplit` | Generated coupled system | Direct/serial comparison code and iteration controls are present | Retain a current-revision solve record before publishing a result |
-| `python -m eda_multiphysics.etv_distributed` | Generated coupled system | Serial-versus-MPI comparison code is present | Retain current-revision rank output before publishing a result |
+| `python -m eda_multiphysics.etv_distributed` | Generated coupled system with explicit native joint/split callback policy | Native residual/RK and normal-static UEL element parity checks; serial-versus-MPI comparison code is present | Retain current-revision rank output before publishing a solver or performance result |
 | `python -m eda_multiphysics.etv_distributed_fs` | Generated coupled system | Serial-versus-rank output checks at size 24 with two and four ranks | Evidence is limited to tested output agreement; no scaling claim |
 | `python -m eda_multiphysics.scaling_bench` | New measurements from the local MPI machine/environment | Machine-readable `SCALEFS` output for requested ranks | Retain complete sanitized process output and environment data before publishing timings |
 | `python -m eda_multiphysics.etv_kernel` | CoupFE weak form and generated local build products | Element residual/tangent and self-heating checks | Applies to the qualified compiled toolchain |
@@ -92,7 +92,7 @@ files are reviewable records:
   layout/package, traceable materials and boundary conditions, retained raw
   evidence, and measured electrical/thermal/stress comparison.
 - **Core and mesh ownership:** Core
-  `454f73ce2de284262b214a2b37bd676c6aca3c0a` supplies native Tet4 and the
+  `e2f42ed5772850a0a23a2ce434f430c287eae5c8` supplies native Tet4 and the
   generic affine-MPC representation/compiler. CoupFE-EDA owns periodic box
   metadata, mesh matching, and relation construction.
 - **Geometry:** generated Tet4 cases are checked at tested resolutions. Imported

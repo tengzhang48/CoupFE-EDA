@@ -235,6 +235,14 @@ Keep KSP, preconditioner, load-stepping, and field-splitting choices with the ED
 case unless they form a tested generic Core contract. Select them from the
 matrix structure and available PETSc build rather than from a universal recipe.
 
+Use Core's explicit `joint`/`split` compiled-element policy only at a solver
+boundary that really issues residual-only callbacks. Keep `joint` as the
+default, reject `auto`, and use the same native kernel when comparing modes.
+Do not inject this CoupFE policy or hardcoded `LFLAGS` into the parallel Abaqus
+UEL export path. A driver that requests one joint R/K assembly per Newton step,
+such as the current FieldSplit scaling driver, has no split opportunity merely
+because the element exposes a residual-only entry.
+
 Performance statements require a retained benchmark script, hardware and
 software environment, problem size, rank/thread settings, warm-up policy,
 timings, and accuracy comparison. Unretained timings may guide research but

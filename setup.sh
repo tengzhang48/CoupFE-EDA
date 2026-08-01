@@ -18,7 +18,7 @@ EDA_ROOT="$(cd "$(dirname "$0")" && pwd)"
 COUPFE_URL="${COUPFE_URL:-https://github.com/tengzhang48/CoupFE.git}"
 COUPFE_BRANCH="${COUPFE_BRANCH:-main}"
 COUPFE_DIR="${COUPFE_DIR:-$EDA_ROOT/.deps/CoupFE}"
-COUPFE_REF="${COUPFE_REF:-454f73ce2de284262b214a2b37bd676c6aca3c0a}"
+COUPFE_REF="${COUPFE_REF:-e2f42ed5772850a0a23a2ce434f430c287eae5c8}"
 
 if [ ! -d "$COUPFE_DIR/.git" ]; then
   if [ -e "$COUPFE_DIR" ]; then

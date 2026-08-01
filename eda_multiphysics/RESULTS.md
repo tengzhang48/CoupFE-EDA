@@ -7,7 +7,7 @@ log. Release status comes from a clean, retained checkpoint described in
 ## Core and environment boundary
 
 The candidate targets CoupFE revision
-`454f73ce2de284262b214a2b37bd676c6aca3c0a`. Evidence must record the imported
+`e2f42ed5772850a0a23a2ce434f430c287eae5c8`. Evidence must record the imported
 Core path and revision as well as the EDA revision. Optional Gmsh, compiler,
 PETSc, and MPI cases are reported separately from the default tests.
 

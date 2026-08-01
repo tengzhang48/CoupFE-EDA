@@ -26,7 +26,7 @@ mesh adapters, region/boundary semantics, EDA provenance, material selections,
 coupled workflows, and problem-specific evidence.
 
 This repository pins Core revision
-`454f73ce2de284262b214a2b37bd676c6aca3c0a`. Code that imports a mesh-specific
+`e2f42ed5772850a0a23a2ce434f430c287eae5c8`. Code that imports a mesh-specific
 periodic adapter from Core violates the current boundary and is covered by a
 regression test.
 

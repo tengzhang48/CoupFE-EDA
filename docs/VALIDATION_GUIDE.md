@@ -24,7 +24,7 @@ prediction.
 ## Environment and Core identity
 
 The qualified Core revision is
-`454f73ce2de284262b214a2b37bd676c6aca3c0a`. Use `./setup.sh` to obtain and
+`e2f42ed5772850a0a23a2ce434f430c287eae5c8`. Use `./setup.sh` to obtain and
 verify that checkout. Before recording evidence, confirm that Python imports
 `coupfe` from the intended checkout and record its Git revision. A successful
 run against a different or dirty Core tree is not release evidence for this

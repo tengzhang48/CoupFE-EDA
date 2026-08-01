@@ -14,18 +14,23 @@ multi-rank qualification is provided for ``etv_distributed_fs``; this module is
 kept as a research driver pending an equivalent retained rank test.
 
     OMP_NUM_THREADS=1 mpirun -n 4 python -m eda_multiphysics.etv_distributed [grid_n]
+
+Use ``--element-evaluation split`` to opt into the native residual-only entry
+for convergence and line-search callbacks. Joint native R/K evaluation remains
+the default.
 """
 
 from __future__ import annotations
 
+import argparse
 import os
-import sys
 import time
 
 import numpy as np
 
 SIGMA0, ALPHA, K_TH, V0 = 3.0, 0.05, 1.5, 2.0   # alpha>0 -> NONLINEAR coupled
 PROPS = (SIGMA0, ALPHA, K_TH)
+ELEMENT_EVALUATION_MODES = ("joint", "split")
 
 
 def build_grid(n, Lx=1.0, Ly=1.0):
@@ -40,11 +45,29 @@ def build_grid(n, Lx=1.0, Ly=1.0):
     return nodes, elems
 
 
-def _kernel(workdir):
+def _kernel(workdir, *, backend="abaqus_uel"):
     """Build (or rebuild) the compiled electro-thermal kernel into `workdir`."""
     from .etv_kernel import build_et_kernel
     os.makedirs(workdir, exist_ok=True)
-    return build_et_kernel(workdir, sigma0=SIGMA0, alpha=ALPHA, k=K_TH)
+    return build_et_kernel(
+        workdir, sigma0=SIGMA0, alpha=ALPHA, k=K_TH, backend=backend
+    )
+
+
+def _parse_args(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("grid_n", nargs="?", type=int, default=160)
+    parser.add_argument("--validate", action="store_true")
+    parser.add_argument(
+        "--element-evaluation",
+        choices=ELEMENT_EVALUATION_MODES,
+        default="joint",
+        help=(
+            "native element callback policy: joint retains fused R/K; split "
+            "uses residual-only evaluation for residual-only solver callbacks"
+        ),
+    )
+    return parser.parse_args(argv)
 
 
 def _dirichlet_fn(nodes, V0=V0):
@@ -63,16 +86,40 @@ def _dirichlet_fn(nodes, V0=V0):
     return fn
 
 
-def serial_solve(n, props=PROPS, V0=V0, workdir=None):
+def serial_solve(
+    n,
+    props=PROPS,
+    V0=V0,
+    workdir=None,
+    *,
+    evaluation_mode="joint",
+    kernel_backend=None,
+):
     """Independent serial oracle: compiled ElementGroup assembly + scipy Newton."""
     import scipy.sparse.linalg as spla
     from coupfe import ElementGroup, assemble_residual, assemble_tangent
     from coupfe.runtime.compiled_element import CompiledElement
     nodes, elems = build_grid(n)
-    mod = _kernel(workdir or os.path.join(os.path.dirname(__file__), "_etk_serial"))
+    if evaluation_mode not in ELEMENT_EVALUATION_MODES:
+        raise ValueError("evaluation_mode must be 'joint' or 'split'")
+    if kernel_backend is None:
+        kernel_backend = "native" if evaluation_mode == "split" else "abaqus_uel"
+    if evaluation_mode == "split" and kernel_backend != "native":
+        raise ValueError("evaluation_mode='split' requires kernel_backend='native'")
+    mod = _kernel(
+        workdir or os.path.join(os.path.dirname(__file__), "_etk_serial"),
+        backend=kernel_backend,
+    )
     elem = CompiledElement(mod, props=props, dof_per_node=2, n_svars=0, mcrd=2,
                            n_elem=len(elems))
-    group = ElementGroup(elem, nodes, elems, dof_per_node=2, comps=(0, 1))
+    group = ElementGroup(
+        elem,
+        nodes,
+        elems,
+        dof_per_node=2,
+        comps=(0, 1),
+        evaluation_mode=evaluation_mode,
+    )
     ndof = len(nodes) * 2
     d = _dirichlet_fn(nodes, V0)(1.0)
     drows = np.array(sorted(d)); dvals = np.array([d[i] for i in drows])
@@ -102,21 +149,23 @@ def serial_solve(n, props=PROPS, V0=V0, workdir=None):
 
 
 def main():
+    args = _parse_args()
     from petsc4py import PETSc
     from coupfe.assembly.distributed import element_partition, solve_distributed
     from coupfe.mesh import KernelMeshView
     from coupfe.runtime.compiled_element import CompiledElement
     comm = PETSc.COMM_WORLD
     rank, size = comm.getRank(), comm.getSize()
-    pos = [a for a in sys.argv[1:] if not a.startswith("--")]
-    n = int(pos[0]) if pos else 160
+    n = args.grid_n
 
     nodes, elems = build_grid(n)
     view = KernelMeshView(nodes, elems, dof_per_node=2)
     ndof_total = len(nodes) * 2
     # each rank compiles the kernel into its own dir (no race), then partitions the elements
     wd = os.path.join(os.path.dirname(__file__), f"_etk_r{rank}")
-    mod = _kernel(wd)
+    # This driver deliberately uses Core's native backend for both policies so
+    # joint-versus-split changes callback work, not the element formulation or ABI.
+    mod = _kernel(wd, backend="native")
     my_gm, my_coords, ndof = element_partition(view, rank, size)
     elem = CompiledElement(mod, props=PROPS, dof_per_node=2, n_svars=0, mcrd=2,
                            n_elem=len(my_gm))
@@ -126,9 +175,23 @@ def main():
     # block, while ASM has no coarse grid. FieldSplit+AMG per field is the
     # implementation selected for future retained scaling studies.
     # (superlu_dist machine-precision distributed direct is conda-only here.)
-    U_par, info = solve_distributed(ndof, my_gm, my_coords, 2, elem.element_rk_batch,
-                                    _dirichlet_fn(nodes), n_steps=3,
-                                    pc="asm", ksp_type="gmres", rtol=1e-12, tol=1e-9)
+    residual_options = {"evaluation_mode": args.element_evaluation}
+    if args.element_evaluation == "split":
+        residual_options["residual_batch_fn"] = elem.element_r_batch
+    U_par, info = solve_distributed(
+        ndof,
+        my_gm,
+        my_coords,
+        2,
+        elem.element_rk_batch,
+        _dirichlet_fn(nodes),
+        n_steps=3,
+        pc="asm",
+        ksp_type="gmres",
+        rtol=1e-12,
+        tol=1e-9,
+        **residual_options,
+    )
     comm.barrier(); dt = time.time() - t0
 
     if rank == 0:
@@ -140,8 +203,16 @@ def main():
               f"my_ne={info['my_ne']} owned={info['n_owned']} ghost={info['n_ghost']}")
         print(f"  wall={dt:.2f}s | ksp_its={its} | peak dT={peakT:.4f} "
               f"(nonlinear coupled, alpha={ALPHA})")
-        if "--validate" in sys.argv:
-            U_ser = serial_solve(n)
+        print(
+            "  native element evaluation: "
+            f"{info['evaluation_mode']} (Jacobian callbacks remain joint R/K)"
+        )
+        if args.validate:
+            U_ser = serial_solve(
+                n,
+                evaluation_mode=args.element_evaluation,
+                kernel_backend="native",
+            )
             err = float(np.max(np.abs(U_par - U_ser)) / max(1e-30, np.max(np.abs(U_ser))))
             print(f"  serial==N-rank: max rel|U_dist - U_serial| = {err:.2e}  "
                   f"{'PASS' if err < 1e-6 else 'CHECK'}  (iterative ASM+GMRES)")

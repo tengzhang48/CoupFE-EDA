@@ -24,7 +24,7 @@ PUBLIC_CORE_BRANCH = "main"
 # This exact Core release root is anonymously reachable from public ``main``.
 # Keep the release guard fail-closed for any other dependency revision.
 APPROVED_PUBLIC_CORE_REF: Optional[str] = (
-    "454f73ce2de284262b214a2b37bd676c6aca3c0a"
+    "e2f42ed5772850a0a23a2ce434f430c287eae5c8"
 )
 CORE_RELEASE_INPUTS = (
     "setup.sh",
@@ -118,6 +118,7 @@ PUBLIC_PACKAGE_FILES = SCHEMA_ASSETS | SYNTHETIC_CASE_ASSETS | {
 PUBLIC_TEST_FILES = {
     "tests/conftest.py",
     "tests/test_integration_regressions.py",
+    "tests/test_native_element_evaluation.py",
     "tests/test_periodic_adapter.py",
     "tests/test_toolchain.py",
     "tests/test_tsv_device.py",

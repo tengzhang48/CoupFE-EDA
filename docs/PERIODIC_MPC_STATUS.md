@@ -1,7 +1,7 @@
 # Periodic TSV and affine-constraint status
 
 The current dependency target is public Core revision
-`454f73ce2de284262b214a2b37bd676c6aca3c0a`. CoupFE-EDA owns periodic geometry,
+`e2f42ed5772850a0a23a2ce434f430c287eae5c8`. CoupFE-EDA owns periodic geometry,
 surface-node matching, edge/corner equivalence construction, macroscopic
 gradient semantics, and TSV-specific checks. Core owns mesh-agnostic affine
 relations and reduced residual/tangent algebra.

@@ -72,7 +72,7 @@ python -m pytest -q
 ```
 
 `setup.sh` clones or refreshes public CoupFE `main` in `.deps/CoupFE`, checks out
-and verifies commit `454f73ce2de284262b214a2b37bd676c6aca3c0a`, rejects a dirty
+and verifies commit `e2f42ed5772850a0a23a2ce434f430c287eae5c8`, rejects a dirty
 dependency checkout, installs both packages in editable mode, and checks the
 import location. The source URL, branch, checkout directory, and commit can be
 set with `COUPFE_URL`, `COUPFE_BRANCH`, `COUPFE_DIR`, and `COUPFE_REF`; changing
@@ -134,7 +134,7 @@ bundled. The project-authored fixture and caller-data boundary are documented in
 - `tsv_3d.py` exercises Hex8 electrothermal elements on generated cylinder,
   annulus, and layer-stack meshes with named idealized references.
 - `tet_3d.py` exercises CoupFE's native Tet4 on generated box and cylinder
-  meshes. With Core `454f73c`, the checked scope includes the tested generated
+  meshes. With Core `e2f42ed`, the checked scope includes the tested generated
   shapes and conformal package case; imported STEP/BREP geometry and broader
   mesh convergence remain research work.
 - `thermomech_3d.py` and `thermomech_tsv.py` cover generated thermo-mechanical
@@ -198,6 +198,14 @@ retained streams, and its interpretation boundary. Historical development
 timings are kept separately from measurements reproduced from a named public
 revision. The other PETSc/MPI modules remain research drivers until they have
 equivalent records.
+
+The research `etv_distributed.py` driver exposes
+`--element-evaluation {joint,split}`. `joint` is the default; `split` uses the
+native residual-only element entry for Core's convergence and line-search
+callbacks while Jacobian callbacks retain joint R/K evaluation. This option
+does not apply to `etv_distributed_fs`, whose current Newton loop requests one
+joint R/K assembly per step. The retained FieldSplit timing record predates the
+option and is not evidence for a split-path speedup.
 
 ## Verification and references
 

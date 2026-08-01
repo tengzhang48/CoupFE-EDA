@@ -39,11 +39,27 @@ CoupFE-EDA depends on a precise Core contract. A Python environment can import
 a different local checkout even when its package name matches. Setup and
 release evidence therefore record the imported path, Git origin, branch, full
 revision, and cleanliness. The release candidate pins
-`454f73ce2de284262b214a2b37bd676c6aca3c0a`.
+`e2f42ed5772850a0a23a2ce434f430c287eae5c8`.
 
 Geometry-specific adapters stay in EDA. Core receives coordinates,
 connectivity, operators, and generic affine relations without EDA object or
 periodic-face policy.
+
+## Evaluation policy belongs at a real callback boundary
+
+A residual-only element entry helps only when the consuming solver actually
+issues residual-only callbacks, such as convergence checks or line-search
+trials. The Core `solve_distributed` research path has that boundary, so EDA
+offers explicit `joint` and `split` policies there and keeps `joint` as the
+default. The custom FieldSplit driver requests joint R/K once per Newton step;
+adding a nominal split switch there would not remove tangent work and would
+misdescribe the implementation.
+
+Joint and split comparisons should use the same native element target. Abaqus
+UEL export is a parallel backend, not a place to inject CoupFE callback policy
+or hardcoded `LFLAGS`. Native residual/RK parity and native/UEL normal-static
+parity are checked at element level; a speed claim still requires a matched,
+retained solver benchmark.
 
 ## Stateful solves need explicit convergence and commit semantics
 
