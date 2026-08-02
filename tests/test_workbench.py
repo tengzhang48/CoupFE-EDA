@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -12,6 +14,10 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def test_approved_tsv_workflow_import_path_does_not_require_core():
@@ -106,20 +112,76 @@ def test_tsv_device_executor_runs_real_example_and_retains_provenance(tmp_path):
         "stdout.txt",
         "stderr.txt",
     }
-    assert all(len(artifact["sha256"]) == 64 for artifact in manifest["artifacts"])
+    for artifact in manifest["artifacts"]:
+        assert artifact["sha256"] == _sha256(run_dir / artifact["name"])
+
+    # The committed browser files are reviewed, byte-addressed release assets.
+    # A fresh numerical run is compared semantically below: last-bit floating-point
+    # text can legitimately vary between NumPy/BLAS builds and runner CPUs.
     retained_contract = json.loads(
         (ROOT / "web/contracts/retained-tsv-artifacts.json").read_text()
     )
-    retained_hashes = {
-        artifact["name"]: artifact["sha256"]
-        for artifact in retained_contract["artifacts"]
+    for artifact in retained_contract["artifacts"]:
+        retained_path = ROOT / "web/public" / artifact["uri"]
+        assert retained_path.is_file()
+        assert artifact["sha256"] == _sha256(retained_path)
+
+    generated_evidence = json.loads((run_dir / "evidence.json").read_text())
+    retained_evidence = json.loads(
+        (
+            ROOT
+            / "web/public/generated/tsv_device_screening/evidence.json"
+        ).read_text()
+    )
+    assert generated_evidence.keys() == retained_evidence.keys()
+    for key, retained_value in retained_evidence.items():
+        generated_value = generated_evidence[key]
+        if isinstance(retained_value, float):
+            assert generated_value == pytest.approx(
+                retained_value,
+                rel=0.0,
+                abs=expected["tolerance"]["absolute"],
+            )
+        else:
+            assert generated_value == retained_value
+
+    generated_csv = run_dir / "device_screening.csv"
+    retained_csv = (
+        ROOT / "web/public/generated/tsv_device_screening/device_screening.csv"
+    )
+    with generated_csv.open(newline="") as stream:
+        generated_reader = csv.DictReader(stream)
+        generated_rows = list(generated_reader)
+        generated_fields = generated_reader.fieldnames
+    with retained_csv.open(newline="") as stream:
+        retained_reader = csv.DictReader(stream)
+        retained_rows = list(retained_reader)
+        retained_fields = retained_reader.fieldnames
+    assert generated_fields == retained_fields
+    assert len(generated_rows) == len(retained_rows) == 2 * expected["n_devices"]
+    exact_fields = {
+        "case",
+        "device_id",
+        "source_object_id",
+        "tsv_id",
+        "carrier",
+        "koz_violation",
     }
-    generated_hashes = {
-        artifact["name"]: artifact["sha256"]
-        for artifact in manifest["artifacts"]
-        if artifact["name"] in retained_hashes
-    }
-    assert generated_hashes == retained_hashes
+    numeric_fields = set(generated_fields or ()).difference(exact_fields)
+    for generated_row, retained_row in zip(generated_rows, retained_rows, strict=True):
+        for field in exact_fields:
+            assert generated_row[field] == retained_row[field]
+        for field in numeric_fields:
+            assert float(generated_row[field]) == pytest.approx(
+                float(retained_row[field]),
+                rel=1.0e-12,
+                abs=expected["tolerance"]["absolute"],
+            )
+
+    generated_svg = (run_dir / "device_screening.svg").read_text()
+    assert "Synthetic TSV-to-device back-annotation" in generated_svg
+    assert "demonstration" in generated_svg
+    assert generated_svg.count("<g><title>") == 2 * expected["n_devices"]
     assert (run_dir / "manifest.json").is_file()
     assert len(manifest["manifest"]["sha256"]) == 64
 

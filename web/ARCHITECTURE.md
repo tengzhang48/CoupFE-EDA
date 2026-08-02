@@ -101,6 +101,6 @@ does not retain the dirty diff or claim exact dirty-input reconstruction.
 
 ## Test obligations
 
-Frontend checks cover the repository-data contract, minimal public snapshot, interface-only mock lifecycle, idempotency, cancellation, event ordering, claim-boundary display, route separation, and base-path production build. Python tests cover the allowlisted executor, source and artifact provenance, idempotent store, path confinement, API request rejection, and a complete local run.
+Frontend checks cover the repository-data contract, minimal public snapshot, interface-only mock lifecycle, idempotency, cancellation, event ordering, claim-boundary display, route separation, and base-path production build. Python tests cover the allowlisted executor, source and artifact provenance, idempotent store, path confinement, API request rejection, and a complete local run. The committed browser artifacts remain byte-addressed by their reviewed SHA-256 values; a fresh numerical run is compared with that retained record semantically and at the regression oracle's declared tolerance so validation does not depend on last-bit text formatting from one NumPy/BLAS build or runner CPU.
 
 Any new public workflow should add real repository evidence first, then extend `site-data.json`, the checker, the website, and tests. It must not enter through an illustrative browser seed.
