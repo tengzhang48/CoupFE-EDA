@@ -10,6 +10,12 @@ The public numerical values come from retained project-generated example and
 benchmark records; the browser-only lifecycle does not generate replacement
 engineering values.
 
+For that reason, public-mode controls use **Simulate** and the history is
+labeled **Simulated run history**. The connected local build uses **Run** and
+**Recent analyses** because its loopback service executes the allowlisted
+repository workflow. This wording distinction is mode-dependent; it does not
+fork the shared interaction or backend contract.
+
 ## Requirements
 
 - Node.js 22.22.2, as pinned in [`.nvmrc`](.nvmrc)

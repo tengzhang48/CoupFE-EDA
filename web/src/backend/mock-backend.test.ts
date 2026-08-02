@@ -61,6 +61,7 @@ describe("MockBackend", () => {
     });
     expect(snapshot.sequence).toBe(demoSnapshot.sequence + 1);
     expect(snapshot.runs).toEqual([created]);
+    expect(created.progress?.message).toBe("Simulation queued");
     expect(created.input.solverVersion).toBe("Not executed (interface simulation)");
     expect(created.input.manifestSha256).toBe("not-applicable:interface-demo");
     expect(created.output).toBeUndefined();

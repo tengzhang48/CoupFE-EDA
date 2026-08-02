@@ -101,19 +101,27 @@ theory before changing presentation:
   source, numerical input, retained result, tolerance, test status, or evidence
   boundary changed.
 
+After the first publication, a same-day visual follow-up moved the complete
+red top-cap-shift annotation farther right so its text begins outside the gray
+joint schematic. The equation, arrow direction, model definition, and panel
+layout were unchanged.
+
 Only the two affected functions were regenerated, using Python 3.13.9 and
 Matplotlib 3.11.0. Their retained SHA-256 digests are:
 
 ```text
 3752b89c72cd9048388408c03904055c677eaa85e97e412efe23489f2a9eaf56  tsv_stress.png
-ff67bdf07114bba2b57933b5e4bfc98f092780c7a7ac3ad3cf28e46edfbe39b1  toolchain_reliability.png
+a6eeb67cb4f721d96ba34147d10f5bcbc4122e1aa1891f979bbcc93edc3863ab  toolchain_reliability.png
 ```
 
 Both PNGs were inspected at full resolution for title, equation, gutter, and
-boundary-label clearance. `npm run check` then passed 35 frontend tests,
-repository-data validation, type checking, asset preparation, and the
-production demo build. The prepared website copies had the same SHA-256
-digests as the retained source PNGs.
+boundary-label clearance. For the first figure commit, `npm run check` passed
+35 frontend tests, repository-data validation, type checking, asset
+preparation, and the production demo build. After the same-day annotation
+position and public-interface wording follow-up, the complete command passed
+36 frontend tests and the same data, type, asset, and build checks. The
+prepared website copies had the same SHA-256 digests as the retained source
+PNGs.
 
 A first unpinned `python -m pytest -q` attempt found an older installed Core
 package and stopped during collection because that package did not contain

@@ -389,6 +389,7 @@ function ApprovedWorkflowPanel({
   onRun: () => void;
   disabled: boolean;
 }) {
+  const isDemo = snapshot.mode === "demo";
   const latest = snapshot.runs.find(
     (run) => run.workflowId === workflow.id && run.status === "succeeded",
   );
@@ -396,10 +397,10 @@ function ApprovedWorkflowPanel({
     <section className="approved-workflow-panel">
       <div className="approved-workflow-heading">
         <span className="dialog-icon"><Icon name="runs" size={22} /></span>
-        <div><p className="eyebrow">Server-approved workflow</p><h2>{workflow.name}</h2><code>{workflow.executorKey}</code></div>
-        <button className="primary-action" onClick={onRun} disabled={disabled}>Review and run <Icon name="chevron" size={16} /></button>
+        <div><p className="eyebrow">{isDemo ? "Approved simulation contract" : "Server-approved workflow"}</p><h2>{workflow.name}</h2><code>{workflow.executorKey}</code></div>
+        <button className="primary-action" onClick={onRun} disabled={disabled}>{isDemo ? "Review simulation" : "Review and run"} <Icon name="chevron" size={16} /></button>
       </div>
-      <p>{workflow.description}</p>
+      <p>{isDemo ? "Browser simulation of the approved local workflow contract using reviewed, retained TSV evidence." : workflow.description}</p>
       {latest?.output?.genericMetrics?.length ? (
         <div className="generic-metric-grid">
           {latest.output.genericMetrics.map((metric) => (
@@ -407,10 +408,10 @@ function ApprovedWorkflowPanel({
           ))}
         </div>
       ) : (
-        <div className="approved-workflow-empty">No local run is recorded yet. Public mode simulates the contract; connected mode executes the server allowlist.</div>
+        <div className="approved-workflow-empty">{isDemo ? "No simulation is recorded yet. The browser models lifecycle events and links reviewed, precomputed evidence." : "No local run is recorded yet. Connected mode executes the server allowlist."}</div>
       )}
       <div className="workflow-boundary"><Icon name="info" size={17} /><div><strong>Release validation: {workflow.releaseValidation ? "claimed" : "not claimed"}</strong><p>{workflow.claimBoundary}</p></div></div>
-      <footer><span>Browser request: workflow ID only</span><span>Server owns driver, arguments, output root, and timeout</span></footer>
+      <footer><span>{isDemo ? "Browser simulation: approved workflow ID" : "Browser request: workflow ID only"}</span><span>{isDemo ? "No solver executes; reviewed evidence is precomputed" : "Server owns driver, arguments, output root, and timeout"}</span></footer>
     </section>
   );
 }
@@ -428,9 +429,10 @@ function RunsView({
   onCancel: (runId: string) => void;
   activeRun: RunRecord | undefined;
 }) {
+  const isDemo = snapshot.mode === "demo";
   return (
     <div className="content-stack">
-      <section className="page-intro"><div><p className="eyebrow">Execution history</p><h1>Approved runs</h1><p>{snapshot.mode === "connected" ? "Successful connected executions retain outputs, stdout/stderr, source tree state, and artifact hashes." : "Public-mode records simulate the interface lifecycle and link only to reviewed, retained project artifacts."}</p></div>{snapshot.models.length > 0 && <button className="secondary-action" onClick={onRunModel}>New model analysis <Icon name="chevron" size={16} /></button>}</section>
+      <section className="page-intro"><div><p className="eyebrow">{isDemo ? "Browser simulation" : "Execution history"}</p><h1>{isDemo ? "Approved workflow simulation" : "Approved runs"}</h1><p>{isDemo ? "Public-mode records simulate the interface lifecycle and link only to reviewed, retained project artifacts." : "Successful connected executions retain outputs, stdout/stderr, source tree state, and artifact hashes."}</p></div>{snapshot.models.length > 0 && <button className="secondary-action" onClick={onRunModel}>New model analysis <Icon name="chevron" size={16} /></button>}</section>
       {snapshot.approvedWorkflows.map((workflow) => (
         <ApprovedWorkflowPanel
           snapshot={snapshot}
@@ -440,8 +442,8 @@ function RunsView({
           key={workflow.id}
         />
       ))}
-      <section className="table-panel"><div className="table-heading"><h2>Recent analyses</h2><span>{snapshot.runs.length} records</span></div><div className="data-table run-table">
-        <div className="data-row data-header"><span>Run</span><span>Target</span><span>Design revision</span><span>Started</span><span>Duration</span><span>Evidence</span></div>
+      <section className="table-panel"><div className="table-heading"><h2>{isDemo ? "Simulated run history" : "Recent analyses"}</h2><span>{snapshot.runs.length} records</span></div><div className="data-table run-table">
+        <div className="data-row data-header"><span>{isDemo ? "Simulation" : "Run"}</span><span>Target</span><span>Design revision</span><span>Started</span><span>Duration</span><span>Evidence</span></div>
         {snapshot.runs.map((run) => {
           const model = run.modelId ? selectModel(snapshot, run.modelId) : undefined;
           const workflow = snapshot.approvedWorkflows.find((item) => item.id === run.workflowId);
@@ -450,7 +452,7 @@ function RunsView({
           const cancellable = run.status === "queued" || (snapshot.mode === "demo" && run.status === "running");
           return <div className="data-row" key={run.id}><span><b className={`run-dot run-${run.status === "succeeded" ? "complete" : run.status}`} /><strong>{run.id}</strong></span><span>{workflow?.name ?? model?.shortName ?? "Unknown target"}</span><span>{run.input.designRevision}</span><span>{formatDateTime(run.startedAt ?? run.requestedAt)}</span><span>{active ? run.progress?.message ?? run.status : formatDuration(runDurationSeconds(run))}</span><span>{cancellable ? <button className="table-action" onClick={() => onCancel(run.id)}>Cancel</button> : active ? "Cannot cancel after start" : `${evidenceCount} linked`}</span></div>;
         })}
-        {snapshot.runs.length === 0 && <div className="empty-panel">No run records have been created by this backend.</div>}
+        {snapshot.runs.length === 0 && <div className="empty-panel">{isDemo ? "No simulated records have been created in this browser session." : "No run records have been created by this backend."}</div>}
       </div></section>
       <section className="provenance-strip"><Icon name="shield" size={20} /><div><strong>{snapshot.mode === "connected" ? "Current-process run index" : "Interface-only history"}</strong><span>{snapshot.mode === "connected" ? "Successful entries retain source revision and tree state, the regression-oracle hash, and checksummed output artifacts. The API index resets when the service restarts." : "The browser simulation does not create a solver manifest; linked TSV artifacts are precomputed repository records."}</span></div></section>
     </div>
@@ -472,18 +474,19 @@ function WorkflowRunDialog({
 }) {
   const workflow = snapshot.approvedWorkflows.find((item) => item.id === workflowId);
   const design = selectActiveDesign(snapshot);
+  const isDemo = snapshot.mode === "demo";
   if (!workflow) return null;
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="run-dialog" role="dialog" aria-modal="true" aria-labelledby="workflow-dialog-title" onMouseDown={(event) => event.stopPropagation()}>
         <button className="dialog-close" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
         <span className="dialog-icon"><Icon name="runs" size={24} /></span>
-        <p className="eyebrow">Approved execution boundary</p>
-        <h2 id="workflow-dialog-title">Run {workflow.name}</h2>
-        <p>The browser submits <strong>{workflow.id}</strong>. The service maps it to <code>{workflow.executorKey}</code> and owns the driver, arguments, output root, and timeout.</p>
+        <p className="eyebrow">{isDemo ? "Browser simulation boundary" : "Approved execution boundary"}</p>
+        <h2 id="workflow-dialog-title">{isDemo ? "Simulate" : "Run"} {workflow.name}</h2>
+        <p>{isDemo ? <>The browser models lifecycle events for <strong>{workflow.id}</strong> and links reviewed, precomputed evidence. It does not contact a solver or execute <code>{workflow.executorKey}</code>.</> : <>The browser submits <strong>{workflow.id}</strong>. The service maps it to <code>{workflow.executorKey}</code> and owns the driver, arguments, output root, and timeout.</>}</p>
         <dl><div><dt>Design</dt><dd>{design?.label ?? "Not recorded"}</dd></div><div><dt>Release validation</dt><dd>{workflow.releaseValidation ? "Claimed" : "Not claimed"}</dd></div><div><dt>Driver record</dt><dd>{workflow.driverPath}</dd></div></dl>
         <div className="dialog-note dialog-note-boundary"><Icon name="info" size={18} />{workflow.claimBoundary}</div>
-        <div className="dialog-actions"><button onClick={onClose}>Cancel</button><button className="primary-action" onClick={onConfirm} disabled={busy}>Start approved workflow <Icon name="chevron" size={16} /></button></div>
+        <div className="dialog-actions"><button onClick={onClose}>Cancel</button><button className="primary-action" onClick={onConfirm} disabled={busy}>{isDemo ? "Start simulation" : "Start approved workflow"} <Icon name="chevron" size={16} /></button></div>
       </section>
     </div>
   );
@@ -645,9 +648,9 @@ export default function App({ backend, projectId }: AppProps) {
     try {
       const run = await startWorkflow(workflowDialog);
       setWorkflowDialog(null);
-      setToast(`Approved workflow queued · ${run.id}`);
+      setToast(`${snapshot.mode === "demo" ? "Simulation" : "Approved workflow"} queued · ${run.id}`);
     } catch (cause) {
-      setToast(cause instanceof Error ? cause.message : "Unable to start the approved workflow.");
+      setToast(cause instanceof Error ? cause.message : snapshot.mode === "demo" ? "Unable to start the simulation." : "Unable to start the approved workflow.");
     } finally {
       setSubmitting(false);
     }
@@ -672,7 +675,7 @@ export default function App({ backend, projectId }: AppProps) {
           className="primary-action topbar-action"
           onClick={() => snapshot.models.length ? setRunDialog(true) : setWorkflowDialog(snapshot.approvedWorkflows[0]?.id ?? null)}
           disabled={Boolean(activeRun) || (!snapshot.models.length && !snapshot.approvedWorkflows.length)}
-        >{activeRun ? `${activeTargetLabel} ${Math.round((activeRun.progress?.fraction ?? 0) * 100)}%` : snapshot.models.length ? "Run selected model" : "Run approved workflow"}<Icon name="chevron" size={17} /></button>
+        >{activeRun ? `${activeTargetLabel} ${Math.round((activeRun.progress?.fraction ?? 0) * 100)}%` : snapshot.models.length ? "Run selected model" : snapshot.mode === "demo" ? "Simulate approved workflow" : "Run approved workflow"}<Icon name="chevron" size={17} /></button>
       </header>
 
       <nav className={`sidebar ${mobileNav ? "is-open" : ""}`} aria-label="Primary navigation">
@@ -682,7 +685,7 @@ export default function App({ backend, projectId }: AppProps) {
       </nav>
 
       <section className="workspace">
-        <div className={`mode-banner mode-${snapshot.mode}`} role="note"><Icon name="info" size={16} /><span><strong>{snapshot.mode === "demo" ? "Demonstration data" : "Connected project"}</strong>{snapshot.mode === "demo" ? "No engineering solver runs in this browser demo. Run actions simulate lifecycle events and return labeled precomputed results." : "Results and run events are provided by the configured CoupFE–EDA API."}</span>{error && <b>{error}</b>}</div>
+        <div className={`mode-banner mode-${snapshot.mode}`} role="note"><Icon name="info" size={16} /><span><strong>{snapshot.mode === "demo" ? "Demonstration data" : "Connected project"}</strong>{snapshot.mode === "demo" ? "No engineering solver runs in this browser demo. Simulation actions model lifecycle events and return labeled precomputed results." : "Results and run events are provided by the configured CoupFE–EDA API."}</span>{error && <b>{error}</b>}</div>
         <div className="workspace-mobile-title"><span>{navItems.find((item) => item.id === effectiveView)?.label}</span><small>{snapshot.project.name}</small></div>
         {effectiveView === "overview" && <OverviewView snapshot={snapshot} selectedModel={selectedModel} setSelectedModel={setSelectedModel} selectedLayer={selectedLayer} setSelectedLayer={setSelectedLayer} onInspectMetric={setInspectedMetric} />}
         {effectiveView === "geometry" && <GeometryView snapshot={snapshot} selectedModel={selectedModel} selectedLayer={selectedLayer} setSelectedLayer={setSelectedLayer} />}

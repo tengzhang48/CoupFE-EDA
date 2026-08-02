@@ -133,9 +133,11 @@ export class MockBackend implements CoupFEBackend {
       progress: {
         phase: "preparing",
         fraction: 0,
-        message: workflow
-          ? "Queued by the approved workflow adapter"
-          : "Queued by the interface-demonstration model adapter",
+        message: this.snapshot.mode === "demo"
+          ? "Simulation queued"
+          : workflow
+            ? "Queued by the approved workflow adapter"
+            : "Queued by the interface-demonstration model adapter",
       },
       input: {
         designRevision: design.label,

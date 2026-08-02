@@ -482,10 +482,10 @@ def fig_toolchain_reliability():
     theta = np.linspace(0, 2 * np.pi, 50)
     ax.plot(np.cos(theta), np.sin(theta), "k-")
     ax.fill(np.cos(theta), np.sin(theta), color="gray", alpha=0.3)
-    ax.annotate("", xy=(1.45, 0), xytext=(1.05, 0),
+    ax.annotate("", xy=(1.65, 0), xytext=(1.05, 0),
                 arrowprops=dict(arrowstyle="->", color="red", lw=2))
-    ax.text(1.25, 0.14, "imposed top-cap shift", color="red", ha="center", fontsize=9)
-    ax.text(1.25, -0.16, "$\\Delta u = \\Delta \\alpha\\,\\Delta T\\,L_D$",
+    ax.text(1.75, 0.14, "imposed top-cap shift", color="red", ha="center", fontsize=9)
+    ax.text(1.75, -0.16, "$\\Delta u = \\Delta \\alpha\\,\\Delta T\\,L_D$",
             color="red", ha="center", fontsize=10)
     ax.set_aspect("equal")
     ax.set_title("test_reliability_3d_solder_joint\nDNP shear $\\gamma \\approx \\Delta u/h$")
