@@ -21,7 +21,7 @@ accuracy or performance for other meshes, devices, machines, or rank counts.
 | [`tsv_mobility_koz_ryu2012/`](tsv_mobility_koz_ryu2012/) | TSV mobility/keep-out-zone reference metadata from Ryu et al. | Reference manifest |
 | [`tsv_more_stress_2025/`](tsv_more_stress_2025/) | Additional published TSV-stress case definition | Definition-only manifest unless accompanied by retained comparison output |
 | [`tsv_raman_jiang2013/`](tsv_raman_jiang2013/) | Raman-stress comparison metadata from Jiang et al. | Reference manifest; measured comparison remains open |
-| [`tsv_release_scorecard.json`](tsv_release_scorecard.json) | Machine-readable status of TSV evidence requirements | Status record, not a benchmark result by itself |
+| [`tsv_release_scorecard.json`](tsv_release_scorecard.json) | Machine-readable roadmap for TSV real-device evidence | Forward evidence record, not a benchmark result, test summary, or project score |
 
 See the [validation guide](../docs/VALIDATION_GUIDE.md) for the distinction
 between analytic checks, published references, calibration, and experimental

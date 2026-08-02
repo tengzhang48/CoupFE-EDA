@@ -87,7 +87,7 @@ async function collectTextFiles(directory) {
 
 const site = await readJson(path.join(webRoot, "site-data.json"));
 equal(site.schemaVersion, 1, "site-data schemaVersion");
-equal(site.recordDate, "2026-08-01", "public-record date");
+equal(site.recordDate, "2026-08-02", "public-record date");
 equal(site.repository.url, "https://github.com/tengzhang48/CoupFE-EDA", "repository URL");
 equal(site.repository.branch, "main", "repository branch");
 equal(site.workflows.length, 5, "guided workflow count");
@@ -350,6 +350,26 @@ for (const notice of [
 await requireFile(site.scorecard.sourcePath);
 await requireFile(site.scorecard.evidenceGuidePath);
 const scorecard = await readJson(repositoryPath(site.scorecard.sourcePath));
+equal(scorecard.record_date, site.recordDate, "scorecard record date");
+for (const [status, label] of Object.entries(site.scorecard.statusLabels)) {
+  equal(label, scorecard.public_status_labels[status], `roadmap public label ${status}`);
+}
+equal(
+  site.scorecard.stages.length,
+  scorecard.roadmap_stages.length,
+  "roadmap stage count",
+);
+for (const [index, displayed] of site.scorecard.stages.entries()) {
+  const source = scorecard.roadmap_stages[index];
+  equal(displayed.id, source.id, `roadmap stage ${index} ID`);
+  equal(displayed.title, source.title, `roadmap stage ${displayed.id} title`);
+  equal(displayed.goal, source.goal, `roadmap stage ${displayed.id} goal`);
+  equal(
+    displayed.categoryIds.join(","),
+    source.categories.join(","),
+    `roadmap stage ${displayed.id} categories`,
+  );
+}
 equal(
   site.scorecard.categories.length,
   Object.keys(scorecard.categories).length,
@@ -361,6 +381,11 @@ for (const displayed of site.scorecard.categories) {
   equal(displayed.status, source.status, `scorecard status ${displayed.id}`);
   equal(displayed.reason, source.blocking_reason, `scorecard reason ${displayed.id}`);
 }
+equal(
+  site.scorecard.stages.flatMap((stage) => stage.categoryIds).sort().join(","),
+  Object.keys(scorecard.categories).sort().join(","),
+  "roadmap category coverage",
+);
 
 const connected = await readJson(
   path.join(webRoot, "contracts", "connected-project-snapshot.json"),

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "recordDate": "2026-08-01",
+  "recordDate": "2026-08-02",
   "repository": {
     "name": "CoupFE-EDA",
     "url": "https://github.com/tengzhang48/CoupFE-EDA",
@@ -139,24 +139,54 @@
   "scorecard": {
     "sourcePath": "benchmarks/tsv_release_scorecard.json",
     "evidenceGuidePath": "docs/VALIDATION_GUIDE.md",
+    "statusLabels": {
+      "blocked": "Foundation present · evidence incomplete",
+      "not_started": "Planned study"
+    },
+    "stages": [
+      {
+        "id": "reference_case",
+        "title": "Reference case",
+        "goal": "Freeze permitted geometry or layout, materials, loads, stable identifiers, measurements, uncertainty, and immutable manifests.",
+        "categoryIds": []
+      },
+      {
+        "id": "numerical_qualification",
+        "title": "Numerical qualification",
+        "goal": "Complete experiment-matched boundary conditions, convergence and element comparisons, MPI qualification, conservation, and matched-fidelity studies.",
+        "categoryIds": ["numerical_mechanics", "multilevel_accuracy", "conservation", "performance"]
+      },
+      {
+        "id": "experimental_comparison",
+        "title": "Experimental comparison",
+        "goal": "Compare global curvature and local Raman observables with declared alignment, uncertainty, tolerances, and held comparison data.",
+        "categoryIds": ["global_experiment", "local_experiment"]
+      },
+      {
+        "id": "device_mapping",
+        "title": "Device mapping",
+        "goal": "Propagate an accepted 3-D field to device observables and reproduce the cited isolated-TSV and array cases.",
+        "categoryIds": ["device_mapping"]
+      },
+      {
+        "id": "eda_design_loop",
+        "title": "EDA design loop",
+        "goal": "Round-trip design identities and coordinates, back-annotate results, execute a legal design action, and report its penalties.",
+        "categoryIds": ["eda_semantics", "design_action"]
+      },
+      {
+        "id": "reproducible_release",
+        "title": "Reproducible case release",
+        "goal": "Retain a locked environment, immutable inputs and results, release artifacts, checksums, and an external reproduction record.",
+        "categoryIds": ["reproducibility"]
+      }
+    ],
     "categories": [
       {
         "id": "numerical_mechanics",
         "label": "Numerical mechanics",
         "status": "blocked",
         "reason": "near-surface Raman mesh/domain convergence, experiment-matched boundary conditions, an independent element comparison, and MPI MPC qualification remain open"
-      },
-      {
-        "id": "global_experiment",
-        "label": "Global experiment",
-        "status": "blocked",
-        "reason": "the comparison curves and uncertainty record are not bundled or reproduced"
-      },
-      {
-        "id": "local_experiment",
-        "label": "Local experiment",
-        "status": "blocked",
-        "reason": "the measured curves, masks, spatial-resolution record, and mesh/domain-qualified local field are incomplete"
       },
       {
         "id": "multilevel_accuracy",
@@ -174,7 +204,19 @@
         "id": "performance",
         "label": "Matched-fidelity performance",
         "status": "not_started",
-        "reason": "no retained matched-fidelity full-versus-reduced timing record exists"
+        "reason": "the retained 526,338-DOF MPI rank sweep measures one distributed model; a matched-fidelity full-versus-reduced timing and memory comparison has not begun"
+      },
+      {
+        "id": "global_experiment",
+        "label": "Global experiment",
+        "status": "blocked",
+        "reason": "the comparison curves and uncertainty record are not bundled or reproduced"
+      },
+      {
+        "id": "local_experiment",
+        "label": "Local experiment",
+        "status": "blocked",
+        "reason": "the measured curves, masks, spatial-resolution record, and mesh/domain-qualified local field are incomplete"
       },
       {
         "id": "device_mapping",
@@ -198,7 +240,7 @@
         "id": "reproducibility",
         "label": "Reproducibility",
         "status": "blocked",
-        "reason": "the final commit's CI/artifact record and a lockfile-frozen environment have not yet been retained"
+        "reason": "current-main CI and artifact guards pass, but a clean retained release-mode checkpoint and a lockfile-frozen Python/toolchain environment are still absent"
       }
     ]
   }

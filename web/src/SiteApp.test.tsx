@@ -15,7 +15,11 @@ describe("public CoupFE-EDA site", () => {
     expect(screen.getByText("526,338-DOF fixed-size solve")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Median solve wall time decreases/i })).toBeInTheDocument();
     expect(screen.getAllByText(/does not validate near-surface TSV stress/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/7 blocked categories and 3 not-started categories/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /From checked demonstrations to a measured device workflow/i })).toBeInTheDocument();
+    expect(screen.getAllByText("Stage")).toHaveLength(6);
+    expect(screen.getByText(/7 foundations present/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 planned studies/i)).toBeInTheDocument();
+    expect(screen.queryByText(/blocked \/ not started/i)).not.toBeInTheDocument();
   });
 
   it("gives every workflow direct guide, code, and retained-result links", () => {

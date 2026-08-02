@@ -4,6 +4,7 @@ import siteData from "../site-data.json";
 
 type Workflow = (typeof siteData.workflows)[number];
 type ScorecardCategory = (typeof siteData.scorecard.categories)[number];
+type RoadmapStage = (typeof siteData.scorecard.stages)[number];
 
 const repositoryFile = (sourcePath: string) =>
   `${siteData.repository.url}/blob/${siteData.repository.branch}/${sourcePath}`;
@@ -74,16 +75,33 @@ function ScalingFigure() {
 }
 
 function ScorecardRow({ category }: { category: ScorecardCategory }) {
+  const publicStatus = category.status === "blocked"
+    ? siteData.scorecard.statusLabels.blocked
+    : siteData.scorecard.statusLabels.not_started;
   return (
     <article className="site-score-row">
-      <div><span className={`site-status site-status-${category.status}`}>{category.status.replace("_", " ")}</span><h3>{category.label}</h3></div>
+      <div><span className={`site-status site-status-${category.status}`}>{publicStatus}</span><h3>{category.label}</h3></div>
       <p>{category.reason}</p>
     </article>
   );
 }
 
+function RoadmapStageCard({ stage, index }: { stage: RoadmapStage; index: number }) {
+  const categoryLabels = stage.categoryIds
+    .map((categoryId) => siteData.scorecard.categories.find((category) => category.id === categoryId)?.label)
+    .filter(Boolean);
+  return (
+    <article className="site-roadmap-stage">
+      <header><span>{String(index + 1).padStart(2, "0")}</span><small>Stage</small></header>
+      <h3>{stage.title}</h3>
+      <p>{stage.goal}</p>
+      <footer>{categoryLabels.length > 0 ? categoryLabels.join(" · ") : "Cross-cutting case prerequisite"}</footer>
+    </article>
+  );
+}
+
 function PublicSite() {
-  const blocked = siteData.scorecard.categories.filter((item) => item.status === "blocked").length;
+  const partiallySupported = siteData.scorecard.categories.filter((item) => item.status === "blocked").length;
   const notStarted = siteData.scorecard.categories.filter((item) => item.status === "not_started").length;
   const thresholdPercent = siteData.tsvScreening.threshold * 100;
   const firstMedian = siteData.scaling.medianSeconds[0]!;
@@ -100,7 +118,7 @@ function PublicSite() {
           <a href="#workflows">Workflows</a>
           <a href="#device-screening">Device screening</a>
           <a href="#scaling">Scaling</a>
-          <a href="#validation">Validation status</a>
+          <a href="#validation">Validation roadmap</a>
         </nav>
         <a className="site-header-action" href={`${import.meta.env.BASE_URL}?surface=workbench`}>Interface demo <span>→</span></a>
       </header>
@@ -126,7 +144,7 @@ function PublicSite() {
             <dl>
               <div><dt>Guided workflows</dt><dd>{siteData.workflows.length}<small>retained regression oracles</small></dd></div>
               <div><dt>Distributed record</dt><dd>{siteData.scaling.ndof.toLocaleString()}<small>degrees of freedom</small></dd></div>
-              <div><dt>TSV validation scorecard</dt><dd>{blocked} / {notStarted}<small>blocked / not started</small></dd></div>
+              <div><dt>Real-device roadmap</dt><dd>{siteData.scorecard.stages.length}<small>evidence stages tracked</small></dd></div>
             </dl>
             <Boundary>{siteData.tsvScreening.claimBoundary}</Boundary>
           </aside>
@@ -223,16 +241,23 @@ function PublicSite() {
 
         <section className="site-validation site-section" id="validation">
           <div className="site-section-heading">
-            <div><p className="site-kicker"><span /> TSV device-validation program</p><h2>The open work remains part of the public record</h2></div>
-            <p>The current scorecard has {blocked} blocked categories and {notStarted} not-started categories. “Blocked” means useful components exist but the named qualification evidence is incomplete.</p>
+            <div><p className="site-kicker"><span /> TSV real-device roadmap</p><h2>From checked demonstrations to a measured device workflow</h2></div>
+            <p>This is a forward evidence plan for the TSV-to-device path—not a test summary, release score, or overall CoupFE-EDA rating. It identifies the work needed before claiming validation against a real device.</p>
+          </div>
+          <div className="site-roadmap-stages" aria-label="Six-stage real-device evidence roadmap">
+            {siteData.scorecard.stages.map((stage, index) => <RoadmapStageCard stage={stage} index={index} key={stage.id} />)}
+          </div>
+          <div className="site-roadmap-evidence-heading">
+            <div><span>Detailed evidence areas</span><h3>What is present, and what remains</h3></div>
+            <p><strong>{partiallySupported} foundations present</strong> · evidence incomplete<br /><strong>{notStarted} planned studies</strong> · no retained study yet</p>
           </div>
           <div className="site-scorecard">
             {siteData.scorecard.categories.map((category) => <ScorecardRow category={category} key={category.id} />)}
           </div>
           <div className="site-scorecard-footer">
-            <Boundary>Real-device claims require accepted 3-D fields, comparison curves, uncertainty, mesh/domain convergence, and EDA round-trip evidence. The synthetic screening example does not substitute for those records.</Boundary>
+            <Boundary>Completing this roadmap would establish a documented real-device research case. Manufacturing signoff or production use would require application-specific qualification beyond this repository.</Boundary>
             <nav className="site-inline-links">
-              <SourceLink path={siteData.scorecard.sourcePath}>Machine-readable scorecard</SourceLink>
+              <SourceLink path={siteData.scorecard.sourcePath}>Machine-readable roadmap</SourceLink>
               <SourceLink path={siteData.scorecard.evidenceGuidePath}>Evidence guide</SourceLink>
             </nav>
           </div>

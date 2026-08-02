@@ -2,7 +2,7 @@
 
 This directory builds two deliberately separate browser surfaces from one React/Vite source tree:
 
-- The default route is the public project website. It presents five runnable examples, the retained 526,338-DOF scaling record, project-authored figures, the synthetic TSV device-screening output, and the current TSV validation scorecard. Every quantitative section links back to repository evidence and shows its qualification boundary.
+- The default route is the public project website. It presents five runnable examples, the retained 526,338-DOF scaling record, project-authored figures, the synthetic TSV device-screening output, and a six-stage roadmap toward a measured real-device workflow. Every quantitative section links back to repository evidence and shows its qualification boundary.
 - `?surface=workbench` opens the workbench interface. On GitHub Pages this is a clearly labeled browser-only interaction demonstration. In a local API build it can execute the one server-approved TSV screening workflow.
 
 GitHub Pages is static. It cannot run Python, CoupFE-EDA, OpenROAD, MPI, or an FEM solver.
@@ -36,7 +36,7 @@ Open the URL printed by Vite. The website is the default route; append `?surface
 
 `npm run check` performs four release checks:
 
-1. verifies every displayed repository path, retained value, scorecard status, and committed TSV artifact hash;
+1. verifies every displayed repository path, retained value, roadmap stage and evidence status, and committed TSV artifact hash;
 2. type-checks the strict TypeScript project;
 3. runs the frontend tests;
 4. prepares repository figures and legal notices and creates `dist/`.
@@ -105,7 +105,7 @@ The local API is unauthenticated. It is suitable for one trusted local checkout,
 - each example's README, runner, and retained numerical oracle;
 - the scaling summary, table, and benchmark manifest;
 - the TSV expected metrics and committed public SVG/CSV/JSON;
-- the machine-readable TSV release scorecard;
+- the machine-readable TSV real-device evidence roadmap;
 - project-authored validation-guide figures;
 - the connected snapshot and approved executor boundary;
 - project, media, attribution, and third-party license records.
