@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "recordDate": "2026-08-01",
+  "repository": {
+    "name": "CoupFE-EDA",
+    "url": "https://github.com/tengzhang48/CoupFE-EDA",
+    "branch": "main"
+  },
+  "workflows": [
+    {
+      "id": "solder_plane_cycle",
+      "index": "01",
+      "title": "Plane-strain solder cycle",
+      "summary": "Six-Quad4 SnPbAg stateful cycle with retained energy and nonlinear residual telemetry.",
+      "command": "python examples/solder_plane_cycle/run.py --check",
+      "result": "0.331884 MPa cycle dW observable",
+      "detail": "Increment-summed mean inelastic energy density · 6 Quad4 elements",
+      "boundary": "Idealized single-cycle plane-strain block; not stabilized-cycle, package-life, crack-location, or real-package validation.",
+      "tier": "NumPy / SciPy / CoupFE",
+      "readmePath": "examples/solder_plane_cycle/README.md",
+      "runnerPath": "examples/solder_plane_cycle/run.py",
+      "resultPath": "examples/solder_plane_cycle/expected_results.json"
+    },
+    {
+      "id": "etv_partitioned_cycle",
+      "index": "02",
+      "title": "Partitioned ETV cycle",
+      "summary": "Quasisteady and lumped-transient temperature assumptions drive the same spatial SAC305 mechanics calculation.",
+      "command": "python examples/etv_partitioned_cycle/run.py --check",
+      "result": "−66.85% fast-cycle energy sensitivity",
+      "detail": "98.60 °C transient peak · 144.94 °C quasisteady peak",
+      "boundary": "Uniform lagged thermal feedback; not a monolithic phi-T-u formulation, measured-device result, or predictive-life calculation.",
+      "tier": "NumPy / SciPy / CoupFE",
+      "readmePath": "examples/etv_partitioned_cycle/README.md",
+      "runnerPath": "examples/etv_partitioned_cycle/run.py",
+      "resultPath": "examples/etv_partitioned_cycle/expected_results.json"
+    },
+    {
+      "id": "solder_3d_cycle",
+      "index": "03",
+      "title": "3-D solder dissipation field",
+      "summary": "Stateful 18-Hex8 SAC305 block exercising nonlinear assembly, equilibrium, and one state commit per accepted increment.",
+      "command": "python examples/solder_3d_cycle/run.py --check",
+      "result": "0.389021 MPa peak dissipation",
+      "detail": "0.343364 MPa mean · peak/mean 1.13297",
+      "boundary": "Idealized regular block at one mesh and load-step choice; not crack-location, mesh convergence, stabilized-cycle, or package-life evidence.",
+      "tier": "NumPy / SciPy / CoupFE",
+      "readmePath": "examples/solder_3d_cycle/README.md",
+      "runnerPath": "examples/solder_3d_cycle/run.py",
+      "resultPath": "examples/solder_3d_cycle/expected_results.json"
+    },
+    {
+      "id": "design_linked_solder_screening",
+      "index": "04",
+      "title": "Design-linked solder screening",
+      "summary": "A stable synthetic joint identity and distance-to-neutral-point value cross into the stateful 3-D block.",
+      "command": "python examples/design_linked_solder_screening/run.py --check",
+      "result": "47,273-cycle calibration screen",
+      "detail": "SYNTH_J00 retained · 42.4264 µm DNP",
+      "boundary": "Only identity and L_D cross the handoff; geometry remains an idealized study input and the cycle count is calibration-specific, not predictive life.",
+      "tier": "NumPy / SciPy / CoupFE",
+      "readmePath": "examples/design_linked_solder_screening/README.md",
+      "runnerPath": "examples/design_linked_solder_screening/run.py",
+      "resultPath": "examples/design_linked_solder_screening/expected_results.json"
+    },
+    {
+      "id": "tsv_device_screening",
+      "index": "05",
+      "title": "TSV-to-device screening",
+      "summary": "Synthetic device IDs pass through a Lamé far-field stress proxy, channel-oriented mobility proxies, and a deterministic orientation action.",
+      "command": "python examples/tsv_00_device_screening/run.py --output-dir /tmp/tsv_device_preview",
+      "result": "12 → 0 threshold violations",
+      "detail": "32 synthetic devices · 5% screening threshold",
+      "boundary": "Deterministic integration regression only; not experimental TSV validation.",
+      "tier": "NumPy / CoupFE-EDA analytic path",
+      "readmePath": "examples/tsv_00_device_screening/README.md",
+      "runnerPath": "examples/tsv_00_device_screening/run.py",
+      "resultPath": "examples/tsv_00_device_screening/expected_metrics.json"
+    }
+  ],
+  "scaling": {
+    "title": "Fixed-size distributed solve",
+    "ndof": 526338,
+    "problemN": 512,
+    "driver": "eda_multiphysics.etv_distributed_fs",
+    "ranks": [1, 2, 4, 8],
+    "medianSeconds": [26.0718019, 14.2711359, 7.29016522, 3.93985692],
+    "speedup": [1.0, 1.8268904509556243, 3.5762978085152373, 6.617448914870747],
+    "iterations": [12, 12, 12, 13],
+    "repeatsPerRank": 3,
+    "machineScope": "one nonexclusive 64-vCPU KVM guest",
+    "boundary": "A bounded local 1/2/4/8-rank measurement, not a general scalability or cross-machine performance claim.",
+    "readmePath": "benchmarks/solver_scaling/README.md",
+    "summaryPath": "benchmarks/solver_scaling/current_526338dof_20260801/summary.json",
+    "tablePath": "benchmarks/solver_scaling/current_526338dof_20260801/table.md",
+    "manifestPath": "benchmarks/solver_scaling/manifest.json"
+  },
+  "tsvScreening": {
+    "nDevices": 32,
+    "threshold": 0.05,
+    "baselineViolations": 12,
+    "optimizedViolations": 0,
+    "baselinePeakAbsMobilityProxy": 0.23598843548567472,
+    "optimizedPeakAbsMobilityProxy": 0.011885648618332287,
+    "releaseValidation": false,
+    "claimBoundary": "Demonstrates identity-preserving stress-to-device mapping and a deterministic orientation action. It does not validate near-surface TSV stress, transistor delay, or a signoff keep-out zone.",
+    "expectedPath": "examples/tsv_00_device_screening/expected_metrics.json",
+    "readmePath": "examples/tsv_00_device_screening/README.md",
+    "figureAsset": "generated/tsv_device_screening/device_screening.svg",
+    "evidenceAsset": "generated/tsv_device_screening/evidence.json",
+    "csvAsset": "generated/tsv_device_screening/device_screening.csv"
+  },
+  "figures": [
+    {
+      "title": "Synthetic coupled pipeline",
+      "caption": "Project-authored verification-guide summary. Each stage retains its own evidence boundary.",
+      "sourcePath": "docs/validation_guide/figures/capstone_pipeline.png",
+      "assetName": "capstone_pipeline.png"
+    },
+    {
+      "title": "Distributed toolchain checks",
+      "caption": "Generated summary of retained distributed-toolchain checks; it is not the fixed-size timing record.",
+      "sourcePath": "docs/validation_guide/figures/toolchain_distributed.png",
+      "assetName": "toolchain_distributed.png"
+    },
+    {
+      "title": "TSV stress component checks",
+      "caption": "Generated component-check figure for the documented idealized TSV stress paths.",
+      "sourcePath": "docs/validation_guide/figures/tsv_stress.png",
+      "assetName": "tsv_stress.png"
+    },
+    {
+      "title": "Reliability toolchain checks",
+      "caption": "Generated project-authored figure covering checked toolchain components and broken controls.",
+      "sourcePath": "docs/validation_guide/figures/toolchain_reliability.png",
+      "assetName": "toolchain_reliability.png"
+    }
+  ],
+  "scorecard": {
+    "sourcePath": "benchmarks/tsv_release_scorecard.json",
+    "evidenceGuidePath": "docs/VALIDATION_GUIDE.md",
+    "categories": [
+      {
+        "id": "numerical_mechanics",
+        "label": "Numerical mechanics",
+        "status": "blocked",
+        "reason": "near-surface Raman mesh/domain convergence, experiment-matched boundary conditions, an independent element comparison, and MPI MPC qualification remain open"
+      },
+      {
+        "id": "global_experiment",
+        "label": "Global experiment",
+        "status": "blocked",
+        "reason": "the comparison curves and uncertainty record are not bundled or reproduced"
+      },
+      {
+        "id": "local_experiment",
+        "label": "Local experiment",
+        "status": "blocked",
+        "reason": "the measured curves, masks, spatial-resolution record, and mesh/domain-qualified local field are incomplete"
+      },
+      {
+        "id": "multilevel_accuracy",
+        "label": "Multilevel accuracy",
+        "status": "not_started",
+        "reason": "independent global/local meshes and a full-array reference are absent"
+      },
+      {
+        "id": "conservation",
+        "label": "Conservation",
+        "status": "not_started",
+        "reason": "force, moment, and virtual-work transfer checks are absent"
+      },
+      {
+        "id": "performance",
+        "label": "Matched-fidelity performance",
+        "status": "not_started",
+        "reason": "no retained matched-fidelity full-versus-reduced timing record exists"
+      },
+      {
+        "id": "device_mapping",
+        "label": "Device mapping",
+        "status": "blocked",
+        "reason": "published isolated and array contours have not been reproduced from an accepted 3-D field"
+      },
+      {
+        "id": "eda_semantics",
+        "label": "EDA semantics",
+        "status": "blocked",
+        "reason": "no retained OpenDB/DEF round-trip case or coordinate round-trip check exists"
+      },
+      {
+        "id": "design_action",
+        "label": "Design action",
+        "status": "blocked",
+        "reason": "no legal-placement OpenDB action or design-penalty accounting is demonstrated"
+      },
+      {
+        "id": "reproducibility",
+        "label": "Reproducibility",
+        "status": "blocked",
+        "reason": "the final commit's CI/artifact record and a lockfile-frozen environment have not yet been retained"
+      }
+    ]
+  }
+}

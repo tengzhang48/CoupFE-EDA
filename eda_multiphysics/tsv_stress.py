@@ -28,9 +28,6 @@ from __future__ import annotations
 
 import numpy as np
 
-from coupfe import newton_solve
-from coupfe.operators.base import Residual, Tangent, complex_step_tangent
-
 # --- material properties (PMC8472814 Table 1) ---
 CU = dict(E=117e9, nu=0.30, a=16.7e-6)
 SI = dict(E=169e9, nu=0.26, a=2.3e-6)
@@ -88,6 +85,8 @@ class AxisymThermoelastic:
         self.ndof = len(self.r)
 
     def residual(self, U, state, t, dt):
+        from coupfe.operators.base import Residual
+
         R = np.zeros(self.ndof, dtype=U.dtype)
         for e in range(self.ne):
             R[e:e + 2] += _elem_residual(U[e:e + 2], self.r[e], self.r[e + 1],
@@ -95,6 +94,8 @@ class AxisymThermoelastic:
         return Residual(gdofs=np.arange(self.ndof), values=R)
 
     def tangent(self, U, state, t, dt):
+        from coupfe.operators.base import Tangent, complex_step_tangent
+
         rows, cols, vals = [], [], []
         for e in range(self.ne):
             r1, r2, m = self.r[e], self.r[e + 1], self.mats[e]
@@ -124,6 +125,8 @@ def _build_mesh(D_um, R_out_um=300.0, n=2400, barrier_nm=0.0):
 
 
 def solve_tsv(D_um, dT, liner_nm=0.0, liner_mat=TAN, **mesh_kw):
+    from coupfe import newton_solve
+
     r, a = _build_mesh(D_um, barrier_nm=liner_nm, **mesh_kw)
     rc = 0.5 * (r[:-1] + r[1:])
     mats = []

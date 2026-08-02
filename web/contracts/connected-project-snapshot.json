@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "sequence": 0,
+  "mode": "connected",
+  "project": {
+    "id": "coupfe-eda-local",
+    "name": "CoupFE-EDA local workbench",
+    "studyType": "Approved local workflows",
+    "activeDesignId": "tsv-synthetic-device-sites-v1"
+  },
+  "designs": [
+    {
+      "id": "tsv-synthetic-device-sites-v1",
+      "label": "Synthetic TSV device-screening inputs",
+      "packageRevision": "examples/tsv_00_device_screening",
+      "createdAt": "2026-08-01T00:00:00.000Z",
+      "parameters": {
+        "tsv_diameter": {
+          "value": 10,
+          "unit": "µm"
+        },
+        "device_count": {
+          "value": 32,
+          "unit": "1"
+        }
+      }
+    }
+  ],
+  "models": [],
+  "approvedWorkflows": [
+    {
+      "id": "tsv_device_screening",
+      "executorKey": "tsv.device-screening.v1",
+      "name": "Synthetic TSV-to-device screening",
+      "description": "Run the identity-preserving stress-to-device mapping example through a server-owned executor.",
+      "driverPath": "examples/tsv_00_device_screening/run.py",
+      "releaseValidation": false,
+      "claimBoundary": "Demonstrates identity-preserving stress-to-device mapping and a deterministic orientation action. It does not validate near-surface TSV stress, transistor delay, or a signoff keep-out zone.",
+      "expectedMetricKeys": [
+        "baseline_violations",
+        "optimized_violations",
+        "baseline_peak_abs_mobility_proxy",
+        "optimized_peak_abs_mobility_proxy",
+        "runtime_seconds"
+      ]
+    }
+  ],
+  "decisions": [],
+  "runs": [],
+  "evidence": [],
+  "artifacts": [],
+  "layers": [],
+  "candidates": []
+}

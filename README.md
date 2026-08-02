@@ -36,6 +36,71 @@ in core.
 | Examples | Runnable workflows with a README, fixed inputs, commands, and interpretable output | [`examples/`](examples/) and the [example catalog](EXAMPLES.md) |
 | Tests | Automated correctness, failure, provenance, and optional-toolchain checks | [`tests/`](tests/) and the [validation guide](docs/VALIDATION_GUIDE.md) |
 | Benchmarks | Fixed reference or performance studies with provenance, configurations, results, and interpretation | [`benchmarks/`](benchmarks/) |
+| Website | Static project presentation and the local-workbench frontend | [`web/`](web/) |
+
+## Website and local workbench
+
+The source under [`web/`](web/) supports two deliberately separate uses:
+
+- The default public GitHub Pages route renders checked repository examples,
+  retained benchmark records, evidence links, and their stated boundaries
+  directly from the website data manifest. Its separate workbench route uses
+  the demonstration backend, whose actions only simulate an in-browser
+  lifecycle. Neither route runs Python, CoupFE-EDA, OpenROAD, MPI, or a
+  finite-element solver, and neither persists projects.
+- The local workbench can connect to a separately started API service. The
+  browser submits domain identifiers to that service; server-owned executor
+  registrations decide which approved workflow may run. The public Pages
+  deployment does not include that API and cannot start local or remote jobs.
+
+The public demo uses project-authored synthetic inputs and retained
+project-generated example and benchmark outputs. Its browser-only lifecycle
+does not substitute invented solver values for those records.
+
+Run and check the static frontend locally with:
+
+```bash
+cd web
+npm ci
+npm run check
+npm run dev
+```
+
+To exercise the connected GUI, start its optional loopback-only API from the
+repository root:
+
+```bash
+python -m pip install -e '.[workbench]'
+coupfe-eda-workbench --repository-root .
+```
+
+The currently allowlisted TSV screening workflow is NumPy-based and does not
+require CoupFE Core. Run `./setup.sh` before using the wider finite-element
+examples that depend on Core.
+
+Then start the API-mode frontend in a second terminal:
+
+```bash
+cd web
+npm ci
+npm run dev:api
+```
+
+Open the Vite URL with `?surface=workbench` appended. The current API exposes
+one server-owned executor, the released synthetic TSV-to-device screening
+example. Its records retain `releaseValidation: false`; running it is not
+real-device qualification. The API is unauthenticated and intentionally
+refuses non-loopback binding, so it is not a network service template.
+
+See [`web/README.md`](web/README.md) and
+[`web/ARCHITECTURE.md`](web/ARCHITECTURE.md) for the contract and safety
+boundary. Do not place credentials or private engineering data in `VITE_*`
+variables because Vite exposes those values to the browser.
+
+After GitHub Pages is enabled with **GitHub Actions** as its source, the
+deployment workflow publishes the static site at
+<https://tengzhang48.github.io/CoupFE-EDA/>. A separate pull-request workflow
+type-checks, tests, and builds the frontend before changes are merged.
 
 ## Capabilities and current evidence
 
@@ -255,6 +320,7 @@ setup.sh                   pinned CoupFE checkout and editable install
 EXAMPLES.md                runnable example catalog
 examples/REFERENCES.md     entry-point provenance and status
 benchmarks/                reference comparisons and retained performance studies
+web/                       static website and local-workbench frontend source
 skills/SKILL.md            contributor workflow for adding a checked example
 docs/                      theory, API, geometry, validation, and evidence guidance
 eda_multiphysics/          package source and synthetic fixture

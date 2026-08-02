@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="460" viewBox="0 0 960 460">
+<rect width="100%" height="100%" fill="#091628"/>
+<style>text{font-family:Arial,sans-serif;fill:#dce7f5}.muted{fill:#92a4bb}.axis{stroke:#334965;stroke-width:1}.channel{stroke:#eef4fb;stroke-width:1.5}</style>
+<text x="24" y="30" font-size="18" font-weight="bold">Synthetic TSV-to-device back-annotation</text>
+<text x="24" y="50" font-size="12" class="muted">10 µm TSV · synthetic device sites · 5% mobility-proxy threshold · demonstration</text>
+<text x="240" y="82" text-anchor="middle" font-size="16">Baseline [100] channels</text>
+<line x1="60" y1="235" x2="420" y2="235" class="axis"/>
+<line x1="240" y1="65" x2="240" y2="405" class="axis"/>
+<circle cx="240" cy="235" r="37.0" fill="#b87333" stroke="#f2b37f" stroke-width="2"/>
+<text x="240" y="239" text-anchor="middle" font-size="10">TSV</text>
+<g><title>CELL_0000 / STD_CELL_0000; nMOS; channel=0 deg; Δμ/μ=+0.2360</title><circle cx="293.61" cy="220.64" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="285.61" y1="220.64" x2="301.61" y2="220.64" class="channel"/>
+<g><title>CELL_0001 / STD_CELL_0001; pMOS; channel=0 deg; Δμ/μ=+0.0067</title><rect x="262.75" y="181.94" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="259.75" y1="186.94" x2="275.75" y2="186.94" class="channel"/>
+<g><title>CELL_0002 / STD_CELL_0002; nMOS; channel=0 deg; Δμ/μ=-0.2360</title><circle cx="225.64" cy="181.39" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="217.64" y1="181.39" x2="233.64" y2="181.39" class="channel"/>
+<g><title>CELL_0003 / STD_CELL_0003; pMOS; channel=0 deg; Δμ/μ=-0.0067</title><rect x="186.94" y="202.25" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="183.94" y1="207.25" x2="199.94" y2="207.25" class="channel"/>
+<g><title>CELL_0004 / STD_CELL_0004; nMOS; channel=0 deg; Δμ/μ=+0.2360</title><circle cx="186.39" cy="249.36" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="178.39" y1="249.36" x2="194.39" y2="249.36" class="channel"/>
+<g><title>CELL_0005 / STD_CELL_0005; pMOS; channel=0 deg; Δμ/μ=+0.0067</title><rect x="207.25" y="278.06" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="204.25" y1="283.06" x2="220.25" y2="283.06" class="channel"/>
+<g><title>CELL_0006 / STD_CELL_0006; nMOS; channel=0 deg; Δμ/μ=-0.2360</title><circle cx="254.36" cy="288.61" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="246.36" y1="288.61" x2="262.36" y2="288.61" class="channel"/>
+<g><title>CELL_0007 / STD_CELL_0007; pMOS; channel=0 deg; Δμ/μ=-0.0067</title><rect x="283.06" y="257.75" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="280.06" y1="262.75" x2="296.06" y2="262.75" class="channel"/>
+<g><title>CELL_0008 / STD_CELL_0008; nMOS; channel=0 deg; Δμ/μ=+0.1327</title><circle cx="311.48" cy="215.85" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="303.48" y1="215.85" x2="319.48" y2="215.85" class="channel"/>
+<g><title>CELL_0009 / STD_CELL_0009; pMOS; channel=0 deg; Δμ/μ=+0.0038</title><rect x="272.00" y="165.91" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="269.00" y1="170.91" x2="285.00" y2="170.91" class="channel"/>
+<g><title>CELL_0010 / STD_CELL_0010; nMOS; channel=0 deg; Δμ/μ=-0.1327</title><circle cx="220.85" cy="163.52" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="212.85" y1="163.52" x2="228.85" y2="163.52" class="channel"/>
+<g><title>CELL_0011 / STD_CELL_0011; pMOS; channel=0 deg; Δμ/μ=-0.0038</title><rect x="170.91" y="193.00" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="167.91" y1="198.00" x2="183.91" y2="198.00" class="channel"/>
+<g><title>CELL_0012 / STD_CELL_0012; nMOS; channel=0 deg; Δμ/μ=+0.1327</title><circle cx="168.52" cy="254.15" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="160.52" y1="254.15" x2="176.52" y2="254.15" class="channel"/>
+<g><title>CELL_0013 / STD_CELL_0013; pMOS; channel=0 deg; Δμ/μ=+0.0038</title><rect x="198.00" y="294.09" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="195.00" y1="299.09" x2="211.00" y2="299.09" class="channel"/>
+<g><title>CELL_0014 / STD_CELL_0014; nMOS; channel=0 deg; Δμ/μ=-0.1327</title><circle cx="259.15" cy="306.48" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="251.15" y1="306.48" x2="267.15" y2="306.48" class="channel"/>
+<g><title>CELL_0015 / STD_CELL_0015; pMOS; channel=0 deg; Δμ/μ=-0.0038</title><rect x="299.09" y="267.00" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="296.09" y1="272.00" x2="312.09" y2="272.00" class="channel"/>
+<g><title>CELL_0016 / STD_CELL_0016; nMOS; channel=0 deg; Δμ/μ=+0.0590</title><circle cx="347.22" cy="206.27" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="339.22" y1="206.27" x2="355.22" y2="206.27" class="channel"/>
+<g><title>CELL_0017 / STD_CELL_0017; pMOS; channel=0 deg; Δμ/μ=+0.0017</title><rect x="290.50" y="133.87" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="287.50" y1="138.87" x2="303.50" y2="138.87" class="channel"/>
+<g><title>CELL_0018 / STD_CELL_0018; nMOS; channel=0 deg; Δμ/μ=-0.0590</title><circle cx="211.27" cy="127.78" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="203.27" y1="127.78" x2="219.27" y2="127.78" class="channel"/>
+<g><title>CELL_0019 / STD_CELL_0019; pMOS; channel=0 deg; Δμ/μ=-0.0017</title><rect x="138.87" y="174.50" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="135.87" y1="179.50" x2="151.87" y2="179.50" class="channel"/>
+<g><title>CELL_0020 / STD_CELL_0020; nMOS; channel=0 deg; Δμ/μ=+0.0590</title><circle cx="132.78" cy="263.73" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="124.78" y1="263.73" x2="140.78" y2="263.73" class="channel"/>
+<g><title>CELL_0021 / STD_CELL_0021; pMOS; channel=0 deg; Δμ/μ=+0.0017</title><rect x="179.50" y="326.13" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="176.50" y1="331.13" x2="192.50" y2="331.13" class="channel"/>
+<g><title>CELL_0022 / STD_CELL_0022; nMOS; channel=0 deg; Δμ/μ=-0.0590</title><circle cx="268.73" cy="342.22" r="5" fill="#ff6577" stroke="#091628"/></g>
+<line x1="260.73" y1="342.22" x2="276.73" y2="342.22" class="channel"/>
+<g><title>CELL_0023 / STD_CELL_0023; pMOS; channel=0 deg; Δμ/μ=-0.0017</title><rect x="331.13" y="285.50" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="328.13" y1="290.50" x2="344.13" y2="290.50" class="channel"/>
+<g><title>CELL_0024 / STD_CELL_0024; nMOS; channel=0 deg; Δμ/μ=+0.0274</title><circle cx="397.25" cy="192.86" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="389.25" y1="192.86" x2="405.25" y2="192.86" class="channel"/>
+<g><title>CELL_0025 / STD_CELL_0025; pMOS; channel=0 deg; Δμ/μ=+0.0008</title><rect x="316.40" y="89.01" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="313.40" y1="94.01" x2="329.40" y2="94.01" class="channel"/>
+<g><title>CELL_0026 / STD_CELL_0026; nMOS; channel=0 deg; Δμ/μ=-0.0274</title><circle cx="197.86" cy="77.75" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="189.86" y1="77.75" x2="205.86" y2="77.75" class="channel"/>
+<g><title>CELL_0027 / STD_CELL_0027; pMOS; channel=0 deg; Δμ/μ=-0.0008</title><rect x="94.01" y="148.60" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="91.01" y1="153.60" x2="107.01" y2="153.60" class="channel"/>
+<g><title>CELL_0028 / STD_CELL_0028; nMOS; channel=0 deg; Δμ/μ=+0.0274</title><circle cx="82.75" cy="277.14" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="74.75" y1="277.14" x2="90.75" y2="277.14" class="channel"/>
+<g><title>CELL_0029 / STD_CELL_0029; pMOS; channel=0 deg; Δμ/μ=+0.0008</title><rect x="153.60" y="370.99" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="150.60" y1="375.99" x2="166.60" y2="375.99" class="channel"/>
+<g><title>CELL_0030 / STD_CELL_0030; nMOS; channel=0 deg; Δμ/μ=-0.0274</title><circle cx="282.14" cy="392.25" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="274.14" y1="392.25" x2="290.14" y2="392.25" class="channel"/>
+<g><title>CELL_0031 / STD_CELL_0031; pMOS; channel=0 deg; Δμ/μ=-0.0008</title><rect x="375.99" y="311.40" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="372.99" y1="316.40" x2="388.99" y2="316.40" class="channel"/>
+<text x="720" y="82" text-anchor="middle" font-size="16">Orientation-screening action</text>
+<line x1="540" y1="235" x2="900" y2="235" class="axis"/>
+<line x1="720" y1="65" x2="720" y2="405" class="axis"/>
+<circle cx="720" cy="235" r="37.0" fill="#b87333" stroke="#f2b37f" stroke-width="2"/>
+<text x="720" y="239" text-anchor="middle" font-size="10">TSV</text>
+<g><title>CELL_0000 / STD_CELL_0000; nMOS; channel=-45 deg; Δμ/μ=-0.0119</title><circle cx="773.61" cy="220.64" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="767.95" y1="214.98" x2="779.27" y2="226.29" class="channel"/>
+<g><title>CELL_0001 / STD_CELL_0001; pMOS; channel=0 deg; Δμ/μ=+0.0067</title><rect x="742.75" y="181.94" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="739.75" y1="186.94" x2="755.75" y2="186.94" class="channel"/>
+<g><title>CELL_0002 / STD_CELL_0002; nMOS; channel=-45 deg; Δμ/μ=+0.0119</title><circle cx="705.64" cy="181.39" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="699.98" y1="175.73" x2="711.29" y2="187.05" class="channel"/>
+<g><title>CELL_0003 / STD_CELL_0003; pMOS; channel=0 deg; Δμ/μ=-0.0067</title><rect x="666.94" y="202.25" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="663.94" y1="207.25" x2="679.94" y2="207.25" class="channel"/>
+<g><title>CELL_0004 / STD_CELL_0004; nMOS; channel=-45 deg; Δμ/μ=-0.0119</title><circle cx="666.39" cy="249.36" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="660.73" y1="243.71" x2="672.05" y2="255.02" class="channel"/>
+<g><title>CELL_0005 / STD_CELL_0005; pMOS; channel=0 deg; Δμ/μ=+0.0067</title><rect x="687.25" y="278.06" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="684.25" y1="283.06" x2="700.25" y2="283.06" class="channel"/>
+<g><title>CELL_0006 / STD_CELL_0006; nMOS; channel=-45 deg; Δμ/μ=+0.0119</title><circle cx="734.36" cy="288.61" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="728.71" y1="282.95" x2="740.02" y2="294.27" class="channel"/>
+<g><title>CELL_0007 / STD_CELL_0007; pMOS; channel=0 deg; Δμ/μ=-0.0067</title><rect x="763.06" y="257.75" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="760.06" y1="262.75" x2="776.06" y2="262.75" class="channel"/>
+<g><title>CELL_0008 / STD_CELL_0008; nMOS; channel=-45 deg; Δμ/μ=-0.0067</title><circle cx="791.48" cy="215.85" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="785.82" y1="210.19" x2="797.14" y2="221.50" class="channel"/>
+<g><title>CELL_0009 / STD_CELL_0009; pMOS; channel=0 deg; Δμ/μ=+0.0038</title><rect x="752.00" y="165.91" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="749.00" y1="170.91" x2="765.00" y2="170.91" class="channel"/>
+<g><title>CELL_0010 / STD_CELL_0010; nMOS; channel=-45 deg; Δμ/μ=+0.0067</title><circle cx="700.85" cy="163.52" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="695.19" y1="157.86" x2="706.50" y2="169.18" class="channel"/>
+<g><title>CELL_0011 / STD_CELL_0011; pMOS; channel=0 deg; Δμ/μ=-0.0038</title><rect x="650.91" y="193.00" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="647.91" y1="198.00" x2="663.91" y2="198.00" class="channel"/>
+<g><title>CELL_0012 / STD_CELL_0012; nMOS; channel=-45 deg; Δμ/μ=-0.0067</title><circle cx="648.52" cy="254.15" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="642.86" y1="248.50" x2="654.18" y2="259.81" class="channel"/>
+<g><title>CELL_0013 / STD_CELL_0013; pMOS; channel=0 deg; Δμ/μ=+0.0038</title><rect x="678.00" y="294.09" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="675.00" y1="299.09" x2="691.00" y2="299.09" class="channel"/>
+<g><title>CELL_0014 / STD_CELL_0014; nMOS; channel=-45 deg; Δμ/μ=+0.0067</title><circle cx="739.15" cy="306.48" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="733.50" y1="300.82" x2="744.81" y2="312.14" class="channel"/>
+<g><title>CELL_0015 / STD_CELL_0015; pMOS; channel=0 deg; Δμ/μ=-0.0038</title><rect x="779.09" y="267.00" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="776.09" y1="272.00" x2="792.09" y2="272.00" class="channel"/>
+<g><title>CELL_0016 / STD_CELL_0016; nMOS; channel=-45 deg; Δμ/μ=-0.0030</title><circle cx="827.22" cy="206.27" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="821.56" y1="200.61" x2="832.87" y2="211.93" class="channel"/>
+<g><title>CELL_0017 / STD_CELL_0017; pMOS; channel=0 deg; Δμ/μ=+0.0017</title><rect x="770.50" y="133.87" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="767.50" y1="138.87" x2="783.50" y2="138.87" class="channel"/>
+<g><title>CELL_0018 / STD_CELL_0018; nMOS; channel=-45 deg; Δμ/μ=+0.0030</title><circle cx="691.27" cy="127.78" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="685.61" y1="122.13" x2="696.93" y2="133.44" class="channel"/>
+<g><title>CELL_0019 / STD_CELL_0019; pMOS; channel=0 deg; Δμ/μ=-0.0017</title><rect x="618.87" y="174.50" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="615.87" y1="179.50" x2="631.87" y2="179.50" class="channel"/>
+<g><title>CELL_0020 / STD_CELL_0020; nMOS; channel=-45 deg; Δμ/μ=-0.0030</title><circle cx="612.78" cy="263.73" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="607.13" y1="258.07" x2="618.44" y2="269.39" class="channel"/>
+<g><title>CELL_0021 / STD_CELL_0021; pMOS; channel=0 deg; Δμ/μ=+0.0017</title><rect x="659.50" y="326.13" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="656.50" y1="331.13" x2="672.50" y2="331.13" class="channel"/>
+<g><title>CELL_0022 / STD_CELL_0022; nMOS; channel=-45 deg; Δμ/μ=+0.0030</title><circle cx="748.73" cy="342.22" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="743.07" y1="336.56" x2="754.39" y2="347.87" class="channel"/>
+<g><title>CELL_0023 / STD_CELL_0023; pMOS; channel=0 deg; Δμ/μ=-0.0017</title><rect x="811.13" y="285.50" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="808.13" y1="290.50" x2="824.13" y2="290.50" class="channel"/>
+<g><title>CELL_0024 / STD_CELL_0024; nMOS; channel=-45 deg; Δμ/μ=-0.0014</title><circle cx="877.25" cy="192.86" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="871.60" y1="187.21" x2="882.91" y2="198.52" class="channel"/>
+<g><title>CELL_0025 / STD_CELL_0025; pMOS; channel=0 deg; Δμ/μ=+0.0008</title><rect x="796.40" y="89.01" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="793.40" y1="94.01" x2="809.40" y2="94.01" class="channel"/>
+<g><title>CELL_0026 / STD_CELL_0026; nMOS; channel=-45 deg; Δμ/μ=+0.0014</title><circle cx="677.86" cy="77.75" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="672.21" y1="72.09" x2="683.52" y2="83.40" class="channel"/>
+<g><title>CELL_0027 / STD_CELL_0027; pMOS; channel=0 deg; Δμ/μ=-0.0008</title><rect x="574.01" y="148.60" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="571.01" y1="153.60" x2="587.01" y2="153.60" class="channel"/>
+<g><title>CELL_0028 / STD_CELL_0028; nMOS; channel=-45 deg; Δμ/μ=-0.0014</title><circle cx="562.75" cy="277.14" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="557.09" y1="271.48" x2="568.40" y2="282.79" class="channel"/>
+<g><title>CELL_0029 / STD_CELL_0029; pMOS; channel=0 deg; Δμ/μ=+0.0008</title><rect x="633.60" y="370.99" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="630.60" y1="375.99" x2="646.60" y2="375.99" class="channel"/>
+<g><title>CELL_0030 / STD_CELL_0030; nMOS; channel=-45 deg; Δμ/μ=+0.0014</title><circle cx="762.14" cy="392.25" r="5" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="756.48" y1="386.60" x2="767.79" y2="397.91" class="channel"/>
+<g><title>CELL_0031 / STD_CELL_0031; pMOS; channel=0 deg; Δμ/μ=-0.0008</title><rect x="855.99" y="311.40" width="10" height="10" fill="#35d0ba" stroke="#091628"/></g>
+<line x1="852.99" y1="316.40" x2="868.99" y2="316.40" class="channel"/>
+<circle cx="335" cy="430" r="5" fill="#35d0ba"/><text x="347" y="434" font-size="12">within threshold</text>
+<circle cx="480" cy="430" r="5" fill="#ff6577"/><text x="492" y="434" font-size="12">KOZ violation</text>
+<circle cx="620" cy="430" r="5" fill="#35d0ba"/><text x="632" y="434" font-size="12">nMOS</text>
+<rect x="690" y="425" width="10" height="10" fill="#35d0ba"/><text x="706" y="434" font-size="12">pMOS</text>
+</svg>

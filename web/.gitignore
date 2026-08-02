@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+*.log
+.env.local
+.env.*.local
+.DS_Store
+public/repository-assets/
+public/legal/

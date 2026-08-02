@@ -35,7 +35,11 @@ Issues = "https://github.com/tengzhang48/CoupFE-EDA/issues"
 distributed = ["petsc4py", "mpi4py"]   # PETSc/MPI; conda-forge petsc4py bundles superlu_dist
 codegen = ["sympy"]                     # coupfe weak-form -> Fortran (build-time)
 mesh = ["gmsh", "meshio"]               # 3D real-geometry meshing (mesh3d/tsv_3d); all-hex via gmsh
+workbench = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1"]  # localhost GUI/API; no remote authentication
 dev = ["pytest>=7", "build>=1", "twine>=5"]
+
+[project.scripts]
+coupfe-eda-workbench = "eda_multiphysics.workbench_api:main"
 
 [tool.setuptools.packages.find]
 include = ["eda_multiphysics*"]

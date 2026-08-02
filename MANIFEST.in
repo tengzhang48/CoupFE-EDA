@@ -19,7 +19,9 @@ include .github/scripts/check_release_artifacts.py
 include .github/scripts/check_runtime_core.py
 include .github/scripts/record_release_evidence.py
 include .github/scripts/smoke_wheel.py
+include .github/workflows/coupfe-workbench-pages.yml
 include .github/workflows/fast-ci.yml
+include .github/workflows/web-ci.yml
 
 recursive-include benchmarks *.json *.md *.py *.txt
 
@@ -47,6 +49,17 @@ prune eda_multiphysics/_tm_*
 recursive-include examples *.py *.md *.csv *.json
 recursive-include skills *.md *.yaml
 
+# Retain the reviewed frontend source in the source distribution. The wheel
+# ships the optional API adapter, but not the frontend or node_modules; the
+# local GUI therefore remains a source-checkout workflow.
+graft web
+prune web/node_modules
+prune web/dist
+prune web/coverage
+prune web/.vite
+prune web/public/repository-assets
+prune web/public/legal
+
 include tests/conftest.py
 include tests/test_integration_regressions.py
 include tests/test_native_element_evaluation.py
@@ -54,7 +67,9 @@ include tests/test_periodic_adapter.py
 include tests/test_toolchain.py
 include tests/test_tsv_device.py
 include tests/test_tsv_local_3d.py
+include tests/test_workbench.py
+include tests/test_workbench_api.py
 
-global-exclude __pycache__ *.py[cod] *.f90 *.so *.o *.mod *.a *.lib *.dll *.dylib
+global-exclude __pycache__ *.py[cod] *.f90 *.so *.o *.mod *.a *.lib *.dll *.dylib *.tsbuildinfo
 global-exclude *.pdf *.tex *.whl *.zip *.tar *.tgz *.gz *.bz2 *.xz *.7z *.rar
 global-exclude .DS_Store

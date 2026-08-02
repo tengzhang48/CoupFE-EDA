@@ -14,6 +14,14 @@ _etk*/
 meson*.build
 .mesonpy*
 _tm_hex/
+# Local web-workbench products are regenerated from the locked frontend source.
+web/node_modules/
+web/dist/
+web/coverage/
+web/.vite/
+web/*.tsbuildinfo
+web/public/repository-assets/
+web/public/legal/
 # LaTeX and rendered-document files are outside the reviewed source artifact.
 *.tex
 *.pdf

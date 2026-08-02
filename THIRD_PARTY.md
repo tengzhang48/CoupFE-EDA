@@ -52,3 +52,39 @@ values from papers cited inline. The repository does not include publisher page
 images or digitized experimental curves. The curvature and Raman manifests
 remain `definition_only`; no experimental-validation claim is made without the
 missing curves and a retained comparison record.
+
+## Web workbench dependencies
+
+The `web/package-lock.json` file records the exact npm dependency resolution
+used to test and build the workbench. Dependency source and `node_modules/` are
+not vendored in this repository. Each npm package retains its own license; the
+project's Apache-2.0 and CC-BY-4.0 licenses do not replace those terms.
+
+The deployed static JavaScript incorporates React, React DOM, and Scheduler
+from the [React project](https://github.com/facebook/react). Those components
+are distributed under the MIT License with the following notice:
+
+> Copyright (c) Meta Platforms, Inc. and affiliates.
+>
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+> copies of the Software, and to permit persons to whom the Software is
+> furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in
+> all copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
+
+Vite, TypeScript, Vitest, Testing Library, jsdom, and their transitive packages
+are build or test dependencies identified by the same lockfile. The Pages
+workflow installs the locked resolution with `npm ci`; it does not publish
+`node_modules/`, test coverage, Vite caches, or an API service.

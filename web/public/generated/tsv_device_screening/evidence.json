@@ -1,0 +1,29 @@
+{
+  "example_scope": "synthetic_identity_preserving_integration",
+  "model_scope": "classical_lame_far_field_device_screening_proxy",
+  "release_validation": false,
+  "device_site_provenance": "synthetic_radial_angular_sampling",
+  "runtime_inputs": [
+    "device_sites.csv"
+  ],
+  "fixed_in_code": [
+    "tsv_id",
+    "diameter_um",
+    "thermal_load_C",
+    "wafer",
+    "threshold"
+  ],
+  "tsv_id": "TSV_0001",
+  "diameter_um": 10.0,
+  "thermal_load_C": -250.0,
+  "wafer": "(001) Si",
+  "n_devices": 32,
+  "threshold": 0.05,
+  "baseline_violations": 12,
+  "optimized_violations": 0,
+  "baseline_peak_abs_mobility_change": 0.23598843548567472,
+  "optimized_peak_abs_mobility_change": 0.011885648618332287,
+  "violation_reduction": 1.0,
+  "peak_proxy_reduction": 0.9496346141120386,
+  "claim_boundary": "Demonstrates identity-preserving stress-to-device mapping and a deterministic orientation action. It does not validate near-surface TSV stress, transistor delay, or a signoff keep-out zone."
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "examples/tsv_00_device_screening/run.py",
+  "releaseValidation": false,
+  "artifacts": [
+    {
+      "name": "evidence.json",
+      "kind": "report",
+      "uri": "generated/tsv_device_screening/evidence.json",
+      "sha256": "c403443e87715255466f2571ba108486a7e5a3cbdd845aa41a826ee86459f326"
+    },
+    {
+      "name": "device_screening.svg",
+      "kind": "render",
+      "uri": "generated/tsv_device_screening/device_screening.svg",
+      "sha256": "bdc8ca31171f56282c796b8bdecf115938308faa7a342f030216796b4241153f"
+    },
+    {
+      "name": "device_screening.csv",
+      "kind": "data",
+      "uri": "generated/tsv_device_screening/device_screening.csv",
+      "sha256": "0ad73bfe3b0567e7541ad82fdc65af24ae4c944d04dca4d0627879fd78643dea"
+    }
+  ]
+}

@@ -84,7 +84,7 @@ def _write_outputs(output_dir, baseline, optimized, scorecard):
             "channel_degrees", "mobility_change", "koz_violation", "distance_um",
             "direction_degrees",
         ]
-        writer = csv.DictWriter(stream, fieldnames=fields)
+        writer = csv.DictWriter(stream, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for case, rows in (("baseline", baseline), ("orientation_action", optimized)):
             for row in rows:

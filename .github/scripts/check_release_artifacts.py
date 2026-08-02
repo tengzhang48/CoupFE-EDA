@@ -110,6 +110,8 @@ PUBLIC_PACKAGE_FILES = SCHEMA_ASSETS | SYNTHETIC_CASE_ASSETS | {
         "tsv_stress.py",
         "tsv_validation.py",
         "validate.py",
+        "workbench.py",
+        "workbench_api.py",
     }
 } | {
     "eda_multiphysics/openroad/export_case.tcl",
@@ -123,6 +125,8 @@ PUBLIC_TEST_FILES = {
     "tests/test_toolchain.py",
     "tests/test_tsv_device.py",
     "tests/test_tsv_local_3d.py",
+    "tests/test_workbench.py",
+    "tests/test_workbench_api.py",
 }
 PUBLIC_LICENSE_FILES = {
     f"LICENSES/{name}"
@@ -136,7 +140,9 @@ PUBLIC_GITHUB_FILES = {
     ".github/scripts/check_runtime_core.py",
     ".github/scripts/record_release_evidence.py",
     ".github/scripts/smoke_wheel.py",
+    ".github/workflows/coupfe-workbench-pages.yml",
     ".github/workflows/fast-ci.yml",
+    ".github/workflows/web-ci.yml",
 }
 CURRENT_SOLVER_SCALING_FILES = {
     f"benchmarks/solver_scaling/current_526338dof_20260801/{name}"
@@ -257,6 +263,55 @@ PUBLIC_SKILL_FILES = {
     "skills/SKILL.md",
     "skills/agents/openai.yaml",
 }
+PUBLIC_WEB_FILES = {
+    f"web/{name}"
+    for name in {
+        ".env.api",
+        ".env.demo",
+        ".env.example",
+        ".gitignore",
+        ".nvmrc",
+        "ARCHITECTURE.md",
+        "INTEGRATION.md",
+        "README.md",
+        "contracts/connected-project-snapshot.json",
+        "contracts/retained-tsv-artifacts.json",
+        "favicon.svg",
+        "index.html",
+        "package-lock.json",
+        "package.json",
+        "public/generated/tsv_device_screening/device_screening.csv",
+        "public/generated/tsv_device_screening/device_screening.svg",
+        "public/generated/tsv_device_screening/evidence.json",
+        "scripts/check-repository-data.mjs",
+        "scripts/prepare-repository-assets.mjs",
+        "scripts/refresh-tsv-device-artifacts.mjs",
+        "site-data.json",
+        "src/App.test.tsx",
+        "src/App.tsx",
+        "src/SiteApp.test.tsx",
+        "src/SiteApp.tsx",
+        "src/backend/factory.ts",
+        "src/backend/fastapi-backend.ts",
+        "src/backend/interface.ts",
+        "src/backend/mock-backend.test.ts",
+        "src/backend/mock-backend.ts",
+        "src/demo/snapshot.ts",
+        "src/domain/selectors.test.ts",
+        "src/domain/selectors.ts",
+        "src/domain/types.ts",
+        "src/hooks/use-workbench.ts",
+        "src/main.tsx",
+        "src/site-styles.css",
+        "src/styles.css",
+        "src/test/setup.ts",
+        "src/vite-env.d.ts",
+        "tsconfig.app.json",
+        "tsconfig.json",
+        "tsconfig.node.json",
+        "vite.config.ts",
+    }
+}
 PUBLIC_ROOT_FILES = {
     ".dockerignore",
     ".gitignore",
@@ -283,6 +338,7 @@ PUBLIC_SDIST_METADATA_FILES = {
         "PKG-INFO",
         "SOURCES.txt",
         "dependency_links.txt",
+        "entry_points.txt",
         "requires.txt",
         "top_level.txt",
     }
@@ -296,6 +352,7 @@ PUBLIC_SOURCE_INVENTORIES = {
     "examples": PUBLIC_EXAMPLE_FILES,
     "skills": PUBLIC_SKILL_FILES,
     "tests": PUBLIC_TEST_FILES,
+    "web": PUBLIC_WEB_FILES,
 }
 PUBLIC_RELEASE_FILES = PUBLIC_ROOT_FILES | set().union(
     *PUBLIC_SOURCE_INVENTORIES.values()
@@ -305,6 +362,21 @@ OPENROAD_LICENSE_SHA256 = (
 )
 OPENROAD_COPYRIGHT_NOTICE = (
     "Copyright (c) 2018-2023, The Regents of the University of California"
+)
+UNREVIEWED_WEB_PLACEHOLDER_FRAGMENTS = (
+    "coupfe-eda@8a3d91e",
+    "8a3d91e",
+    "coupfe-core 0.7.0",
+    "benchmarks/tsv/thermal-validation-v2.json",
+    "verification/mesh-study-04.json",
+    "materials/interface-limit-v2.yaml",
+    "benchmarks/tsv/margin-validation-v1.json",
+    "package-steady-v3",
+    "tsv-materials-v2",
+)
+EXPECTED_CONSOLE_ENTRY_POINTS = (
+    "[console_scripts]\n"
+    "coupfe-eda-workbench = eda_multiphysics.workbench_api:main\n"
 )
 
 REQUIRED_SDIST_FILES = PUBLIC_RELEASE_FILES
@@ -400,19 +472,29 @@ FORBIDDEN_SUFFIXES = {
 IMAGE_SUFFIXES = {".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
 TEXT_SUFFIXES = {
     "",
+    ".api",
     ".cfg",
+    ".css",
     ".csv",
+    ".demo",
+    ".example",
     ".f90",
     ".for",
+    ".html",
     ".ini",
+    ".js",
     ".json",
     ".md",
+    ".mjs",
     ".py",
     ".rst",
     ".sh",
     ".sp",
+    ".svg",
     ".tcl",
     ".toml",
+    ".ts",
+    ".tsx",
     ".txt",
     ".yaml",
     ".yml",
@@ -433,12 +515,14 @@ def _validate_names(names: list[str], artifact: Path) -> None:
         raise SystemExit(f"{artifact.name} contains unsafe paths: {sorted(unsafe)}")
 
 
-def _is_allowed_documentation_image(path: PurePosixPath) -> bool:
+def _is_allowed_public_image(path: PurePosixPath) -> bool:
     parts = tuple(part.casefold() for part in path.parts)
     return (
         path.suffix.casefold() in IMAGE_SUFFIXES
-        and len(parts) >= 4
-        and parts[:3] == ("docs", "validation_guide", "figures")
+        and (
+            (len(parts) >= 4 and parts[:3] == ("docs", "validation_guide", "figures"))
+            or (len(parts) >= 2 and parts[0] == "web")
+        )
     )
 
 
@@ -457,7 +541,7 @@ def _is_forbidden_path(name: str) -> bool:
         or any(part.startswith("_etk") for part in parts)
         or any(part.startswith("_tm_") for part in parts)
         or suffix in FORBIDDEN_SUFFIXES
-        or (suffix in IMAGE_SUFFIXES and not _is_allowed_documentation_image(path))
+        or (suffix in IMAGE_SUFFIXES and not _is_allowed_public_image(path))
     )
 
 
@@ -682,6 +766,18 @@ def _validate_text(name: str, payload: bytes, artifact: Path) -> None:
 
     if path.suffix.casefold() == ".json":
         _validate_json_text(text, name, artifact)
+
+    if name.startswith("web/"):
+        placeholders = sorted(
+            fragment
+            for fragment in UNREVIEWED_WEB_PLACEHOLDER_FRAGMENTS
+            if fragment in text
+        )
+        if placeholders:
+            raise SystemExit(
+                f"{artifact.name}:{name} contains the unreviewed prototype "
+                f"evidence record: {placeholders}"
+            )
 
     hits = [fragment for fragment in _sensitive_fragments() if fragment in text]
     hits.extend(
@@ -1625,6 +1721,7 @@ def _validate_wheel(wheel: Path) -> int:
             )
         dist_info = metadata_roots.pop()
         required = PUBLIC_PACKAGE_FILES | {
+            f"{dist_info}/entry_points.txt",
             f"{dist_info}/licenses/LICENSE",
             f"{dist_info}/licenses/LICENSES/CC-BY-4.0.txt",
             f"{dist_info}/licenses/LICENSES/OpenROAD-BSD-3-Clause.txt",
@@ -1633,6 +1730,15 @@ def _validate_wheel(wheel: Path) -> int:
             f"{dist_info}/licenses/docs/LICENSE.md",
         }
         _require_files(files, required, wheel)
+        entry_points_name = f"{dist_info}/entry_points.txt"
+        if (
+            archive.read(entry_points_name).decode("utf-8")
+            != EXPECTED_CONSOLE_ENTRY_POINTS
+        ):
+            raise SystemExit(
+                f"{wheel.name}:{entry_points_name} differs from the reviewed "
+                "workbench console entry point"
+            )
         _reject_forbidden_files(files, wheel)
         _validate_exact_subtree(
             files,
@@ -1708,6 +1814,15 @@ def _validate_sdist(
             "coupfe_eda.egg-info",
             PUBLIC_SDIST_METADATA_FILES,
         )
+        entry_points_name = "coupfe_eda.egg-info/entry_points.txt"
+        entry_points_stream = archive.extractfile(file_members[entry_points_name])
+        if entry_points_stream is None:
+            raise SystemExit(f"{sdist.name}:{entry_points_name} could not be read")
+        if entry_points_stream.read().decode("utf-8") != EXPECTED_CONSOLE_ENTRY_POINTS:
+            raise SystemExit(
+                f"{sdist.name}:{entry_points_name} differs from the reviewed "
+                "workbench console entry point"
+            )
         _validate_public_tests(files, sdist)
         for name, member in file_members.items():
             stream = archive.extractfile(member)
