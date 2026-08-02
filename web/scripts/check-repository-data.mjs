@@ -92,7 +92,7 @@ equal(site.repository.url, "https://github.com/tengzhang48/CoupFE-EDA", "reposit
 equal(site.repository.branch, "main", "repository branch");
 equal(site.repository.version, "0.1.0", "project version");
 equal(site.repository.releaseStatus, "Active alpha", "project release status");
-equal(site.repository.author, "CoupMech Lab", "project author");
+equal(site.repository.author, "Teng Zhang", "project author");
 equal(site.repository.issuesUrl, `${site.repository.url}/issues`, "project issues URL");
 const pyproject = await readFile(await requireFile("pyproject.toml"), "utf8");
 if (!pyproject.includes(`version = "${site.repository.version}"`)) {

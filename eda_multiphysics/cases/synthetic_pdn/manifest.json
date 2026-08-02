@@ -19,7 +19,7 @@
   "provenance": {
     "source_kind": "project_authored_synthetic_data",
     "origin": "project_authored_synthetic_fixture",
-    "copyright": "2026 Teng Zhang and CoupMech Lab",
+    "copyright": "2026 Teng Zhang",
     "license": "Apache-2.0",
     "generator": "generate_case.py",
     "randomness": "none",

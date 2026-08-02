@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Open EDA-coupled electro-thermo-mechanical multiphysics, built on CoupFE"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{ name = "CoupMech Lab" }]
+authors = [{ name = "Teng Zhang" }]
 license = "Apache-2.0 AND CC-BY-4.0"
 license-files = ["LICENSE", "NOTICE", "THIRD_PARTY.md", "docs/LICENSE.md", "LICENSES/*.txt"]
 classifiers = [

@@ -7,7 +7,7 @@
     "branch": "main",
     "version": "0.1.0",
     "releaseStatus": "Active alpha",
-    "author": "CoupMech Lab",
+    "author": "Teng Zhang",
     "issuesUrl": "https://github.com/tengzhang48/CoupFE-EDA/issues"
   },
   "projectBoundary": "The public evidence applies only to the documented models, inputs, checks, and measured benchmark configuration. Real-device validation and manufacturing signoff are not claimed.",
