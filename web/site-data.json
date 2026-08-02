@@ -4,7 +4,48 @@
   "repository": {
     "name": "CoupFE-EDA",
     "url": "https://github.com/tengzhang48/CoupFE-EDA",
-    "branch": "main"
+    "branch": "main",
+    "version": "0.1.0",
+    "releaseStatus": "Active alpha",
+    "author": "CoupMech Lab",
+    "issuesUrl": "https://github.com/tengzhang48/CoupFE-EDA/issues"
+  },
+  "projectBoundary": "The public evidence applies only to the documented models, inputs, checks, and measured benchmark configuration. Real-device validation and manufacturing signoff are not claimed.",
+  "process": {
+    "summary": "The repository supports this documented workflow pattern. Individual examples exercise different subsets; no bundled case is a live production EDA-to-signoff flow.",
+    "boundary": "This is the shared architecture across the checked examples and public contracts. No single bundled case executes every stage on a production design.",
+    "steps": [
+      {
+        "id": "design_inputs",
+        "title": "Design and case inputs",
+        "detail": "Project-authored synthetic records or caller-supplied placement, power, PDN, and joint files"
+      },
+      {
+        "id": "identity_provenance",
+        "title": "Identity and provenance",
+        "detail": "Declared units and transforms with retained source-object, TSV, device, or joint IDs"
+      },
+      {
+        "id": "analysis_representation",
+        "title": "Analysis representation",
+        "detail": "Supported generated reference meshes or analytic and reduced representations"
+      },
+      {
+        "id": "selected_analysis",
+        "title": "Selected analysis",
+        "detail": "The documented electrical, thermal, mechanical, or stateful solder path"
+      },
+      {
+        "id": "retained_evidence",
+        "title": "Reviewable evidence",
+        "detail": "Named oracles, invariants, retained outputs, provenance, and claim boundaries"
+      },
+      {
+        "id": "bounded_feedback",
+        "title": "Bounded feedback",
+        "detail": "Stable-ID screening quantities and back-annotation contracts, not live database edits"
+      }
+    ]
   },
   "workflows": [
     {
@@ -104,6 +145,7 @@
     "optimizedPeakAbsMobilityProxy": 0.011885648618332287,
     "releaseValidation": false,
     "claimBoundary": "Demonstrates identity-preserving stress-to-device mapping and a deterministic orientation action. It does not validate near-surface TSV stress, transistor delay, or a signoff keep-out zone.",
+    "displayBoundary": "This retained regression demonstrates identity-preserving stress-to-device mapping and a deterministic orientation-screening action for project-authored synthetic sites. It does not reproduce the near-surface 3-D TSV stress field, validate Raman or transistor measurements, predict delay, or establish a signoff keep-out zone.",
     "expectedPath": "examples/tsv_00_device_screening/expected_metrics.json",
     "readmePath": "examples/tsv_00_device_screening/README.md",
     "figureAsset": "generated/tsv_device_screening/device_screening.svg",
@@ -139,6 +181,7 @@
   "scorecard": {
     "sourcePath": "benchmarks/tsv_release_scorecard.json",
     "evidenceGuidePath": "docs/VALIDATION_GUIDE.md",
+    "roadmapPath": "docs/roadmap.md",
     "statusLabels": {
       "blocked": "Foundation present · evidence incomplete",
       "not_started": "Planned study"

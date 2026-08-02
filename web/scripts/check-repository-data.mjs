@@ -90,6 +90,34 @@ equal(site.schemaVersion, 1, "site-data schemaVersion");
 equal(site.recordDate, "2026-08-02", "public-record date");
 equal(site.repository.url, "https://github.com/tengzhang48/CoupFE-EDA", "repository URL");
 equal(site.repository.branch, "main", "repository branch");
+equal(site.repository.version, "0.1.0", "project version");
+equal(site.repository.releaseStatus, "Active alpha", "project release status");
+equal(site.repository.author, "CoupMech Lab", "project author");
+equal(site.repository.issuesUrl, `${site.repository.url}/issues`, "project issues URL");
+const pyproject = await readFile(await requireFile("pyproject.toml"), "utf8");
+if (!pyproject.includes(`version = "${site.repository.version}"`)) {
+  fail("displayed project version does not match pyproject.toml");
+}
+if (!pyproject.includes(`authors = [{ name = "${site.repository.author}" }]`)) {
+  fail("displayed project author does not match pyproject.toml");
+}
+const webPackage = await readJson(path.join(webRoot, "package.json"));
+const webPackageLock = await readJson(path.join(webRoot, "package-lock.json"));
+equal(webPackage.version, site.repository.version, "frontend/project version alignment");
+equal(webPackageLock.version, webPackage.version, "frontend lockfile version");
+equal(webPackageLock.packages[""].version, webPackage.version, "frontend lockfile root version");
+if (!site.projectBoundary || site.projectBoundary.length < 80) {
+  fail("project-level claim boundary is missing or too short");
+}
+equal(site.process.steps.length, 6, "public process step count");
+equal(
+  site.process.steps.map((step) => step.id).join(","),
+  "design_inputs,identity_provenance,analysis_representation,selected_analysis,retained_evidence,bounded_feedback",
+  "public process step order",
+);
+if (!site.process.boundary || site.process.boundary.length < 80) {
+  fail("public process boundary is missing or too short");
+}
 equal(site.workflows.length, 5, "guided workflow count");
 
 const expectedWorkflowIds = [
@@ -266,6 +294,13 @@ equal(
   site.tsvScreening.claimBoundary,
   "public TSV claim boundary",
 );
+if (
+  !site.tsvScreening.displayBoundary.includes("project-authored synthetic sites") ||
+  !site.tsvScreening.displayBoundary.includes("near-surface 3-D TSV stress field") ||
+  !site.tsvScreening.displayBoundary.includes("signoff keep-out zone")
+) {
+  fail("public TSV display boundary omits required synthetic/3-D/signoff limits");
+}
 equal(publicEvidence.n_devices, expectedTsv.n_devices, "public TSV device count");
 equal(
   publicEvidence.baseline_violations,
@@ -349,6 +384,7 @@ for (const notice of [
 
 await requireFile(site.scorecard.sourcePath);
 await requireFile(site.scorecard.evidenceGuidePath);
+await requireFile(site.scorecard.roadmapPath);
 const scorecard = await readJson(repositoryPath(site.scorecard.sourcePath));
 equal(scorecard.record_date, site.recordDate, "scorecard record date");
 for (const [status, label] of Object.entries(site.scorecard.statusLabels)) {

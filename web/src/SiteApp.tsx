@@ -3,8 +3,7 @@ import { createBackend } from "./backend/factory";
 import siteData from "../site-data.json";
 
 type Workflow = (typeof siteData.workflows)[number];
-type ScorecardCategory = (typeof siteData.scorecard.categories)[number];
-type RoadmapStage = (typeof siteData.scorecard.stages)[number];
+type WorkflowKind = "integration" | "verification";
 
 const repositoryFile = (sourcePath: string) =>
   `${siteData.repository.url}/blob/${siteData.repository.branch}/${sourcePath}`;
@@ -29,12 +28,12 @@ function Boundary({ children, compact = false }: { children: string; compact?: b
   );
 }
 
-function WorkflowCard({ workflow }: { workflow: Workflow }) {
+function WorkflowCard({ workflow, kind, displayIndex }: { workflow: Workflow; kind: WorkflowKind; displayIndex: number }) {
   return (
-    <article className="site-workflow-card">
+    <article className={`site-workflow-card site-workflow-card-${kind}`}>
       <header>
-        <span>{workflow.index}</span>
-        <div><small>Checked guided workflow</small><h3>{workflow.title}</h3></div>
+        <span>{String(displayIndex).padStart(2, "0")}</span>
+        <div><small>{kind === "integration" ? "EDA-linked demonstration" : "Physics / solver verification"}</small><h4>{workflow.title}</h4></div>
       </header>
       <p>{workflow.summary}</p>
       <div className="site-result-strip">
@@ -74,52 +73,56 @@ function ScalingFigure() {
   );
 }
 
-function ScorecardRow({ category }: { category: ScorecardCategory }) {
-  const publicStatus = category.status === "blocked"
-    ? siteData.scorecard.statusLabels.blocked
-    : siteData.scorecard.statusLabels.not_started;
-  return (
-    <article className="site-score-row">
-      <div><span className={`site-status site-status-${category.status}`}>{publicStatus}</span><h3>{category.label}</h3></div>
-      <p>{category.reason}</p>
-    </article>
-  );
-}
-
-function RoadmapStageCard({ stage, index }: { stage: RoadmapStage; index: number }) {
-  const categoryLabels = stage.categoryIds
-    .map((categoryId) => siteData.scorecard.categories.find((category) => category.id === categoryId)?.label)
-    .filter(Boolean);
-  return (
-    <article className="site-roadmap-stage">
-      <header><span>{String(index + 1).padStart(2, "0")}</span><small>Stage</small></header>
-      <h3>{stage.title}</h3>
-      <p>{stage.goal}</p>
-      <footer>{categoryLabels.length > 0 ? categoryLabels.join(" · ") : "Cross-cutting case prerequisite"}</footer>
-    </article>
-  );
-}
-
 function PublicSite() {
-  const partiallySupported = siteData.scorecard.categories.filter((item) => item.status === "blocked").length;
-  const notStarted = siteData.scorecard.categories.filter((item) => item.status === "not_started").length;
   const thresholdPercent = siteData.tsvScreening.threshold * 100;
   const firstMedian = siteData.scaling.medianSeconds[0]!;
   const lastMedian = siteData.scaling.medianSeconds.at(-1)!;
   const firstRank = siteData.scaling.ranks[0]!;
   const lastRank = siteData.scaling.ranks.at(-1)!;
   const measuredSpeedup = siteData.scaling.speedup.at(-1)!;
+  const workflowFor = (id: string) => {
+    const workflow = siteData.workflows.find((candidate) => candidate.id === id);
+    if (!workflow) throw new Error(`Missing public workflow ${id}`);
+    return workflow;
+  };
+  const integrationWorkflows = [
+    workflowFor("tsv_device_screening"),
+    workflowFor("design_linked_solder_screening"),
+  ];
+  const verificationWorkflows = [
+    workflowFor("etv_partitioned_cycle"),
+    workflowFor("solder_3d_cycle"),
+    workflowFor("solder_plane_cycle"),
+  ];
 
   return (
     <div className="site-shell">
       <header className="site-header">
         <a className="site-brand" href={import.meta.env.BASE_URL}><Mark /><strong>CoupFE<span>–EDA</span></strong></a>
-        <nav aria-label="Project website">
-          <a href="#workflows">Workflows</a>
-          <a href="#device-screening">Device screening</a>
-          <a href="#scaling">Scaling</a>
-          <a href="#validation">Validation roadmap</a>
+        <nav className="site-desktop-nav" aria-label="Project website">
+          <a href="#how-it-works">How it works</a>
+          <a href="#examples">Examples</a>
+          <a href="#validation">Evidence</a>
+          <a href="#performance">Performance</a>
+          <a href={repositoryFile("docs/README.md")}>Documentation</a>
         </nav>
+        <details className="site-mobile-nav">
+          <summary>Menu</summary>
+          <nav
+            aria-label="Mobile project website"
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest("a")) {
+                event.currentTarget.closest("details")?.removeAttribute("open");
+              }
+            }}
+          >
+            <a href="#how-it-works">How it works</a>
+            <a href="#examples">Examples</a>
+            <a href="#validation">Evidence</a>
+            <a href="#performance">Performance</a>
+            <a href={repositoryFile("docs/README.md")}>Documentation</a>
+          </nav>
+        </details>
         <a className="site-header-action" href={`${import.meta.env.BASE_URL}?surface=workbench`}>Interface demo <span>→</span></a>
       </header>
 
@@ -127,42 +130,49 @@ function PublicSite() {
         <section className="site-hero">
           <div className="site-hero-copy">
             <p className="site-kicker"><span /> Open research software · built on CoupFE</p>
-            <h1>EDA-aware multiphysics workflows, with the evidence boundary visible.</h1>
+            <h1>EDA-aware multiphysics, from design inputs to reviewable evidence.</h1>
             <p className="site-lede">
-              CoupFE-EDA shows how design identities, generated geometry, coupled fields,
-              stateful materials, and reliability screens can be connected. It is an early
-              research platform and demonstration—not a signoff tool or a completed
-              real-device validation program.
+              CoupFE-EDA connects stable design identities and generated analysis representations
+              to documented electrical, thermal, mechanical, and reliability workflows. The public
+              repository provides runnable research examples and retained evidence records; it does
+              not establish real-device accuracy, predictive package life, manufacturing qualification,
+              or EDA signoff.
             </p>
             <div className="site-hero-actions">
-              <a className="site-primary-link" href="#workflows">Explore checked workflows <span>↓</span></a>
+              <a className="site-primary-link" href="#how-it-works">See how it works <span>↓</span></a>
               <a className="site-secondary-link" href={siteData.repository.url}>View source on GitHub <span>↗</span></a>
             </div>
           </div>
           <aside className="site-hero-panel">
             <div className="site-hero-panel-head"><span>Current public record</span><b>{siteData.recordDate}</b></div>
             <dl>
-              <div><dt>Guided workflows</dt><dd>{siteData.workflows.length}<small>retained regression oracles</small></dd></div>
-              <div><dt>Distributed record</dt><dd>{siteData.scaling.ndof.toLocaleString()}<small>degrees of freedom</small></dd></div>
-              <div><dt>Real-device roadmap</dt><dd>{siteData.scorecard.stages.length}<small>evidence stages tracked</small></dd></div>
+              <div><dt>Guided workflows</dt><dd>{siteData.workflows.length}<small>runners and retained oracles</small></dd></div>
+              <div><dt>Retained benchmark</dt><dd>{siteData.scaling.ndof.toLocaleString()}<small>degrees of freedom</small></dd></div>
+              <div><dt>Real-device validation</dt><dd className="site-record-status">Not established<small>experiment-matched qualification</small></dd></div>
             </dl>
-            <Boundary>{siteData.tsvScreening.claimBoundary}</Boundary>
+            <Boundary>{siteData.projectBoundary}</Boundary>
           </aside>
         </section>
 
-        <section className="site-principles" aria-label="Project principles">
-          <article><span>01</span><div><strong>Trace the design object</strong><p>Stable IDs and provenance survive handoffs into analysis records.</p></div></article>
-          <article><span>02</span><div><strong>Keep model levels explicit</strong><p>Component checks, examples, timings, and experimental comparisons are not collapsed into one label.</p></div></article>
-          <article><span>03</span><div><strong>Fail closed</strong><p>Stateful examples emit results only after every accepted increment satisfies the solver rule.</p></div></article>
-        </section>
-
-        <section className="site-section" id="workflows">
+        <section className="site-process site-section" id="how-it-works">
           <div className="site-section-heading">
-            <div><p className="site-kicker"><span /> Runnable examples</p><h2>Five paths from inputs to reviewable results</h2></div>
-            <p>Every card links to its runner, retained numerical oracle, and full limitations. These checks show what the stated model computes; they are not experimental qualification.</p>
+            <div><p className="site-kicker"><span /> How CoupFE-EDA works</p><h2>A traceable path from design inputs to engineering evidence</h2></div>
+            <p>{siteData.process.summary}</p>
           </div>
-          <div className="site-workflow-grid">
-            {siteData.workflows.map((workflow) => <WorkflowCard workflow={workflow} key={workflow.id} />)}
+          <ol className="site-process-flow">
+            {siteData.process.steps.map((step, index) => (
+              <li key={step.id}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <strong>{step.title}</strong>
+                <p>{step.detail}</p>
+              </li>
+            ))}
+          </ol>
+          <Boundary>{siteData.process.boundary}</Boundary>
+          <div className="site-process-principles" aria-label="Project principles">
+            <article><span>01</span><div><strong>Trace the design object</strong><p>Stable IDs and provenance survive handoffs into analysis records.</p></div></article>
+            <article><span>02</span><div><strong>Keep model levels explicit</strong><p>Components, examples, timings, and experimental comparisons retain separate evidence labels.</p></div></article>
+            <article><span>03</span><div><strong>Fail closed</strong><p>Stateful examples emit results only after every accepted increment satisfies the solver rule.</p></div></article>
           </div>
         </section>
 
@@ -175,18 +185,21 @@ function PublicSite() {
             <a href={publicAsset(siteData.tsvScreening.figureAsset)}>Open full-size SVG <span>↗</span></a>
           </div>
           <div className="site-feature-copy">
-            <p className="site-kicker"><span /> Real retained example output</p>
-            <h2>Identity-preserving TSV screening</h2>
+            <p className="site-kicker"><span /> Retained synthetic integration demonstration</p>
+            <div className="site-feature-title"><h2>Identity-preserving TSV-to-device screening</h2><span>Synthetic inputs</span></div>
             <p>
               The project runner maps {siteData.tsvScreening.nDevices} synthetic device IDs
               through a classical Lamé far-field stress proxy and channel-oriented mobility
               proxies. A deterministic orientation action is then re-screened at a {thresholdPercent}% threshold.
             </p>
+            <div className="site-feature-process" aria-label="Synthetic TSV screening process">
+              <span>Stable IDs</span><span>Stress proxy</span><span>Mobility proxy</span><span>Threshold screen</span><span>Synthetic orientation action</span>
+            </div>
             <div className="site-feature-metrics">
-              <article><span>Threshold violations</span><strong>{siteData.tsvScreening.baselineViolations} <i>→</i> {siteData.tsvScreening.optimizedViolations}</strong></article>
+              <article><span>Synthetic proxy violations</span><strong>{siteData.tsvScreening.baselineViolations} <i>→</i> {siteData.tsvScreening.optimizedViolations}</strong></article>
               <article><span>Peak |mobility proxy|</span><strong>{siteData.tsvScreening.baselinePeakAbsMobilityProxy.toFixed(4)} <i>→</i> {siteData.tsvScreening.optimizedPeakAbsMobilityProxy.toFixed(4)}</strong></article>
             </div>
-            <Boundary>{siteData.tsvScreening.claimBoundary}</Boundary>
+            <Boundary>{siteData.tsvScreening.displayBoundary}</Boundary>
             <nav className="site-inline-links" aria-label="TSV screening evidence">
               <a href={publicAsset(siteData.tsvScreening.evidenceAsset)}>Evidence JSON</a>
               <a href={publicAsset(siteData.tsvScreening.csvAsset)}>Device CSV</a>
@@ -196,9 +209,37 @@ function PublicSite() {
           </div>
         </section>
 
-        <section className="site-scaling site-section" id="scaling">
+        <section className="site-interface-cta" id="interface">
+          <div><p className="site-kicker"><span /> Supervision interface</p><h2>Explore models, evidence, and simulated lifecycle events</h2></div>
+          <p>The public interface demonstrates the review and supervision contract. It does not execute CoupFE-EDA solvers; connected execution remains a separate loopback-only local setup.</p>
+          <nav aria-label="Interface demonstration">
+            <a className="site-primary-link" href={`${import.meta.env.BASE_URL}?surface=workbench`}>Open interface demonstration <span>→</span></a>
+            <a className="site-secondary-link" href={repositoryFile("web/README.md")}>Local setup documentation <span>↗</span></a>
+          </nav>
+        </section>
+
+        <section className="site-section site-examples" id="examples">
           <div className="site-section-heading">
-            <div><p className="site-kicker"><span /> Retained benchmark bundle</p><h2>{siteData.scaling.ndof.toLocaleString()}-DOF fixed-size solve</h2></div>
+            <div><p className="site-kicker"><span /> Checked examples</p><h2>EDA-linked demonstrations and focused numerical examples</h2></div>
+            <p>Every card links to its runner, retained numerical oracle, and full limitation. The grouping distinguishes declared handoff demonstrations from focused physics and solver checks.</p>
+          </div>
+          <section className="site-workflow-group" aria-labelledby="integration-workflows-title">
+            <header><div><span>EDA-linked demonstrations</span><h3 id="integration-workflows-title">Design identities carried into engineering screens</h3></div><p>Integration examples preserve a synthetic design object across a declared analysis or screening handoff.</p></header>
+            <div className="site-workflow-grid site-workflow-grid-integration">
+              {integrationWorkflows.map((workflow, index) => <WorkflowCard workflow={workflow} kind="integration" displayIndex={index + 1} key={workflow.id} />)}
+            </div>
+          </section>
+          <section className="site-workflow-group" aria-labelledby="verification-workflows-title">
+            <header><div><span>Physics and solver verification</span><h3 id="verification-workflows-title">Selected physics and solver examples</h3></div><p>These examples check specific constitutive, coupling, assembly, and state-update behavior without claiming a complete device workflow.</p></header>
+            <div className="site-workflow-grid site-workflow-grid-verification">
+              {verificationWorkflows.map((workflow, index) => <WorkflowCard workflow={workflow} kind="verification" displayIndex={index + 1} key={workflow.id} />)}
+            </div>
+          </section>
+        </section>
+
+        <section className="site-scaling site-section" id="performance">
+          <div className="site-section-heading">
+            <div><p className="site-kicker"><span /> Performance evidence</p><h2>{siteData.scaling.ndof.toLocaleString()}-DOF fixed-size solve</h2></div>
             <p>{siteData.scaling.driver} · {siteData.scaling.repeatsPerRank} complete launches per rank count · synchronized maximum-rank solve wall time.</p>
           </div>
           <div className="site-scaling-layout">
@@ -222,58 +263,31 @@ function PublicSite() {
           </div>
         </section>
 
-        <section className="site-section" id="figures">
+        <section className="site-validation-summary site-section" id="validation">
           <div className="site-section-heading">
-            <div><p className="site-kicker"><span /> Project-authored figures</p><h2>Read the checks before reading the claims</h2></div>
-            <p>These figures are generated from the repository's validation-guide records. Their role is to make component and toolchain evidence easier to inspect.</p>
+            <div><p className="site-kicker"><span /> Validation status</p><h2>Checked foundations; real-device validation remains open</h2></div>
+            <p>The homepage summarizes the current boundary. The detailed evidence categories, secondary figures, and future research stages remain public in the linked technical records.</p>
           </div>
-          <div className="site-figure-grid">
-            {siteData.figures.map((figure) => (
-              <figure key={figure.assetName}>
-                <a href={repositoryFile(figure.sourcePath)}>
-                  <img src={publicAsset(`repository-assets/validation-guide/${figure.assetName}`)} alt={figure.title} />
-                </a>
-                <figcaption><strong>{figure.title}</strong><p>{figure.caption}</p><span>Open source figure ↗</span></figcaption>
-              </figure>
-            ))}
+          <div className="site-validation-grid">
+            <article><span>Demonstrated here</span><h3>Checked public evidence</h3><ul><li>Five guided result-bearing workflows with retained regression oracles</li><li>Synthetic identity-preserving TSV screening and deterministic orientation action</li><li>A retained 526,338-DOF, 1/2/4/8-rank benchmark on its recorded machine</li></ul></article>
+            <article><span>Not currently claimed</span><h3>Real-device qualification</h3><ul><li>Experiment-matched TSV stress or mobility agreement</li><li>Predictive solder/package life or a live OpenDB design loop</li><li>Manufacturing signoff or production qualification</li></ul></article>
+            <article><span>Next major milestone</span><h3>3-D TSV reference case</h3><p>Retain a permitted, versioned reference case with experiment-matched boundary conditions, mesh/domain convergence, and a comparison record with declared alignment and uncertainty.</p></article>
           </div>
-        </section>
-
-        <section className="site-validation site-section" id="validation">
-          <div className="site-section-heading">
-            <div><p className="site-kicker"><span /> TSV real-device roadmap</p><h2>From checked demonstrations to a measured device workflow</h2></div>
-            <p>This is a forward evidence plan for the TSV-to-device path—not a test summary, release score, or overall CoupFE-EDA rating. It identifies the work needed before claiming validation against a real device.</p>
-          </div>
-          <div className="site-roadmap-stages" aria-label="Six-stage real-device evidence roadmap">
-            {siteData.scorecard.stages.map((stage, index) => <RoadmapStageCard stage={stage} index={index} key={stage.id} />)}
-          </div>
-          <div className="site-roadmap-evidence-heading">
-            <div><span>Detailed evidence areas</span><h3>What is present, and what remains</h3></div>
-            <p><strong>{partiallySupported} foundations present</strong> · evidence incomplete<br /><strong>{notStarted} planned studies</strong> · no retained study yet</p>
-          </div>
-          <div className="site-scorecard">
-            {siteData.scorecard.categories.map((category) => <ScorecardRow category={category} key={category.id} />)}
-          </div>
-          <div className="site-scorecard-footer">
-            <Boundary>Completing this roadmap would establish a documented real-device research case. Manufacturing signoff or production use would require application-specific qualification beyond this repository.</Boundary>
-            <nav className="site-inline-links">
-              <SourceLink path={siteData.scorecard.sourcePath}>Machine-readable roadmap</SourceLink>
+          <div className="site-validation-footer">
+            <Boundary>{siteData.projectBoundary}</Boundary>
+            <nav className="site-inline-links" aria-label="Validation records">
               <SourceLink path={siteData.scorecard.evidenceGuidePath}>Evidence guide</SourceLink>
+              <SourceLink path={siteData.scorecard.roadmapPath}>Research roadmap</SourceLink>
+              <SourceLink path={siteData.scorecard.sourcePath}>Machine-readable status</SourceLink>
             </nav>
           </div>
-        </section>
-
-        <section className="site-workbench-invite">
-          <div><p className="site-kicker"><span /> Interface direction</p><h2>A GUI for supervising models, runs, evidence, and decisions</h2></div>
-          <p>The browser prototype demonstrates the interaction contract. Its public mode simulates run lifecycle events and does not execute CoupFE-EDA. A real local service exposes only approved workflow IDs and owns every command, path, and output directory.</p>
-          <a href={`${import.meta.env.BASE_URL}?surface=workbench`}>Open the clearly labeled interface demonstration <span>→</span></a>
         </section>
       </main>
 
       <footer className="site-footer">
         <a className="site-brand" href={import.meta.env.BASE_URL}><Mark /><strong>CoupFE<span>–EDA</span></strong></a>
-        <p>One open implementation of EDA-aware multiphysics workflows, built on CoupFE. The framework is extensible; the current evidence limits remain explicit.</p>
-        <nav><a href={siteData.repository.url}>GitHub</a><SourceLink path="docs/README.md">Documentation</SourceLink><a href={publicAsset("legal/LICENSE")}>Code license</a><a href={publicAsset("legal/LICENSE-SCOPE.md")}>License scope</a><a href={publicAsset("legal/THIRD_PARTY.md")}>Third-party notices</a></nav>
+        <div><p>One open implementation of EDA-aware multiphysics workflows, built on CoupFE. The current evidence limits remain explicit.</p><small>v{siteData.repository.version} · {siteData.repository.releaseStatus} · {siteData.repository.author}</small></div>
+        <nav aria-label="Project resources"><a href={siteData.repository.url}>GitHub</a><SourceLink path="docs/README.md">Documentation</SourceLink><SourceLink path={siteData.scorecard.evidenceGuidePath}>Evidence</SourceLink><SourceLink path={siteData.scorecard.roadmapPath}>Roadmap</SourceLink><a href={siteData.repository.issuesUrl}>Contact / issues</a><a href={publicAsset("legal/LICENSE")}>License</a><a href={publicAsset("legal/THIRD_PARTY.md")}>Notices</a></nav>
       </footer>
     </div>
   );

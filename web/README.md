@@ -2,13 +2,18 @@
 
 This directory builds two deliberately separate browser surfaces from one React/Vite source tree:
 
-- The default route is the public project website. It presents five runnable examples, the retained 526,338-DOF scaling record, project-authored figures, the synthetic TSV device-screening output, and a six-stage roadmap toward a measured real-device workflow. Every quantitative section links back to repository evidence and shows its qualification boundary.
+- The default route is the public project website. It presents a bounded design-input-to-evidence workflow pattern, the featured synthetic TSV-to-device record, five examples grouped by purpose, the retained 526,338-DOF scaling record, and a compact validation-status summary. Every quantitative section links back to repository evidence and shows its qualification boundary.
 - `?surface=workbench` opens the workbench interface. On GitHub Pages this is a clearly labeled browser-only interaction demonstration. In a local API build it can execute the one server-approved TSV screening workflow.
 
 GitHub Pages is static. It cannot run Python, CoupFE-EDA, OpenROAD, MPI, or an FEM solver.
 The public numerical values come from retained project-generated example and
 benchmark records; the browser-only lifecycle does not generate replacement
 engineering values.
+
+The complete real-device roadmap, ten-category evidence record, and four
+project-authored validation figures remain public in the repository and are
+checked by the website data guard. The landing page links to those records
+rather than rendering the full matrix and figure gallery inline.
 
 For that reason, public-mode controls use **Simulate** and the history is
 labeled **Simulated run history**. The connected local build uses **Run** and
