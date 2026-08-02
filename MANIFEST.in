@@ -41,6 +41,7 @@ include docs/roadmap.md
 include docs/theory.md
 recursive-include docs/history *.md
 include docs/validation_guide/generate_figures.py
+include docs/validation_guide/README.md
 recursive-include docs/validation_guide/figures *.png
 
 recursive-include eda_multiphysics *.py *.md *.csv *.json *.sp *.tcl

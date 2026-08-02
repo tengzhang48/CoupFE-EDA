@@ -237,6 +237,7 @@ PUBLIC_DOC_FILES = PUBLIC_HISTORY_FILES | {
     }
 } | {
     "docs/validation_guide/generate_figures.py",
+    "docs/validation_guide/README.md",
 }
 PUBLIC_EXAMPLE_FILES = {
     "examples/REFERENCES.md",

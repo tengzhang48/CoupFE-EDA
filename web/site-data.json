@@ -131,7 +131,7 @@
     },
     {
       "title": "Reliability toolchain checks",
-      "caption": "Generated project-authored figure covering checked toolchain components and broken controls.",
+      "caption": "Generated project-authored schematic of the imposed DNP shift Δu = Δα ΔT L_D and the bundled nine-location design-map check.",
       "sourcePath": "docs/validation_guide/figures/toolchain_reliability.png",
       "assetName": "toolchain_reliability.png"
     }

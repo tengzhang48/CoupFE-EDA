@@ -5,6 +5,11 @@ results. A successful test supports the named equation, implementation path,
 inputs, mesh, and tolerance. It does not qualify a different device, process,
 or signoff use.
 
+The project-authored summary PNGs are reproducible from their plotting source.
+See [validation-guide figure maintenance](validation_guide/README.md) for the
+symbol definitions, targeted regeneration commands, visual review checklist,
+and website asset flow.
+
 ## Evidence classes
 
 | Class | Meaning | Examples |

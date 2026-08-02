@@ -3,6 +3,9 @@
 Run from the repo root:
     conda activate coupfe-eda
     python docs/validation_guide/generate_figures.py
+
+For targeted regeneration and the review checklist, see
+``docs/validation_guide/README.md``.
 """
 from __future__ import annotations
 
@@ -85,7 +88,15 @@ def fig_tsv_stress():
     ax.set_title("TSV geometry")
     ax.set_xlabel("$r$")
     ax.set_ylabel("$r$")
-    ax.annotate("traction-free", xy=(1.05, 0), fontsize=9)
+    ax.annotate(
+        "traction-free",
+        xy=(1.05, 0),
+        ha="center",
+        va="center",
+        rotation=90,
+        rotation_mode="anchor",
+        fontsize=9,
+    )
     ax.annotate("Cu/Si mismatch\n$\\Delta T$", xy=(0, 0), ha="center", va="center", fontsize=9)
 
     ax = axes[1]
@@ -471,11 +482,13 @@ def fig_toolchain_reliability():
     theta = np.linspace(0, 2 * np.pi, 50)
     ax.plot(np.cos(theta), np.sin(theta), "k-")
     ax.fill(np.cos(theta), np.sin(theta), color="gray", alpha=0.3)
-    ax.annotate("", xy=(1.2, 0.3), xytext=(1.2, -0.3),
+    ax.annotate("", xy=(1.45, 0), xytext=(1.05, 0),
                 arrowprops=dict(arrowstyle="->", color="red", lw=2))
-    ax.text(1.4, 0, "$du$", color="red", va="center")
+    ax.text(1.25, 0.14, "imposed top-cap shift", color="red", ha="center", fontsize=9)
+    ax.text(1.25, -0.16, "$\\Delta u = \\Delta \\alpha\\,\\Delta T\\,L_D$",
+            color="red", ha="center", fontsize=10)
     ax.set_aspect("equal")
-    ax.set_title("test_reliability_3d_solder_joint\nshear $\\gamma \\approx du/h$")
+    ax.set_title("test_reliability_3d_solder_joint\nDNP shear $\\gamma \\approx \\Delta u/h$")
     ax.axis("off")
 
     ax = axes[1]
@@ -489,7 +502,11 @@ def fig_toolchain_reliability():
     ax.set_xlabel("µm")
     ax.set_ylabel("µm")
 
-    fig.suptitle("Toolchain reliability_3d tests", fontsize=14, y=1.02)
+    # Reserve a distinct top band so the two-line panel titles do not crowd the
+    # figure title.  ``tight_layout`` also keeps the shift/equation annotation
+    # inside the left panel without pushing it into the design-map panel.
+    fig.suptitle("Toolchain reliability_3d tests", fontsize=14, y=0.98)
+    fig.tight_layout(rect=(0, 0, 1, 0.90), w_pad=2.0)
     save(fig, "toolchain_reliability.png")
 
 
