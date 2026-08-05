@@ -196,7 +196,7 @@ function PublicSite() {
             <dl>
               <div><dt>Guided workflows</dt><dd>{siteData.workflows.length}<small>runners and retained oracles</small></dd></div>
               <div><dt>Retained benchmark</dt><dd>{siteData.scaling.ndof.toLocaleString()}<small>degrees of freedom</small></dd></div>
-              <div><dt>Real-device validation</dt><dd className="site-record-status">Not established<small>experiment-matched qualification</small></dd></div>
+              <div><dt>Measured-device comparison</dt><dd className="site-record-status">Not performed<small>No experimental qualification claim</small></dd></div>
             </dl>
             <Boundary>{siteData.projectBoundary}</Boundary>
           </aside>
@@ -281,7 +281,7 @@ function PublicSite() {
           </div>
           <div className="site-media-provenance" role="note">
             <strong>How these figures are built</strong>
-            <span>The solder and ETV images rerun the named CoupFE mechanics examples and refuse output unless their numerical oracles pass. The device map is regenerated from its EDA screening runner. Artifact and source hashes are retained in the linked contracts.</span>
+            <span>The solder, design-linked solder, and ETV images rerun the named CoupFE mechanics examples and refuse output unless their numerical oracles pass. The device map is regenerated from its EDA screening runner. Artifact and source hashes are retained in the linked contracts.</span>
           </div>
         </section>
 
@@ -372,12 +372,15 @@ function PublicSite() {
 function WorkbenchSurface() {
   const apiMode = import.meta.env.VITE_COUPFE_BACKEND === "fastapi";
   return (
-    <div className="prototype-route">
-      <div className="prototype-boundary" role="note">
-        <a href={import.meta.env.BASE_URL}>← Project website</a>
-        <strong>{apiMode ? "Local CoupFE solver connected" : "Retained CoupFE field explorer — GitHub Pages does not run the solver"}</strong>
-        <span>{apiMode ? "The only Run action maps to one fixed server-owned case." : "Field colors, curves, probes, and solved load states come from the build-verified axisymmetric TSV bundle."}</span>
-      </div>
+    <div className="workbench-route">
+      <header className="workbench-topbar">
+        <a href={import.meta.env.BASE_URL}>← CoupFE–EDA website</a>
+        <div>
+          <strong>TSV field workbench</strong>
+          <span>Axisymmetric plane-strain component verification</span>
+        </div>
+        <span className="workbench-topbar-status">{apiMode ? "Local solver connected" : "Retained evidence · read only"}</span>
+      </header>
       <App
         backend={apiMode ? createBackend() : undefined}
         projectId="coupfe-eda-local"

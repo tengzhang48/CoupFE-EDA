@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="580" viewBox="0 0 960 580" role="img" aria-labelledby="figure-title figure-description">
+  <title id="figure-title">Design-linked solder screening output</title>
+  <desc id="figure-description">A synthetic three-by-three joint map highlights stable joint SYNTH J00, then two three-by-three heatmaps show all 18 checked Hex8 dissipation values. The displayed cycle count is a calibration-specific screen, not predictive package life.</desc>
+  <rect width="960" height="580" fill="#08111f"/>
+  <style>
+    text { font-family: Inter, ui-sans-serif, system-ui, sans-serif; fill: #edf4ff; }
+    .muted { fill: #9eb0c8; } .label { fill: #cbd8ea; font-size: 13px; }
+    .small { font-size: 12px; } .value { font: 600 13px ui-monospace, SFMono-Regular, monospace; }
+    .axis { stroke: #52647e; stroke-width: 1; }
+  </style>
+  <text x="42" y="46" font-size="24" font-weight="700">Design-linked solder screening output</text>
+  <text x="42" y="72" class="muted" font-size="13">Synthetic joint identity → distance-to-neutral-point handoff → checked 18-Hex8 SAC305 response</text>
+  <rect x="42" y="104" width="286" height="402" rx="8" fill="#0d1b2e" stroke="#344862"/>
+  <text x="62" y="136" font-size="16" font-weight="650">Synthetic 3 × 3 joint map</text>
+  <text x="62" y="158" class="small muted">Maximum DNP; stable row-order tie break</text>
+  <circle cx="96" cy="210" r="20" fill="#d7a83e" stroke="#ffffff" stroke-width="3"/>
+  <text x="96" y="214" text-anchor="middle" class="small">J00</text>
+  <circle cx="178" cy="210" r="20" fill="#193a55" stroke="#71859b" stroke-width="1"/>
+  <text x="178" y="214" text-anchor="middle" class="small">J01</text>
+  <circle cx="260" cy="210" r="20" fill="#193a55" stroke="#d7a83e" stroke-width="2"/>
+  <text x="260" y="214" text-anchor="middle" class="small">J02</text>
+  <circle cx="96" cy="292" r="20" fill="#193a55" stroke="#71859b" stroke-width="1"/>
+  <text x="96" y="296" text-anchor="middle" class="small">J10</text>
+  <circle cx="178" cy="292" r="20" fill="#193a55" stroke="#71859b" stroke-width="1"/>
+  <text x="178" y="296" text-anchor="middle" class="small">J11</text>
+  <circle cx="260" cy="292" r="20" fill="#193a55" stroke="#71859b" stroke-width="1"/>
+  <text x="260" y="296" text-anchor="middle" class="small">J12</text>
+  <circle cx="96" cy="374" r="20" fill="#193a55" stroke="#d7a83e" stroke-width="2"/>
+  <text x="96" y="378" text-anchor="middle" class="small">J20</text>
+  <circle cx="178" cy="374" r="20" fill="#193a55" stroke="#71859b" stroke-width="1"/>
+  <text x="178" y="378" text-anchor="middle" class="small">J21</text>
+  <circle cx="260" cy="374" r="20" fill="#193a55" stroke="#d7a83e" stroke-width="2"/>
+  <text x="260" y="378" text-anchor="middle" class="small">J22</text>
+  <text x="62" y="406" class="label">selected <tspan class="value">SYNTH_J00</tspan></text>
+  <text x="62" y="431" class="label">source <tspan class="value">VDD_20000_20000_1</tspan></text>
+  <text x="62" y="456" class="label">L_D <tspan class="value">42.4264 µm</tspan></text>
+  <text x="62" y="481" class="label">L_D / h <tspan class="value">0.848528</tspan></text>
+  <text x="366" y="136" font-size="16" font-weight="650">Accepted Hex8 dissipation field</text>
+  <text x="366" y="158" class="small muted">All element values · MPa = MJ/m³</text>
+  <text x="378" y="194" class="label">Layer z1 / 2</text>
+  <rect x="378" y="348" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="408" y="375" text-anchor="middle" class="value">0.004834</text>
+  <text x="408" y="393" text-anchor="middle" class="small muted">e1,1</text>
+  <rect x="445" y="348" width="60" height="60" rx="5" fill="#ddae43" stroke="#71859b" stroke-width="1"/>
+  <text x="475" y="375" text-anchor="middle" class="value">0.011134</text>
+  <text x="475" y="393" text-anchor="middle" class="small muted">e2,1</text>
+  <rect x="512" y="348" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="542" y="375" text-anchor="middle" class="value">0.004834</text>
+  <text x="542" y="393" text-anchor="middle" class="small muted">e3,1</text>
+  <rect x="378" y="281" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="408" y="308" text-anchor="middle" class="value">0.004834</text>
+  <text x="408" y="326" text-anchor="middle" class="small muted">e1,2</text>
+  <rect x="445" y="281" width="60" height="60" rx="5" fill="#ddae43" stroke="#71859b" stroke-width="1"/>
+  <text x="475" y="308" text-anchor="middle" class="value">0.011134</text>
+  <text x="475" y="326" text-anchor="middle" class="small muted">e2,2</text>
+  <rect x="512" y="281" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="542" y="308" text-anchor="middle" class="value">0.004834</text>
+  <text x="542" y="326" text-anchor="middle" class="small muted">e3,2</text>
+  <rect x="378" y="214" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="408" y="241" text-anchor="middle" class="value">0.004834</text>
+  <text x="408" y="259" text-anchor="middle" class="small muted">e1,3</text>
+  <rect x="445" y="214" width="60" height="60" rx="5" fill="#ddae43" stroke="#71859b" stroke-width="1"/>
+  <text x="475" y="241" text-anchor="middle" class="value">0.011134</text>
+  <text x="475" y="259" text-anchor="middle" class="small muted">e2,3</text>
+  <rect x="512" y="214" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="542" y="241" text-anchor="middle" class="value">0.004834</text>
+  <text x="542" y="259" text-anchor="middle" class="small muted">e3,3</text>
+  <text x="655" y="194" class="label">Layer z2 / 2</text>
+  <rect x="655" y="348" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="685" y="375" text-anchor="middle" class="value">0.004834</text>
+  <text x="685" y="393" text-anchor="middle" class="small muted">e1,1</text>
+  <rect x="722" y="348" width="60" height="60" rx="5" fill="#ddae43" stroke="#71859b" stroke-width="1"/>
+  <text x="752" y="375" text-anchor="middle" class="value">0.011134</text>
+  <text x="752" y="393" text-anchor="middle" class="small muted">e2,1</text>
+  <rect x="789" y="348" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="819" y="375" text-anchor="middle" class="value">0.004834</text>
+  <text x="819" y="393" text-anchor="middle" class="small muted">e3,1</text>
+  <rect x="655" y="281" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="685" y="308" text-anchor="middle" class="value">0.004834</text>
+  <text x="685" y="326" text-anchor="middle" class="small muted">e1,2</text>
+  <rect x="722" y="281" width="60" height="60" rx="5" fill="#ddae43" stroke="#71859b" stroke-width="1"/>
+  <text x="752" y="308" text-anchor="middle" class="value">0.011134</text>
+  <text x="752" y="326" text-anchor="middle" class="small muted">e2,2</text>
+  <rect x="789" y="281" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="819" y="308" text-anchor="middle" class="value">0.004834</text>
+  <text x="819" y="326" text-anchor="middle" class="small muted">e3,2</text>
+  <rect x="655" y="214" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="685" y="241" text-anchor="middle" class="value">0.004834</text>
+  <text x="685" y="259" text-anchor="middle" class="small muted">e1,3</text>
+  <rect x="722" y="214" width="60" height="60" rx="5" fill="#ddae43" stroke="#71859b" stroke-width="1"/>
+  <text x="752" y="241" text-anchor="middle" class="value">0.011134</text>
+  <text x="752" y="259" text-anchor="middle" class="small muted">e2,3</text>
+  <rect x="789" y="214" width="60" height="60" rx="5" fill="#183654" stroke="#71859b" stroke-width="1"/>
+  <text x="819" y="241" text-anchor="middle" class="value">0.004834</text>
+  <text x="819" y="259" text-anchor="middle" class="small muted">e3,3</text>
+  <text x="366" y="457" class="label">peak dissipation <tspan class="value">0.011134 MPa</tspan></text>
+  <text x="366" y="482" class="label">mean dissipation <tspan class="value">0.006934 MPa</tspan></text>
+  <text x="655" y="457" class="label">shear range <tspan class="value">0.002016</tspan></text>
+  <text x="655" y="482" class="label">calibration screen <tspan class="value">47,273 cycles</tspan></text>
+  <text x="42" y="548" class="small muted">Synthetic map and regular block. Only stable identity and L_D cross the handoff; the cycle count is calibration-specific, not predictive life.</text>
+</svg>

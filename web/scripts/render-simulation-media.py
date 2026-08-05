@@ -1,7 +1,7 @@
 """Render website figures from checked CoupFE-EDA simulation runners.
 
 The script executes the named EDA examples, verifies their retained numerical
-oracles, and writes two accessible SVG figures plus a checksum/source contract.
+oracles, and writes three accessible SVG figures plus a checksum/source contract.
 It deliberately does not consume CoupFE-Cardiac results; that project's
 environment can be used to provide the shared pinned CoupFE Core dependency.
 
@@ -33,6 +33,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from eda_multiphysics.source_identity import SourceIdentityError, resolve_coupfe_identity
+from examples.design_linked_solder_screening import run as design_solder_runner
 from examples.etv_partitioned_cycle import run as etv_runner
 from examples.solder_3d_cycle import run as solder_runner
 
@@ -78,7 +79,7 @@ def _core_identity() -> dict[str, str]:
     return resolve_coupfe_identity().as_record()
 
 
-def _verify_simulations() -> tuple[dict[str, Any], dict[str, Any]]:
+def _verify_simulations() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     solder = solder_runner.run()
     solder_oracle = json.loads(
         (ROOT / "examples/solder_3d_cycle/expected_results.json").read_text(encoding="utf-8")
@@ -93,13 +94,33 @@ def _verify_simulations() -> tuple[dict[str, Any], dict[str, Any]]:
     if errors:
         raise MediaBuildError("solder_3d_cycle failed its oracle: " + "; ".join(errors))
 
+    design_solder = design_solder_runner.run()
+    design_oracle = json.loads(
+        (ROOT / "examples/design_linked_solder_screening/expected_results.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    errors = design_solder_runner._compare(
+        design_solder,
+        design_oracle["expected"],
+        rtol=float(design_oracle["relative_tolerance"]),
+        atol=float(design_oracle["absolute_tolerance"]),
+    )
+    errors.extend(
+        design_solder_runner._check_bounds(design_solder, design_oracle.get("bounds", []))
+    )
+    if errors:
+        raise MediaBuildError(
+            "design_linked_solder_screening failed its oracle: " + "; ".join(errors)
+        )
+
     etv = etv_runner.run()
     verification = etv_runner._check(etv)
     if not verification["passed"]:
         raise MediaBuildError(
             "etv_partitioned_cycle failed its oracle: " + "; ".join(verification["failures"])
         )
-    return solder, etv
+    return solder, design_solder, etv
 
 
 def _mix(left: tuple[int, int, int], right: tuple[int, int, int], amount: float) -> str:
@@ -175,6 +196,85 @@ def _solder_svg(record: dict[str, Any]) -> str:
     )
 
 
+def _design_linked_solder_svg(record: dict[str, Any]) -> str:
+    values = [float(value) for value in record["results"]["dW_element_MPa"]]
+    nx, ny, nz = record["configuration"]["mesh_elements_xyz"]
+    if [nx, ny, nz] != [3, 3, 2] or len(values) != 18 or not all(math.isfinite(v) for v in values):
+        raise MediaBuildError("design-linked solder field is not the reviewed 3x3x2 result")
+
+    selected = record["selected_design_object"]
+    tied = set(selected["maximum_dnp_tied_joint_ids"])
+    if selected["joint_id"] != "SYNTH_J00" or len(tied) != 4:
+        raise MediaBuildError("design-linked solder selection is not the reviewed stable-ID result")
+
+    lower, upper = min(values), max(values)
+    parts = [
+        '<text x="42" y="46" font-size="24" font-weight="700">Design-linked solder screening output</text>',
+        '<text x="42" y="72" class="muted" font-size="13">Synthetic joint identity → distance-to-neutral-point handoff → checked 18-Hex8 SAC305 response</text>',
+        '<rect x="42" y="104" width="286" height="402" rx="8" fill="#0d1b2e" stroke="#344862"/>',
+        '<text x="62" y="136" font-size="16" font-weight="650">Synthetic 3 × 3 joint map</text>',
+        '<text x="62" y="158" class="small muted">Maximum DNP; stable row-order tie break</text>',
+    ]
+    for row in range(3):
+        for column in range(3):
+            joint_id = f"SYNTH_J{row}{column}"
+            x = 96 + column * 82
+            y = 210 + row * 82
+            selected_joint = joint_id == selected["joint_id"]
+            tied_joint = joint_id in tied
+            fill = "#d7a83e" if selected_joint else "#193a55"
+            stroke = "#ffffff" if selected_joint else "#d7a83e" if tied_joint else "#71859b"
+            width = 3 if selected_joint else 2 if tied_joint else 1
+            parts.append(
+                f'<circle cx="{x}" cy="{y}" r="20" fill="{fill}" stroke="{stroke}" stroke-width="{width}"/>'
+            )
+            parts.append(f'<text x="{x}" y="{y + 4}" text-anchor="middle" class="small">J{row}{column}</text>')
+    parts.extend(
+        [
+            f'<text x="62" y="406" class="label">selected <tspan class="value">{escape(selected["joint_id"])}</tspan></text>',
+            f'<text x="62" y="431" class="label">source <tspan class="value">{escape(selected["source_object_id"])}</tspan></text>',
+            f'<text x="62" y="456" class="label">L_D <tspan class="value">{selected["L_D_um"]:.4f} µm</tspan></text>',
+            f'<text x="62" y="481" class="label">L_D / h <tspan class="value">{record["configuration"]["L_D_over_h"]:.6f}</tspan></text>',
+            '<text x="366" y="136" font-size="16" font-weight="650">Accepted Hex8 dissipation field</text>',
+            '<text x="366" y="158" class="small muted">All element values · MPa = MJ/m³</text>',
+        ]
+    )
+
+    cell = 67
+    for layer in range(nz):
+        x0 = 378 + layer * 277
+        parts.append(f'<text x="{x0}" y="194" class="label">Layer z{layer + 1} / {nz}</text>')
+        for row in range(ny):
+            for column in range(nx):
+                value = values[(layer * ny + row) * nx + column]
+                fraction = (value - lower) / (upper - lower)
+                fill = _mix((24, 54, 84), (221, 174, 67), fraction)
+                x = x0 + column * cell
+                y = 214 + (ny - 1 - row) * cell
+                parts.append(
+                    f'<rect x="{x}" y="{y}" width="{cell - 7}" height="{cell - 7}" rx="5" '
+                    f'fill="{fill}" stroke="#71859b" stroke-width="1"/>'
+                )
+                parts.append(f'<text x="{x + 30}" y="{y + 27}" text-anchor="middle" class="value">{value:.6f}</text>')
+                parts.append(f'<text x="{x + 30}" y="{y + 45}" text-anchor="middle" class="small muted">e{column + 1},{row + 1}</text>')
+
+    parts.extend(
+        [
+            f'<text x="366" y="457" class="label">peak dissipation <tspan class="value">{record["results"]["dW_peak_MPa"]:.6f} MPa</tspan></text>',
+            f'<text x="366" y="482" class="label">mean dissipation <tspan class="value">{record["results"]["dW_mean_MPa"]:.6f} MPa</tspan></text>',
+            f'<text x="655" y="457" class="label">shear range <tspan class="value">{record["results"]["engineering_shear_range"]:.6f}</tspan></text>',
+            f'<text x="655" y="482" class="label">calibration screen <tspan class="value">{record["results"]["Syed_calibration_screen_cycles"]:,.0f} cycles</tspan></text>',
+            '<text x="42" y="548" class="small muted">Synthetic map and regular block. Only stable identity and L_D cross the handoff; the cycle count is calibration-specific, not predictive life.</text>',
+        ]
+    )
+    return _svg_document(
+        "Design-linked solder screening output",
+        "A synthetic three-by-three joint map highlights stable joint SYNTH J00, then two three-by-three heatmaps show all 18 checked Hex8 dissipation values. The displayed cycle count is a calibration-specific screen, not predictive package life.",
+        "\n".join(f"  {part}" for part in parts),
+        height=580,
+    )
+
+
 def _bar(x: float, baseline: float, width: float, value: float, maximum: float, height: float, fill: str, pattern: bool) -> str:
     bar_height = value / maximum * height
     y = baseline - bar_height
@@ -238,10 +338,11 @@ def _etv_svg(record: dict[str, Any]) -> str:
 
 def build(output_dir: Path, contract_path: Path) -> dict[str, Any]:
     core = _core_identity()
-    solder, etv = _verify_simulations()
+    solder, design_solder, etv = _verify_simulations()
     output_dir.mkdir(parents=True, exist_ok=True)
     expected = {
         "solder-3d-dissipation.svg": _solder_svg(solder),
+        "design-linked-solder-screening.svg": _design_linked_solder_svg(design_solder),
         "etv-partitioned-comparison.svg": _etv_svg(etv),
     }
     for name, content in expected.items():
@@ -250,6 +351,11 @@ def build(output_dir: Path, contract_path: Path) -> dict[str, Any]:
     sources = []
     for case_id, runner, oracle in (
         ("solder_3d_cycle", "examples/solder_3d_cycle/run.py", "examples/solder_3d_cycle/expected_results.json"),
+        (
+            "design_linked_solder_screening",
+            "examples/design_linked_solder_screening/run.py",
+            "examples/design_linked_solder_screening/expected_results.json",
+        ),
         ("etv_partitioned_cycle", "examples/etv_partitioned_cycle/run.py", "examples/etv_partitioned_cycle/expected_results.json"),
     ):
         sources.append(

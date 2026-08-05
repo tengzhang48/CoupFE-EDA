@@ -14,6 +14,9 @@ describe("public CoupFE-EDA site", () => {
     const { container } = render(<SiteApp />);
     expect(screen.getByRole("heading", { level: 1, name: /EDA-aware multiphysics, from design inputs to reviewable evidence/i })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByText("Measured-device comparison")).toBeInTheDocument();
+    expect(screen.getByText("Not performed")).toBeInTheDocument();
+    expect(screen.getByText("No experimental qualification claim")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /A traceable path from design inputs to engineering evidence/i })).toBeInTheDocument();
     for (const step of [
       "Design and case inputs",
@@ -132,8 +135,8 @@ describe("public CoupFE-EDA site", () => {
   it("labels Pages as retained evidence and does not expose a fake run action", () => {
     window.history.replaceState({}, "", "/?surface=workbench");
     render(<SiteApp />);
-    expect(screen.getByText(/Retained CoupFE field explorer — GitHub Pages does not run the solver/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Inspect the field behind the claim." })).toBeInTheDocument();
+    expect(screen.getByText(/Retained evidence · read only/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "TSV field workbench" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Retained solver run" })).toHaveTextContent(/cannot execute Python or CoupFE/i);
     expect(screen.queryByRole("button", { name: /run the fixed/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /simulate/i })).not.toBeInTheDocument();

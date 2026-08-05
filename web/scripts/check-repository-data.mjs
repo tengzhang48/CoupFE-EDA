@@ -511,10 +511,10 @@ if (!publicSvg.includes("Synthetic TSV-to-device") || !publicSvg.includes("demon
   fail("public TSV SVG is not visibly labeled as a synthetic demonstration");
 }
 
-equal(site.simulationMedia.length, 3, "simulation-media card count");
+equal(site.simulationMedia.length, 4, "simulation-media card count");
 equal(
   site.simulationMedia.map((media) => media.id).join(","),
-  "solder_3d_dissipation,etv_partitioned_comparison,tsv_device_screening",
+  "solder_3d_dissipation,design_linked_solder_screening,etv_partitioned_comparison,tsv_device_screening",
   "simulation-media card order",
 );
 for (const media of site.simulationMedia) {
@@ -554,7 +554,12 @@ equal(
   "https://github.com/tengzhang48/CoupFE.git",
   "simulation-media Core URL",
 );
-equal(simulationMediaContract.sources?.length, 2, "simulation-media source count");
+equal(simulationMediaContract.sources?.length, 3, "simulation-media source count");
+equal(
+  simulationMediaContract.sources.map((source) => source.caseId).join(","),
+  "solder_3d_cycle,design_linked_solder_screening,etv_partitioned_cycle",
+  "simulation-media source order",
+);
 for (const source of simulationMediaContract.sources) {
   equal(source.oraclePassed, true, `simulation-media oracle status ${source.caseId}`);
   const runnerPath = await requireFile(source.runner);
@@ -562,7 +567,12 @@ for (const source of simulationMediaContract.sources) {
   equal(await sha256(runnerPath), source.runnerSha256, `simulation-media runner hash ${source.caseId}`);
   equal(await sha256(oraclePath), source.oracleSha256, `simulation-media oracle hash ${source.caseId}`);
 }
-equal(simulationMediaContract.artifacts?.length, 2, "simulation-media artifact count");
+equal(simulationMediaContract.artifacts?.length, 3, "simulation-media artifact count");
+equal(
+  simulationMediaContract.artifacts.map((artifact) => artifact.name).join(","),
+  "solder-3d-dissipation.svg,design-linked-solder-screening.svg,etv-partitioned-comparison.svg",
+  "simulation-media artifact order",
+);
 for (const artifact of simulationMediaContract.artifacts) {
   if (!/^[a-z0-9-]+\.svg$/.test(artifact.name)) {
     fail(`unsafe simulation-media artifact name: ${String(artifact.name)}`);

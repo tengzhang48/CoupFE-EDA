@@ -144,30 +144,65 @@ describe("real CoupFE field explorer", () => {
     mockFieldFetch();
     renderExplorer();
 
-    expect(screen.getByRole("heading", { name: "Inspect the field behind the claim." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "TSV field workbench" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Retained solver run" })).toHaveTextContent(
       "GitHub Pages reads the checked field bundle",
     );
-    expect(await screen.findByRole("heading", { name: "Silicon radial stress σrr" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Radial stress versus radius" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Axisymmetric radial stress at delta temperature -400 kelvin/i })).toBeInTheDocument();
     expect(screen.getByText(siteData.tsvField.claimBoundary)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "field.json" })).toHaveAttribute("href", "/field.json");
-    expect(screen.getByText(/Every plotted field value has a route back to solver arrays/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Retained source record" })).toBeInTheDocument();
+    expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /simulate/i })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Mesh nodes" }));
-    expect(screen.getByText(/sampled actual Line2 nodes/i)).toBeInTheDocument();
+    const meshButton = screen.getByRole("button", { name: "Mesh nodes" });
+    fireEvent.click(meshButton);
+    expect(meshButton).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("slider", { name: "Silicon probe radius" }))
+      .toHaveAttribute("aria-valuetext", "20.00 micrometres");
   });
 
   it("moves only among the nine actual solved states", async () => {
     mockFieldFetch();
     renderExplorer();
-    await screen.findByRole("heading", { name: "Silicon radial stress σrr" });
+    await screen.findByRole("heading", { name: "Radial stress versus radius" });
 
     const slider = screen.getByRole("slider", { name: "Solved cooling-load state" });
+    expect(slider).toHaveAttribute("aria-valuetext", "-400 kelvin; load case 9 of 9");
     fireEvent.change(slider, { target: { value: "4" } });
+    expect(slider).toHaveAttribute("aria-valuetext", "-200 kelvin; load case 5 of 9");
     expect(screen.getByText("ΔT = -200 K")).toBeInTheDocument();
-    expect(screen.getByText(/State 5 of 9 · independent static CoupFE solve · not transient/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Play actual states" })).toBeInTheDocument();
+    expect(screen.getByText(/Case 5 of 9 · independent static solve · not transient/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Play actual states/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Select load case 2: -50 K" }));
+    expect(screen.getByText("ΔT = -50 K")).toBeInTheDocument();
+  });
+
+  it("switches among retained stress and displacement outputs", async () => {
+    mockFieldFetch();
+    const { container } = renderExplorer();
+    await screen.findByRole("heading", { name: "Radial stress versus radius" });
+    expect(container.querySelector(".field-colorbar i")).toHaveClass("is-positive");
+
+    fireEvent.click(screen.getByRole("button", { name: /Hoop stress/ }));
+    expect(screen.getByRole("heading", { name: "Hoop stress versus radius" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Axisymmetric hoop stress at delta temperature -400 kelvin/i })).toBeInTheDocument();
+    expect(container.querySelector(".field-colorbar i")).toHaveClass("is-negative");
+
+    fireEvent.click(screen.getByRole("button", { name: /Radial displacement/ }));
+    expect(screen.getByRole("heading", { name: "Radial displacement versus radius" })).toBeInTheDocument();
+    expect(screen.getByText(/Visible minimum/).closest("div")).toHaveTextContent("nm");
+    expect(container.querySelector(".field-colorbar i")).toHaveClass("is-negative");
+  });
+
+  it("keeps the field scale fixed across every solved load case", async () => {
+    const bundle = fieldBundle();
+    const firstSilicon = bundle.mesh.region_element_indices.silicon[0]!;
+    bundle.load_sweep.steps[1]!.field.sigma_rr_MPa[firstSilicon] = 1111;
+    mockFieldFetch(bundle);
+    renderExplorer();
+    await screen.findByRole("heading", { name: "Radial stress versus radius" });
+    expect(screen.getByText("1111")).toBeInTheDocument();
   });
 
   it("fails closed on a field that does not come from the reviewed case", () => {
@@ -180,6 +215,12 @@ describe("real CoupFE field explorer", () => {
     const inventedMesh = fieldBundle();
     inventedMesh.mesh.connectivity[4] = [0, 1];
     expect(() => validateTsvFieldBundle(inventedMesh)).toThrow(/not the reviewed Line2 chain/i);
+    const roundedGeometry = fieldBundle();
+    roundedGeometry.mesh.via_radius_um = 14.999999999999998;
+    expect(() => validateTsvFieldBundle(roundedGeometry)).not.toThrow();
+    const wrongGeometry = fieldBundle();
+    wrongGeometry.mesh.via_radius_um = 14.9;
+    expect(() => validateTsvFieldBundle(wrongGeometry)).toThrow(/geometric radii/i);
   });
 
   it("submits only the named workflow in connected mode", async () => {
@@ -236,7 +277,7 @@ describe("real CoupFE field explorer", () => {
       startRun: vi.fn(), cancelRun: vi.fn(), subscribeProjectEvents: vi.fn().mockReturnValue(() => undefined),
     };
     renderExplorer(backend);
-    await screen.findByRole("heading", { name: "Silicon radial stress σrr" });
+    await screen.findByRole("heading", { name: "Radial stress versus radius" });
     expect(screen.getByText(/retained release bundle/i)).toBeInTheDocument();
 
     await act(async () => { resolveSnapshot(completedConnectedSnapshot()); });
@@ -262,7 +303,7 @@ describe("real CoupFE field explorer", () => {
       startRun: vi.fn(), cancelRun: vi.fn(), subscribeProjectEvents: vi.fn().mockReturnValue(() => undefined),
     };
     renderExplorer(backend);
-    await screen.findByRole("heading", { name: "Silicon radial stress σrr" });
+    await screen.findByRole("heading", { name: "Radial stress versus radius" });
     await act(async () => { resolveSnapshot(completedConnectedSnapshot()); });
     expect(await screen.findByRole("alert")).toHaveTextContent(/local run run-local-1 was rejected/i);
     expect(screen.getByText(/retained release bundle/i)).toBeInTheDocument();

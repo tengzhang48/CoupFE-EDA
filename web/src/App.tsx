@@ -9,7 +9,23 @@ const VIEWBOX_SIZE = 500;
 const FIELD_CENTER = VIEWBOX_SIZE / 2;
 const FIELD_RADIUS = 214;
 const NEAR_FIELD_RADIUS_UM = 60;
-const PALETTE = ["#101b43", "#234b8f", "#227f9d", "#2aa889", "#78c679", "#d8d85f", "#f2b84b"];
+const POSITIVE_PALETTE = ["#6c8797", "#5c7a8e", "#4b6e84", "#3c617a", "#2e546f", "#25475f", "#1d3a50"];
+const NEGATIVE_PALETTE = ["#7e3f2c", "#8d4b31", "#98583a", "#9d6445", "#98705a", "#8c7868", "#737a7d"];
+const DIVERGING_PALETTE = ["#1f4d6b", "#3f6b82", "#607f8d", "#6f767a", "#8a6b53", "#985438", "#813d2d"];
+
+type FieldQuantity = "sigma_rr" | "sigma_theta" | "radial_displacement";
+
+const FIELD_OPTIONS: ReadonlyArray<{
+  id: FieldQuantity;
+  label: string;
+  symbol: string;
+  unit: "MPa" | "nm";
+  location: string;
+}> = [
+  { id: "sigma_rr", label: "Radial stress", symbol: "σrr", unit: "MPa", location: "element center" },
+  { id: "sigma_theta", label: "Hoop stress", symbol: "σθθ", unit: "MPa", location: "element center" },
+  { id: "radial_displacement", label: "Radial displacement", symbol: "ur", unit: "nm", location: "node" },
+];
 
 interface SolverRecord {
   newton_iterations: number;
@@ -265,7 +281,12 @@ export function validateTsvFieldBundle(value: unknown): TsvFieldBundle {
   });
   const viaRadius = finiteNumber(value.mesh.via_radius_um, "mesh.via_radius_um");
   const outerRadius = finiteNumber(value.mesh.outer_radius_um, "mesh.outer_radius_um");
-  if (viaRadius !== siteData.tsvField.diameterUm / 2 || outerRadius !== siteData.tsvField.outerRadiusUm) {
+  const geometryMatches = (observed: number, expected: number) =>
+    Math.abs(observed - expected) <= 1e-12 * Math.max(1, Math.abs(expected));
+  if (
+    !geometryMatches(viaRadius, siteData.tsvField.diameterUm / 2) ||
+    !geometryMatches(outerRadius, siteData.tsvField.outerRadiusUm)
+  ) {
     throw new Error("field.json geometric radii do not match the reviewed case");
   }
   if (
@@ -381,12 +402,19 @@ function parseHex(value: string): [number, number, number] {
   return [1, 3, 5].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16)) as [number, number, number];
 }
 
-function fieldColor(value: number, maximum: number): string {
-  const scaled = Math.min(1, Math.max(0, maximum > 0 ? value / maximum : 0)) * (PALETTE.length - 1);
-  const index = Math.min(PALETTE.length - 2, Math.floor(scaled));
+function fieldColor(value: number, minimum: number, maximum: number): string {
+  const palette = maximum <= 0
+    ? NEGATIVE_PALETTE
+    : minimum >= 0
+      ? POSITIVE_PALETTE
+      : DIVERGING_PALETTE;
+  const range = maximum - minimum;
+  const normalized = range > 0 ? (value - minimum) / range : 0.5;
+  const scaled = Math.min(1, Math.max(0, normalized)) * (palette.length - 1);
+  const index = Math.min(palette.length - 2, Math.floor(scaled));
   const local = scaled - index;
-  const left = parseHex(PALETTE[index]!);
-  const right = parseHex(PALETTE[index + 1]!);
+  const left = parseHex(palette[index]!);
+  const right = parseHex(palette[index + 1]!);
   const channel = (position: number) => Math.round(left[position]! + (right[position]! - left[position]!) * local);
   return `rgb(${channel(0)} ${channel(1)} ${channel(2)})`;
 }
@@ -410,6 +438,7 @@ function linePath(
   values: number[],
   minimumRadius: number,
   maximumRadius: number,
+  minimumValue: number,
   maximumValue: number,
 ): string {
   const samples = coordinates
@@ -420,7 +449,8 @@ function linePath(
     .filter((_, index) => index % stride === 0 || index === samples.length - 1)
     .map(({ radius, value }, index) => {
       const x = 54 + ((radius - minimumRadius) / (maximumRadius - minimumRadius)) * 500;
-      const y = 238 - (Math.max(0, value) / maximumValue) * 190;
+      const valueRange = maximumValue - minimumValue;
+      const y = 238 - ((value - minimumValue) / (valueRange || 1)) * 190;
       return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(" ");
@@ -515,10 +545,9 @@ export default function App({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadingSource, setLoadingSource] = useState(true);
   const [selectedStep, setSelectedStep] = useState(siteData.tsvField.loadSteps - 1);
-  const [playing, setPlaying] = useState(false);
-  const [playDirection, setPlayDirection] = useState<1 | -1>(-1);
   const [fullDomain, setFullDomain] = useState(false);
   const [meshVisible, setMeshVisible] = useState(false);
+  const [fieldQuantity, setFieldQuantity] = useState<FieldQuantity>("sigma_rr");
   const [probeRadius, setProbeRadius] = useState(siteData.tsvField.queryRadiusUm);
   const fieldSurfaceRef = useRef<SVGSVGElement>(null);
 
@@ -556,46 +585,57 @@ export default function App({
 
   const activeSource = loadedSource ?? retainedSource;
 
-  useEffect(() => {
-    if (!playing) return;
-    const timer = window.setInterval(() => {
-      setSelectedStep((current) => {
-        let next = current + playDirection;
-        if (next <= 0) {
-          next = 0;
-          setPlayDirection(1);
-        } else if (next >= siteData.tsvField.loadSteps - 1) {
-          next = siteData.tsvField.loadSteps - 1;
-          setPlayDirection(-1);
-        }
-        return next;
-      });
-    }, 700);
-    return () => window.clearInterval(timer);
-  }, [playDirection, playing]);
-
   const step = bundle?.load_sweep.steps[selectedStep];
   const viewRadius = fullDomain ? siteData.tsvField.outerRadiusUm : NEAR_FIELD_RADIUS_UM;
+  const activeField = FIELD_OPTIONS.find((option) => option.id === fieldQuantity)!;
   const siliconElementIndices = useMemo(() => bundle
     ? bundle.mesh.region_by_element.flatMap((region, index) => region === "silicon" ? [index] : [])
     : [], [bundle]);
   const siliconCenters = useMemo(() => bundle
     ? siliconElementIndices.map((index) => bundle.mesh.element_centers_um[index]!)
     : [], [bundle, siliconElementIndices]);
-  const probeMinimum = siliconCenters[0] ?? siteData.tsvField.diameterUm / 2;
+  const siliconNodeIndices = useMemo(() => bundle
+    ? bundle.mesh.radius_nodes_um.flatMap((radius, index) => radius >= bundle.mesh.via_radius_um ? [index] : [])
+    : [], [bundle]);
+  const siliconNodeRadii = useMemo(() => bundle
+    ? siliconNodeIndices.map((index) => bundle.mesh.radius_nodes_um[index]!)
+    : [], [bundle, siliconNodeIndices]);
+  const siliconElementMinimum = siliconCenters[0] ?? siteData.tsvField.diameterUm / 2;
+  const siliconNodeMinimum = siliconNodeRadii[0] ?? siteData.tsvField.diameterUm / 2;
+  const probeMinimum = fieldQuantity === "radial_displacement"
+    ? siliconNodeMinimum
+    : siliconElementMinimum;
 
   useEffect(() => {
     setProbeRadius((current) => Math.min(viewRadius, Math.max(probeMinimum, current)));
   }, [probeMinimum, viewRadius]);
 
-  const maximumStress = useMemo(() => {
-    if (!bundle) return 1;
-    const final = bundle.load_sweep.steps.at(-1)!;
-    return Math.max(
-      1,
-      ...final.field.sigma_rr_MPa.filter((_, index) => bundle.mesh.region_by_element[index] === "silicon"),
-    );
-  }, [bundle]);
+  const allFieldValues = useMemo(() => {
+    if (!bundle) return [0];
+    return bundle.load_sweep.steps.flatMap(({ field }) => {
+      if (fieldQuantity === "sigma_rr") {
+        return siliconElementIndices.map((index) => field.sigma_rr_MPa[index]!);
+      }
+      if (fieldQuantity === "sigma_theta") {
+        return siliconElementIndices.map((index) => field.sigma_theta_MPa[index]!);
+      }
+      return siliconNodeIndices.map((index) => field.radial_displacement_nm[index]!);
+    });
+  }, [bundle, fieldQuantity, siliconElementIndices, siliconNodeIndices]);
+
+  const fieldRange = useMemo(() => {
+    const minimum = Math.min(0, ...allFieldValues);
+    const maximum = Math.max(0, ...allFieldValues);
+    return maximum === minimum
+      ? { minimum: minimum - 0.5, maximum: maximum + 0.5 }
+      : { minimum, maximum };
+  }, [allFieldValues]);
+
+  const fieldValueAtElement = useCallback((field: FieldArrays, index: number) => {
+    if (fieldQuantity === "sigma_rr") return field.sigma_rr_MPa[index]!;
+    if (fieldQuantity === "sigma_theta") return field.sigma_theta_MPa[index]!;
+    return (field.radial_displacement_nm[index]! + field.radial_displacement_nm[index + 1]!) / 2;
+  }, [fieldQuantity]);
 
   const rings = useMemo(() => {
     if (!bundle || !step) return [];
@@ -610,10 +650,10 @@ export default function App({
       return {
         radius: (radius / viewRadius) * FIELD_RADIUS,
         width: Math.max(1, (widthUm / viewRadius) * FIELD_RADIUS * 1.25),
-        color: fieldColor(step.field.sigma_rr_MPa[index]!, maximumStress),
+        color: fieldColor(fieldValueAtElement(step.field, index), fieldRange.minimum, fieldRange.maximum),
       };
     }).reverse();
-  }, [bundle, maximumStress, siliconElementIndices, step, viewRadius]);
+  }, [bundle, fieldRange.maximum, fieldRange.minimum, fieldValueAtElement, siliconElementIndices, step, viewRadius]);
 
   const meshRings = useMemo(() => {
     if (!bundle) return [];
@@ -642,31 +682,63 @@ export default function App({
   const siliconSigmaTheta = bundle && step
     ? siliconElementIndices.map((index) => step.field.sigma_theta_MPa[index]!)
     : [];
+  const siliconDisplacement = bundle && step
+    ? siliconNodeIndices.map((index) => step.field.radial_displacement_nm[index]!)
+    : [];
   const probe = bundle && step ? {
     sigmaRr: interpolateAt(probeRadius, siliconCenters, siliconSigmaRr),
     sigmaTheta: interpolateAt(probeRadius, siliconCenters, siliconSigmaTheta),
-    displacement: interpolateAt(probeRadius, bundle.mesh.radius_nodes_um, step.field.radial_displacement_nm),
+    displacement: interpolateAt(probeRadius, siliconNodeRadii, siliconDisplacement),
   } : null;
+  const seriesCoordinates = fieldQuantity === "radial_displacement" ? siliconNodeRadii : siliconCenters;
+  const seriesValues = fieldQuantity === "sigma_rr"
+    ? siliconSigmaRr
+    : fieldQuantity === "sigma_theta"
+      ? siliconSigmaTheta
+      : siliconDisplacement;
+  const selectedProbeValue = fieldQuantity === "sigma_rr"
+    ? probe?.sigmaRr
+    : fieldQuantity === "sigma_theta"
+      ? probe?.sigmaTheta
+      : probe?.displacement;
   const chartPath = bundle && step
-    ? linePath(siliconCenters, siliconSigmaRr, probeMinimum, viewRadius, maximumStress)
+    ? linePath(
+      seriesCoordinates,
+      seriesValues,
+      probeMinimum,
+      viewRadius,
+      fieldRange.minimum,
+      fieldRange.maximum,
+    )
     : "";
   const queryX = bundle
     ? 54 + ((siteData.tsvField.queryRadiusUm - probeMinimum) / (viewRadius - probeMinimum)) * 500
     : 0;
   const queryFe = step ? step.comparison.fe_sigma_rr_MPa : 0;
   const queryLame = step ? step.comparison.lame_sigma_rr_MPa : 0;
-  const queryFeY = 238 - Math.max(0, queryFe) / maximumStress * 190;
-  const queryLameY = 238 - Math.max(0, queryLame) / maximumStress * 190;
+  const chartY = (value: number) =>
+    238 - ((value - fieldRange.minimum) / (fieldRange.maximum - fieldRange.minimum)) * 190;
+  const queryFeY = chartY(queryFe);
+  const queryLameY = chartY(queryLame);
+  const probeX = 54 + ((probeRadius - probeMinimum) / (viewRadius - probeMinimum)) * 500;
+  const probeY = selectedProbeValue === undefined ? 238 : chartY(selectedProbeValue);
+  const visibleSeries = seriesValues.filter((_, index) => seriesCoordinates[index]! <= viewRadius);
+  const currentMinimum = visibleSeries.length ? Math.min(...visibleSeries) : 0;
+  const currentMaximum = visibleSeries.length ? Math.max(...visibleSeries) : 0;
 
   return (
     <main className="field-workbench">
-      <header className="field-workbench-hero">
+      <header className="field-workbench-header">
         <div>
-          <p className="field-kicker">CoupFE Core field explorer · {activeSource.label}</p>
-          <h1>Inspect the field behind the claim.</h1>
-          <p>The color bands, curves, probe values, and animation below are read from the named solver artifact. No CSS contour, invented mesh, or simulated lifecycle is used.</p>
+          <p className="field-kicker">Axisymmetric thermoelastic component verification</p>
+          <h1>TSV field workbench</h1>
+          <p>Retained radial mesh data from nine independent static CoupFE solves.</p>
         </div>
-        <aside><span>Case</span><strong>{siteData.tsvField.caseId}</strong><small>D = {siteData.tsvField.diameterUm} µm · ΔT = {siteData.tsvField.deltaTemperatureK} K · Line2</small></aside>
+        <dl className="field-case-summary">
+          <div><dt>Case</dt><dd>{bundle?.case_id ?? siteData.tsvField.caseId}</dd></div>
+          <div><dt>Source</dt><dd>{activeSource.label}</dd></div>
+          <div><dt>Core</dt><dd>{activeSource.coreRevision.slice(0, 10)}</dd></div>
+        </dl>
       </header>
 
       {backend
@@ -674,90 +746,196 @@ export default function App({
         : <RetainedRunBoundary />}
 
       {loadError && <div className="field-load-state field-load-error" role="alert"><strong>Field evidence rejected</strong><span>{loadError}</span></div>}
-      {loadingSource && <div className={`field-load-state ${bundle ? "field-load-pending" : ""}`} role="status">Loading and validating {requestedSource.label} field.json…{bundle ? ` The ${activeSource.label} remains displayed until validation succeeds.` : ""}</div>}
+      {loadingSource && <div className={"field-load-state " + (bundle ? "field-load-pending" : "")} role="status">Loading and validating {requestedSource.label} field.json…{bundle ? " The " + activeSource.label + " remains displayed until validation succeeds." : ""}</div>}
 
       {bundle && step && (
         <>
+          <section className="field-toolbar" aria-label="Field display controls">
+            <fieldset>
+              <legend>Field quantity</legend>
+              <div className="field-button-group">
+                {FIELD_OPTIONS.map((option) => (
+                  <button
+                    type="button"
+                    key={option.id}
+                    aria-pressed={fieldQuantity === option.id}
+                    className={fieldQuantity === option.id ? "is-active" : ""}
+                    onClick={() => setFieldQuantity(option.id)}
+                  >
+                    <span>{option.symbol}</span>{option.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Radial domain</legend>
+              <div className="field-button-group">
+                <button type="button" aria-pressed={!fullDomain} className={!fullDomain ? "is-active" : ""} onClick={() => setFullDomain(false)}>Near field · 60 µm</button>
+                <button type="button" aria-pressed={fullDomain} className={fullDomain ? "is-active" : ""} onClick={() => setFullDomain(true)}>Full field · 300 µm</button>
+                <button type="button" aria-pressed={meshVisible} className={meshVisible ? "is-active" : ""} onClick={() => setMeshVisible((value) => !value)}>Mesh nodes</button>
+              </div>
+            </fieldset>
+            <dl>
+              <div><dt>Load case</dt><dd>{selectedStep + 1} / {bundle.load_sweep.steps.length}</dd></div>
+              <div><dt>Prescribed ΔT</dt><dd>{step.delta_temperature_K.toFixed(0)} K</dd></div>
+            </dl>
+          </section>
+
           <section className="field-stage" aria-label="Solver field and radial profile">
+            <article className="field-profile-panel">
+              <header>
+                <div><span>{activeField.location} values</span><h2>{activeField.label} versus radius</h2></div>
+                <p>Y scale is fixed across all nine load cases.</p>
+              </header>
+              <div className="field-profile-chart">
+                <svg viewBox="0 0 600 310" role="img" aria-label={activeField.label + " profile at delta temperature " + step.delta_temperature_K + " kelvin"}>
+                {[0, .25, .5, .75, 1].map((fraction) => {
+                  const y = 238 - fraction * 190;
+                  const value = fieldRange.minimum + fraction * (fieldRange.maximum - fieldRange.minimum);
+                  return <g key={fraction}><line x1="54" y1={y} x2="554" y2={y} /><text x="44" y={y + 4} textAnchor="end">{value.toFixed(0)}</text></g>;
+                })}
+                {[0, .25, .5, .75, 1].map((fraction) => {
+                  const x = 54 + fraction * 500;
+                  const radius = probeMinimum + fraction * (viewRadius - probeMinimum);
+                  return <g key={fraction}><line x1={x} y1="238" x2={x} y2="244" className="field-axis" /><text x={x} y="260" textAnchor="middle">{radius.toFixed(0)}</text></g>;
+                })}
+                {fieldRange.minimum < 0 && fieldRange.maximum > 0 && <line x1="54" y1={chartY(0)} x2="554" y2={chartY(0)} className="field-zero-line" />}
+                <line x1="54" y1="238" x2="554" y2="238" className="field-axis" />
+                <line x1="54" y1="42" x2="54" y2="238" className="field-axis" />
+                <path d={chartPath} className="field-profile-line" />
+                <line x1={probeX} y1="42" x2={probeX} y2="238" className="field-probe-line" />
+                <circle cx={probeX} cy={probeY} r="4" className="field-probe-point" />
+                {fieldQuantity === "sigma_rr" && queryX >= 54 && queryX <= 554 && <>
+                  <line x1={queryX} y1="42" x2={queryX} y2="238" className="field-query-line" />
+                  <circle cx={queryX} cy={queryFeY} r="5" className="field-fe-point" />
+                  <path d={"M" + (queryX - 6) + "," + queryLameY + " h12 M" + queryX + "," + (queryLameY - 6) + " v12"} className="field-lame-point" />
+                </>}
+                <text x="304" y="294" textAnchor="middle">radius r (µm)</text>
+                <text x="14" y="24">{activeField.symbol} ({activeField.unit})</text>
+                </svg>
+              </div>
+              <div className="field-profile-legend">
+                <span><i className="field-fe-key" />CoupFE {activeField.symbol}</span>
+                <span><i className="field-probe-key" />Probe at {probeRadius.toFixed(2)} µm</span>
+                {fieldQuantity === "sigma_rr" && <span><i className="field-lame-key" />Lamé at 20 µm</span>}
+              </div>
+              <dl className="field-comparison">
+                <div><dt>Visible minimum</dt><dd>{currentMinimum.toFixed(4)} {activeField.unit}</dd></div>
+                <div><dt>Visible maximum</dt><dd>{currentMaximum.toFixed(4)} {activeField.unit}</dd></div>
+                <div><dt>Probe value</dt><dd>{selectedProbeValue?.toFixed(4)} {activeField.unit}</dd></div>
+                {fieldQuantity === "sigma_rr" && <>
+                  <div><dt>Lamé at 20 µm</dt><dd>{queryLame.toFixed(4)} MPa</dd></div>
+                  <div><dt>Relative difference</dt><dd>{step.comparison.relative_error === null ? "zero-load identity" : (step.comparison.relative_error * 100).toFixed(4) + "%"}</dd></div>
+                </>}
+              </dl>
+            </article>
+
             <article className="field-contour-panel">
-              <header><div><span>Recovered field</span><h2>Silicon radial stress σrr</h2></div><nav aria-label="Field view"><button aria-pressed={!fullDomain} className={!fullDomain ? "is-active" : ""} onClick={() => setFullDomain(false)}>Near field</button><button aria-pressed={fullDomain} className={fullDomain ? "is-active" : ""} onClick={() => setFullDomain(true)}>Full domain</button><button aria-pressed={meshVisible} className={meshVisible ? "is-active" : ""} onClick={() => setMeshVisible((value) => !value)}>Mesh nodes</button></nav></header>
+              <header>
+                <div><h2>Axisymmetric reconstruction</h2></div>
+                <p>Revolved display of the solved 1-D radial field.</p>
+              </header>
               <div className="field-contour-wrap">
                 <svg
                   ref={fieldSurfaceRef}
-                  viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}
+                  viewBox={"0 0 " + VIEWBOX_SIZE + " " + VIEWBOX_SIZE}
                   role="img"
-                  aria-label={`Axisymmetric radial stress at delta temperature ${step.delta_temperature_K} kelvin`}
+                  aria-label={"Axisymmetric " + activeField.label.toLowerCase() + " at delta temperature " + step.delta_temperature_K + " kelvin"}
                   onPointerMove={(event) => handleProbe(event.clientX, event.clientY)}
                   onPointerDown={(event) => handleProbe(event.clientX, event.clientY)}
                 >
-                  <circle cx={FIELD_CENTER} cy={FIELD_CENTER} r={FIELD_RADIUS} fill="#0b1730" stroke="#31425e" />
+                  <circle cx={FIELD_CENTER} cy={FIELD_CENTER} r={FIELD_RADIUS} fill="#f7f9fb" stroke="#9aa6b2" />
                   {rings.map((ring, index) => <circle key={index} cx={FIELD_CENTER} cy={FIELD_CENTER} r={ring.radius} fill="none" stroke={ring.color} strokeWidth={ring.width} />)}
-                  <circle cx={FIELD_CENTER} cy={FIELD_CENTER} r={(bundle.mesh.via_radius_um / viewRadius) * FIELD_RADIUS} fill="#c57847" stroke="#f4d0b5" strokeWidth="2" />
+                  <circle cx={FIELD_CENTER} cy={FIELD_CENTER} r={(bundle.mesh.via_radius_um / viewRadius) * FIELD_RADIUS} fill="#b87c58" stroke="#6e4d3c" strokeWidth="1.5" />
                   {meshVisible && meshRings.map((radiusUm) => (
-                    <circle key={radiusUm} cx={FIELD_CENTER} cy={FIELD_CENTER} r={(radiusUm / viewRadius) * FIELD_RADIUS} fill="none" stroke="#f8fafc" strokeOpacity=".18" strokeWidth=".7" />
+                    <circle key={radiusUm} cx={FIELD_CENTER} cy={FIELD_CENTER} r={(radiusUm / viewRadius) * FIELD_RADIUS} fill="none" stroke="#243746" strokeOpacity=".24" strokeWidth=".7" />
                   ))}
-                  <line x1={FIELD_CENTER} y1={FIELD_CENTER} x2={FIELD_CENTER + (probeRadius / viewRadius) * FIELD_RADIUS} y2={FIELD_CENTER} stroke="#fff" strokeWidth="1.5" />
-                  <circle cx={FIELD_CENTER + (probeRadius / viewRadius) * FIELD_RADIUS} cy={FIELD_CENTER} r="5" fill="#fff" stroke="#07101f" strokeWidth="2" />
+                  <line x1={FIELD_CENTER} y1={FIELD_CENTER} x2={FIELD_CENTER + (probeRadius / viewRadius) * FIELD_RADIUS} y2={FIELD_CENTER} stroke="#172b3a" strokeWidth="1.5" />
+                  <circle cx={FIELD_CENTER + (probeRadius / viewRadius) * FIELD_RADIUS} cy={FIELD_CENTER} r="5" fill="#ffffff" stroke="#172b3a" strokeWidth="2" />
                   <text x={FIELD_CENTER} y={FIELD_CENTER + 5} textAnchor="middle">Cu</text>
-                  <text x="22" y="476">Axisymmetric reconstruction · {meshVisible ? "sampled actual Line2 nodes" : `solved radius 0–${viewRadius} µm`}</text>
+                  <text x="22" y="476">Line2 field revolved for display · radius 0–{viewRadius} µm</text>
                 </svg>
-                <div className="field-colorbar"><span>{maximumStress.toFixed(0)} MPa</span><i /><span>0</span></div>
+                <div className="field-colorbar">
+                  <span>{fieldRange.maximum.toFixed(0)} {activeField.unit}</span>
+                  <i className={fieldRange.maximum <= 0 ? "is-negative" : fieldRange.minimum >= 0 ? "is-positive" : "is-diverging"} />
+                  <span>{((fieldRange.maximum + fieldRange.minimum) / 2).toFixed(0)}</span>
+                  <span>{fieldRange.minimum.toFixed(0)} {activeField.unit}</span>
+                </div>
               </div>
               <dl className="field-probe">
-                <div><dt>Si-side probe radius</dt><dd>{probeRadius.toFixed(2)} µm</dd></div>
+                <div><dt>Probe radius</dt><dd>{probeRadius.toFixed(2)} µm</dd></div>
                 <div><dt>σrr</dt><dd>{probe?.sigmaRr.toFixed(3)} MPa</dd></div>
                 <div><dt>σθθ</dt><dd>{probe?.sigmaTheta.toFixed(3)} MPa</dd></div>
-                <div><dt>u<sub>r</sub></dt><dd>{probe?.displacement.toFixed(3)} nm</dd></div>
+                <div><dt>ur</dt><dd>{probe?.displacement.toFixed(3)} nm</dd></div>
               </dl>
               <label className="field-probe-slider">
                 <span>Silicon probe radius</span>
-                <input aria-label="Silicon probe radius" type="range" min={probeMinimum} max={viewRadius} step="0.05" value={probeRadius} onChange={(event) => setProbeRadius(Number(event.target.value))} />
+                <input aria-label="Silicon probe radius" aria-valuetext={probeRadius.toFixed(2) + " micrometres"} type="range" min={probeMinimum} max={viewRadius} step="0.05" value={probeRadius} onChange={(event) => setProbeRadius(Number(event.target.value))} />
                 <output>{probeRadius.toFixed(2)} µm</output>
               </label>
-            </article>
-
-            <article className="field-profile-panel">
-              <header><span>Element-center values</span><h2>Stress versus radius</h2><p>Fixed y-scale across every solved load state.</p></header>
-              <svg viewBox="0 0 600 290" role="img" aria-label="Finite element radial stress profile with Lamé reference at 20 micrometres">
-                {[0, .25, .5, .75, 1].map((fraction) => {
-                  const y = 238 - fraction * 190;
-                  return <g key={fraction}><line x1="54" y1={y} x2="554" y2={y} /><text x="44" y={y + 4} textAnchor="end">{(fraction * maximumStress).toFixed(0)}</text></g>;
-                })}
-                <line x1="54" y1="238" x2="554" y2="238" className="field-axis" />
-                <path d={chartPath} className="field-profile-line" />
-                {queryX >= 54 && queryX <= 554 && <>
-                  <line x1={queryX} y1="42" x2={queryX} y2="238" className="field-query-line" />
-                  <circle cx={queryX} cy={queryFeY} r="5" className="field-fe-point" />
-                  <path d={`M${queryX - 6},${queryLameY} h12 M${queryX},${queryLameY - 6} v12`} className="field-lame-point" />
-                </>}
-                <text x="304" y="278" textAnchor="middle">radius r (µm)</text>
-                <text x="14" y="24">σrr (MPa)</text>
-              </svg>
-              <div className="field-profile-legend"><span><i className="field-fe-key" />CoupFE field</span><span><i className="field-lame-key" />Lamé at 20 µm</span></div>
-              <dl className="field-comparison">
-                <div><dt>CoupFE</dt><dd>{queryFe.toFixed(4)} MPa</dd></div>
-                <div><dt>Lamé</dt><dd>{queryLame.toFixed(4)} MPa</dd></div>
-                <div><dt>Relative difference</dt><dd>{step.comparison.relative_error === null ? "zero-load identity" : `${(step.comparison.relative_error * 100).toFixed(4)}%`}</dd></div>
-              </dl>
             </article>
           </section>
 
           <section className="field-timeline" aria-label="Actual solved load states">
-            <div><span>Prescribed load sweep</span><strong>ΔT = {step.delta_temperature_K.toFixed(0)} K</strong><small>State {selectedStep + 1} of {bundle.load_sweep.steps.length} · independent static CoupFE solve · not transient</small></div>
-            <button type="button" onClick={() => setPlaying((value) => !value)}>{playing ? "Pause actual states" : "Play actual states"}</button>
-            <input aria-label="Solved cooling-load state" type="range" min="0" max={bundle.load_sweep.steps.length - 1} step="1" value={selectedStep} onChange={(event) => { setPlaying(false); setSelectedStep(Number(event.target.value)); }} />
-            <div className="field-step-dots" aria-hidden="true">{bundle.load_sweep.steps.map((item, index) => <i key={item.step_index} className={index === selectedStep ? "is-active" : ""} />)}</div>
+            <div>
+              <span>Prescribed load case</span>
+              <strong>ΔT = {step.delta_temperature_K.toFixed(0)} K</strong>
+              <small>Case {selectedStep + 1} of {bundle.load_sweep.steps.length} · independent static solve · not transient</small>
+            </div>
+            <div className="field-state-buttons">
+              <button type="button" disabled={selectedStep === 0} onClick={() => setSelectedStep((value) => Math.max(0, value - 1))}>Previous</button>
+              <button type="button" disabled={selectedStep === bundle.load_sweep.steps.length - 1} onClick={() => setSelectedStep((value) => Math.min(bundle.load_sweep.steps.length - 1, value + 1))}>Next</button>
+            </div>
+            <input aria-label="Solved cooling-load state" aria-valuetext={step.delta_temperature_K.toFixed(0) + " kelvin; load case " + (selectedStep + 1) + " of " + bundle.load_sweep.steps.length} type="range" min="0" max={bundle.load_sweep.steps.length - 1} step="1" value={selectedStep} onChange={(event) => setSelectedStep(Number(event.target.value))} />
+            <div className="field-step-labels" aria-hidden="true">{bundle.load_sweep.steps.map((item) => <span key={item.step_index}>{item.delta_temperature_K}</span>)}</div>
+          </section>
+
+          <section className="field-output-table" aria-labelledby="field-output-title">
+            <header>
+              <div><h2 id="field-output-title">Solved load cases</h2></div>
+              <p>Every row is an independently converged CoupFE solve. Select a row to inspect its complete field arrays above.</p>
+            </header>
+            <div className="field-table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Case</th>
+                    <th scope="col">ΔT (K)</th>
+                    <th scope="col">σrr FE @ 20 µm (MPa)</th>
+                    <th scope="col">Lamé (MPa)</th>
+                    <th scope="col">Difference (%)</th>
+                    <th scope="col">max |ur| (nm)</th>
+                    <th scope="col">Newton</th>
+                    <th scope="col">Final relative residual</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bundle.load_sweep.steps.map((item, index) => (
+                    <tr key={item.step_index} className={index === selectedStep ? "is-selected" : ""}>
+                      <th scope="row"><button type="button" aria-label={"Select load case " + (index + 1) + ": " + item.delta_temperature_K + " K"} aria-current={index === selectedStep ? "true" : undefined} onClick={() => setSelectedStep(index)}>{index + 1}</button></th>
+                      <td>{item.delta_temperature_K.toFixed(0)}</td>
+                      <td>{item.comparison.fe_sigma_rr_MPa.toFixed(4)}</td>
+                      <td>{item.comparison.lame_sigma_rr_MPa.toFixed(4)}</td>
+                      <td>{item.comparison.relative_error === null ? "—" : (item.comparison.relative_error * 100).toFixed(4)}</td>
+                      <td>{Math.max(...item.field.radial_displacement_nm.map((value) => Math.abs(value))).toFixed(4)}</td>
+                      <td>{item.solver.newton_iterations}</td>
+                      <td>{item.solver.final_relative_residual.toExponential(3)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <section className="field-metrics" aria-label="Solver evidence">
-            <article><span>Mesh / DOF</span><strong>{bundle.mesh.element_centers_um.length.toLocaleString()} / {bundle.mesh.radius_nodes_um.length.toLocaleString()}</strong><small>radial Line2 / displacement unknowns</small></article>
-            <article><span>Newton iterations</span><strong>{step.solver.newton_iterations}</strong><small>actual selected-state solve</small></article>
-            <article><span>Final relative residual</span><strong>{step.solver.final_relative_residual.toExponential(2)}</strong><small>{(step.solver.residual_fraction_of_acceptance_limit * 100).toFixed(2)}% of acceptance limit</small></article>
-            <article><span>Core revision</span><strong>{activeSource.coreRevision.slice(0, 10)}</strong><small>full SHA in matching manifest</small></article>
+            <article><span>Mesh</span><strong>{bundle.mesh.element_centers_um.length.toLocaleString()} elements</strong><small>{bundle.mesh.radius_nodes_um.length.toLocaleString()} Line2 nodes / DOF</small></article>
+            <article><span>Selected solve</span><strong>{step.solver.newton_iterations} Newton iterations</strong><small>converged = true</small></article>
+            <article><span>Residual</span><strong>{step.solver.final_relative_residual.toExponential(2)}</strong><small>{(step.solver.residual_fraction_of_acceptance_limit * 100).toFixed(2)}% of acceptance limit</small></article>
+            <article><span>Topology</span><strong>{bundle.topology.type} · {bundle.topology.spatial_dimension}D</strong><small>{bundle.topology.dof_per_node} displacement DOF per node</small></article>
           </section>
 
           <section className="field-evidence">
-            <div><span>Evidence bundle</span><h2>Every plotted field value has a route back to solver arrays.</h2><p>{bundle.claim_boundary}</p></div>
+            <div><span>Evidence and scope</span><h2>Retained source record</h2><p>{bundle.claim_boundary}</p></div>
             <nav aria-label="Field evidence artifacts"><a href={activeSource.fieldUrl}>field.json</a><a href={activeSource.summaryUrl}>summary.json</a><a href={activeSource.manifestUrl}>{activeSource.manifestLabel}</a><a href={runnerUrl}>runner source ↗</a></nav>
           </section>
         </>

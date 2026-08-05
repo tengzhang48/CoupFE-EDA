@@ -5,10 +5,10 @@ This directory builds two browser surfaces from one React/Vite source tree:
 - The default route is the public project website. Its featured result is a
   retained CoupFE axisymmetric TSV field with raw arrays, a solver-derived
   contour, a nine-state load-sweep video, numerical comparison, and provenance
-  links. A separate simulation gallery adds solver-derived 3-D solder and ETV
-  comparison figures plus the explicitly synthetic TSV-to-device screening
-  map. The rest of the site presents checked examples, the retained 526,338-DOF
-  scaling record, and explicit evidence limits.
+  links. A separate simulation gallery adds solver-derived 3-D solder,
+  design-linked solder, and ETV comparison figures plus the explicitly
+  synthetic TSV-to-device screening map. The rest of the site presents checked
+  examples, the retained 526,338-DOF scaling record, and explicit evidence limits.
 - `?surface=workbench` opens the TSV field explorer. On GitHub Pages it reads
   and validates the retained `field.json`; it can switch near/full-domain
   views, show a mesh overlay, probe displacement and both recovered stress
@@ -40,8 +40,9 @@ The authoritative claim boundary is:
 ## Refresh the simulation gallery
 
 The public gallery does not use stock, generated-concept, or CoupFE-Cardiac
-simulation media. Its two solver figures execute CoupFE-EDA's
-`solder_3d_cycle` and `etv_partitioned_cycle` runners and refuse to publish when
+simulation media. Its three solver figures execute CoupFE-EDA's
+`solder_3d_cycle`, `design_linked_solder_screening`, and
+`etv_partitioned_cycle` runners and refuse to publish when
 their numerical oracles fail. The TSV device map comes from the separate
 CoupFE-EDA analytic screening runner and remains labeled as synthetic
 integration evidence.
@@ -60,10 +61,12 @@ PYTHON=/path/to/CoupFE-Cardiac/.venv/bin/python npm run refresh:tsv
 
 `refresh:media` writes accessible SVGs under
 `public/generated/simulation-media/` and a source/oracle/artifact hash contract
-at `contracts/simulation-media.json`. The solder heatmap exposes all 18 Hex8
-element values as two exact 3×3 layers. The ETV figure keeps energy and
-temperature in separate panels and distinguishes quasisteady from
-lumped-transient assumptions by both color and pattern.
+at `contracts/simulation-media.json`. The first solder heatmap exposes all 18
+Hex8 element values as two exact 3×3 layers. The design-linked figure shows the
+stable synthetic joint identity and distance-to-neutral-point handed to another
+18-element solder result. The ETV figure keeps energy and temperature in
+separate panels and distinguishes quasisteady from lumped-transient assumptions
+by both color and pattern.
 
 ## Check and preview the public site
 
@@ -224,7 +227,7 @@ appropriate only for one trusted local checkout—not network or multi-user use.
 | `npm run build` | Checked static/retained production build |
 | `npm run build:api` | Checked connected production build |
 | `npm run check` | Type-check, test, prepare data, and build the public site |
-| `npm run refresh:media` | Rerun the solder/ETV examples, verify their oracles, and refresh accessible simulation SVGs plus their hash contract |
+| `npm run refresh:media` | Rerun the solder, design-linked solder, and ETV examples; verify their oracles; and refresh accessible simulation SVGs plus their hash contract |
 | `npm run refresh:tsv` | Refresh the separate synthetic TSV-to-device screening artifacts; it does not regenerate the axisymmetric field bundle |
 
 ## Source organization

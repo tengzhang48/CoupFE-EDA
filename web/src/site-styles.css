@@ -170,9 +170,7 @@
 .site-simulation-gallery { padding-top: 24px; }
 .site-media-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .site-media-card { overflow: hidden; border: 1px solid #cddbe2; border-radius: 7px; background: #fff; box-shadow: 0 18px 45px rgba(17, 44, 70, .055); }
-.site-media-card:last-child { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(330px, .85fr); }
 .site-media-card figure { position: relative; margin: 0; border-bottom: 1px solid #cddbe2; background: #08111f; }
-.site-media-card:last-child figure { border-right: 1px solid #cddbe2; border-bottom: 0; }
 .site-media-card img { display: block; width: 100%; aspect-ratio: 12 / 7; object-fit: contain; background: #08111f; }
 .site-media-card figcaption { position: absolute; bottom: 12px; left: 12px; padding: 6px 8px; border: 1px solid rgba(159, 196, 216, .35); border-radius: 3px; background: rgba(5, 16, 29, .85); color: #b8dce8; font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .site-media-card-copy { padding: 22px; }
@@ -293,7 +291,6 @@
   .site-process-flow li:not(:last-child)::after { display: none; }
   .site-workflow-grid-verification { grid-template-columns: repeat(2, 1fr); }
   .site-workflow-grid-verification .site-workflow-card:last-child { grid-column: 1 / -1; }
-  .site-media-card:last-child { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 900px) {
@@ -304,8 +301,6 @@
   .site-feature,
   .site-scaling-layout { grid-template-columns: 1fr; }
   .site-media-grid { grid-template-columns: 1fr; }
-  .site-media-card:last-child { grid-column: 1; grid-template-columns: 1fr; }
-  .site-media-card:last-child figure { border-right: 0; border-bottom: 1px solid #cddbe2; }
   .site-media-provenance { grid-template-columns: 1fr; gap: 8px; }
   .site-scaling-chart { border-right: 0; border-bottom: 1px solid #d3dfe5; }
   .site-interface-cta { grid-template-columns: 1fr; }
