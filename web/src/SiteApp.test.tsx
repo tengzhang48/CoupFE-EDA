@@ -8,65 +8,54 @@ afterEach(() => {
 });
 
 describe("public CoupFE-EDA site", () => {
-  it("opens with a direct, visual multiphysics story", () => {
+  it("opens with a concise evidence-first project narrative", () => {
     render(<SiteApp />);
-
-    expect(screen.getByRole("heading", { level: 1, name: /Find the hot spots.*See the stress.*Decide with evidence/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /EDA-aware multiphysics, from design inputs to reviewable evidence/i })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole("img", { name: /semiconductor package cutaway with finite-element-style field contours/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/Concept visualization.*not solver output/i).length).toBeGreaterThan(0);
-    expect(screen.getByText("5", { selector: ".site-proof-strip strong" })).toBeInTheDocument();
-    expect(screen.getByText("526,338", { selector: ".site-proof-strip strong" })).toBeInTheDocument();
-    expect(screen.getByText("12 → 0", { selector: ".site-proof-strip strong" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Four physics. One traceable design story." })).toBeInTheDocument();
-    for (const capability of ["Electrical", "Thermal", "Mechanical", "Reliability"]) {
-      expect(screen.getByText(new RegExp(capability), { selector: ".site-capability-grid article > span" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /A traceable path from design inputs to engineering evidence/i })).toBeInTheDocument();
+    for (const step of [
+      "Design and case inputs",
+      "Identity and provenance",
+      "Analysis representation",
+      "Selected analysis",
+      "Reviewable evidence",
+      "Bounded feedback",
+    ]) {
+      expect(screen.getByText(step)).toBeInTheDocument();
     }
-    expect(screen.getByRole("heading", { name: "Look at the physics before reading about it." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Don’t just read the run record. Watch the field change." })).toBeInTheDocument();
-    const workbenchVideo = screen.getByLabelText(/Looping interface demonstration of the interactive TSV/i);
-    expect(workbenchVideo.querySelector("source")?.getAttribute("src")).toContain("tsv-workbench-demo.webm");
-    expect(screen.getByRole("heading", { name: "Clear about what works. Clear about what is still open." })).toBeInTheDocument();
+    expect(screen.getByText(/No single bundled case executes every stage on a production design/i)).toBeInTheDocument();
+    expect(screen.getByText("Synthetic orientation action")).toBeInTheDocument();
+    expect(screen.getAllByText("EDA-linked demonstration")).toHaveLength(2);
+    expect(screen.getAllByText("Physics / solver verification")).toHaveLength(3);
+    expect(screen.getByText("526,338-DOF fixed-size solve")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Median solve wall time decreases/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Checked foundations; real-device validation remains open/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "3-D TSV reference case" })).toBeInTheDocument();
+    expect(screen.queryByText("Stage")).not.toBeInTheDocument();
+    expect(screen.queryByText(/7 foundations present/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/3 planned studies/i)).not.toBeInTheDocument();
+    expect(document.querySelector("#figures")).toBeNull();
+    expect(screen.queryByRole("heading", { name: /Read the checks before reading the claims/i })).not.toBeInTheDocument();
   });
 
-  it("lets visitors switch among clearly labeled simulation evidence levels", () => {
+  it("groups the integration demonstrations separately from focused verification", () => {
     render(<SiteApp />);
-    const tabs = screen.getByRole("tablist", { name: "Simulation views" });
-    const coupledTab = within(tabs).getByRole("tab", { name: /Coupled field/i });
-    const screeningTab = within(tabs).getByRole("tab", { name: /Device screening/i });
-    const scalingTab = within(tabs).getByRole("tab", { name: /Solver scaling/i });
+    const integrationGroup = screen.getByRole("heading", { name: /Design identities carried into engineering screens/i }).closest("section");
+    const verificationGroup = screen.getByRole("heading", { name: /Selected physics and solver examples/i }).closest("section");
+    expect(integrationGroup).not.toBeNull();
+    expect(verificationGroup).not.toBeNull();
 
-    expect(coupledTab).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByText("Illustrative artwork · not solver output")).toBeInTheDocument();
-
-    fireEvent.click(screeningTab);
-    expect(screeningTab).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("img", { name: /Retained synthetic TSV device screening result/i })).toBeInTheDocument();
-    expect(screen.getByText("Retained synthetic output")).toBeInTheDocument();
-
-    fireEvent.click(scalingTab);
-    expect(scalingTab).toHaveAttribute("aria-selected", "true");
-    const reel = screen.getByRole("heading", { name: "Look at the physics before reading about it." }).closest("section");
-    expect(within(reel!).getByRole("img", { name: /Median solve wall time decreases/i })).toBeInTheDocument();
-    expect(screen.getByText("Measured benchmark")).toBeInTheDocument();
-    expect(within(tabs).getByRole("button", { name: /Pause simulation reel/i })).toBeInTheDocument();
-  });
-
-  it("keeps design-linked demonstrations distinct from focused verification cases", () => {
-    render(<SiteApp />);
     for (const title of ["TSV-to-device screening", "Design-linked solder screening"]) {
-      const card = screen.getByRole("heading", { name: title }).closest("article");
-      expect(card).toHaveClass("site-workflow-card-integration");
-      expect(within(card!).getByText("Design-linked")).toBeInTheDocument();
+      expect(within(integrationGroup!).getByRole("heading", { name: title })).toBeInTheDocument();
+      expect(within(verificationGroup!).queryByRole("heading", { name: title })).not.toBeInTheDocument();
     }
     for (const title of ["Partitioned ETV cycle", "3-D solder dissipation field", "Plane-strain solder cycle"]) {
-      const card = screen.getByRole("heading", { name: title }).closest("article");
-      expect(card).toHaveClass("site-workflow-card-verification");
-      expect(within(card!).getByText("Physics verification")).toBeInTheDocument();
+      expect(within(verificationGroup!).getByRole("heading", { name: title })).toBeInTheDocument();
+      expect(within(integrationGroup!).queryByRole("heading", { name: title })).not.toBeInTheDocument();
     }
   });
 
-  it("gives every runnable case direct guide, code, and retained-result links", () => {
+  it("gives every workflow direct guide, code, and retained-result links", () => {
     render(<SiteApp />);
     for (const title of [
       "Plane-strain solder cycle",
@@ -79,17 +68,17 @@ describe("public CoupFE-EDA site", () => {
       expect(card).not.toBeNull();
       const links = within(card!).getAllByRole("link");
       expect(links.map((link) => link.getAttribute("href"))).toEqual(
-        expect.arrayContaining([expect.stringContaining("github.com/tengzhang48/CoupFE-EDA/blob/main/")]),
+        expect.arrayContaining([
+          expect.stringContaining("github.com/tengzhang48/CoupFE-EDA/blob/main/"),
+        ]),
       );
-      expect(within(card!).getByRole("link", { name: /Guide/i })).toBeInTheDocument();
-      expect(within(card!).getByRole("link", { name: /Code/i })).toBeInTheDocument();
-      expect(within(card!).getByRole("link", { name: /Result/i })).toBeInTheDocument();
+      expect(within(card!).getByText("Claim boundary")).toBeInTheDocument();
     }
   });
 
-  it("orders the public story and exposes navigation and evidence destinations", () => {
+  it("orders the public sections and exposes navigation and evidence destinations", () => {
     const { container } = render(<SiteApp />);
-    const orderedIds = ["capabilities", "simulations", "workflow", "workbench", "examples", "performance", "evidence"];
+    const orderedIds = ["how-it-works", "device-screening", "interface", "examples", "performance", "validation"];
     for (const id of orderedIds) expect(container.querySelector(`#${id}`)).not.toBeNull();
     for (let index = 0; index < orderedIds.length - 1; index += 1) {
       const current = container.querySelector(`#${orderedIds[index]}`)!;
@@ -97,29 +86,37 @@ describe("public CoupFE-EDA site", () => {
       expect(current.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
 
-    const navigation = screen.getByRole("navigation", { name: "Project website" });
+    const desktopNavigation = screen.getByRole("navigation", { name: "Project website" });
     for (const [name, href] of [
-      ["Capabilities", "#capabilities"],
-      ["Simulations", "#simulations"],
-      ["Workflow", "#workflow"],
-      ["Evidence", "#evidence"],
+      ["How it works", "#how-it-works"],
+      ["Examples", "#examples"],
+      ["Evidence", "#validation"],
+      ["Performance", "#performance"],
     ]) {
-      expect(within(navigation).getByRole("link", { name }).getAttribute("href")).toBe(href);
+      expect(within(desktopNavigation).getByRole("link", { name }).getAttribute("href")).toBe(href);
     }
-    expect(within(navigation).getByRole("link", { name: "Docs" }).getAttribute("href")).toContain("docs/README.md");
+    expect(within(desktopNavigation).getByRole("link", { name: "Documentation" }).getAttribute("href")).toContain("docs/README.md");
+    const mobileNavigation = screen.getByRole("navigation", { name: "Mobile project website" });
+    expect(mobileNavigation).toBeInTheDocument();
+    const mobileDetails = mobileNavigation.closest("details")!;
+    mobileDetails.setAttribute("open", "");
+    const mobileExamplesLink = within(mobileNavigation).getByRole("link", { name: "Examples" });
+    mobileExamplesLink.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    fireEvent.click(mobileExamplesLink);
+    expect(mobileDetails).not.toHaveAttribute("open");
+    expect(screen.getByRole("navigation", { name: "Interface demonstration" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Validation records" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Project resources" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Launch workbench/i }).getAttribute("href")).toContain("surface=workbench");
+    expect(screen.getByRole("link", { name: "Evidence guide" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Research roadmap" })).toBeInTheDocument();
+    expect(screen.getByText(/does not execute CoupFE-EDA solvers/i)).toBeInTheDocument();
   });
 
-  it("keeps the visual workbench behind an explicit demonstration boundary", async () => {
+  it("keeps the workbench behind an explicit interface-demonstration boundary", async () => {
     window.history.replaceState({}, "", "/?surface=workbench");
     render(<SiteApp />);
-
-    expect(await screen.findByText(/Interactive demonstration — no solver runs/i)).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "TSV screening workbench" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "TSV stress-to-device screening" })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Baseline synthetic TSV stress field" })).toBeInTheDocument();
+    expect(await screen.findByText(/Interface demonstration — no solver runs/i)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Synthetic TSV-to-device screening" })).toBeInTheDocument();
     expect(screen.getByText(/Release validation: not claimed/i)).toBeInTheDocument();
     expect(screen.queryByText(/Peak temperature/i)).not.toBeInTheDocument();
   });

@@ -37,7 +37,6 @@ import type {
   RunRecord,
 } from "./domain/types";
 import { useWorkbench } from "./hooks/use-workbench";
-import siteData from "../site-data.json";
 
 type ViewId = "overview" | "geometry" | "models" | "runs" | "compare" | "evidence";
 
@@ -379,146 +378,6 @@ function ModelsView({ snapshot, selectedModel, setSelectedModel }: { snapshot: P
   );
 }
 
-type TsvFieldMode = "stress" | "devices";
-
-const tsvDeviceSites = Array.from({ length: 32 }, (_, index) => {
-  const ring = Math.floor(index / 8);
-  const angle = ((index % 8) * Math.PI) / 4 - 0.26;
-  const radius = 88 + ring * 42;
-  return {
-    id: index,
-    x: 380 + Math.cos(angle) * radius,
-    y: 230 + Math.sin(angle) * radius,
-    nmos: index % 2 === 0,
-    violation: index < 24 && index % 2 === 0,
-  };
-});
-
-function TsvFieldMap({ mode, optimized, running }: { mode: TsvFieldMode; optimized: boolean; running: boolean }) {
-  return (
-    <svg
-      className={`tsv-field-map field-mode-${mode} ${optimized ? "is-optimized" : "is-baseline"} ${running ? "is-running" : ""}`}
-      viewBox="0 0 760 460"
-      role="img"
-      aria-label={`${optimized ? "Orientation-screened" : "Baseline"} synthetic TSV ${mode === "stress" ? "stress field" : "device-site map"}`}
-    >
-      <defs>
-        <radialGradient id="tsv-field" cx="50%" cy="50%" r="54%">
-          <stop offset="0%" stopColor="#ff5a32" stopOpacity=".96" />
-          <stop offset="19%" stopColor="#ffb13d" stopOpacity=".86" />
-          <stop offset="39%" stopColor="#4cc9c5" stopOpacity=".62" />
-          <stop offset="67%" stopColor="#1b66ae" stopOpacity=".32" />
-          <stop offset="100%" stopColor="#071827" stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id="tsv-copper" x1="0" x2="1">
-          <stop stopColor="#6d3217" /><stop offset=".24" stopColor="#e6974e" /><stop offset=".48" stopColor="#ffd08b" /><stop offset=".75" stopColor="#b65f2c" /><stop offset="1" stopColor="#5c2915" />
-        </linearGradient>
-        <linearGradient id="tsv-scan" x1="0" x2="1">
-          <stop stopColor="#66e6f5" stopOpacity="0" /><stop offset=".5" stopColor="#66e6f5" stopOpacity=".55" /><stop offset="1" stopColor="#66e6f5" stopOpacity="0" />
-        </linearGradient>
-        <pattern id="tsv-grid" width="24" height="24" patternUnits="userSpaceOnUse">
-          <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#8eb6cd" strokeOpacity=".13" strokeWidth="1" />
-        </pattern>
-        <filter id="tsv-glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
-
-      <rect width="760" height="460" fill="#07131f" />
-      <rect x="18" y="18" width="724" height="424" rx="4" fill="#0a1e2e" stroke="#28465a" />
-      <rect x="18" y="18" width="724" height="424" rx="4" fill="url(#tsv-grid)" />
-      <text x="38" y="48" className="field-map-label">SYNTHETIC SILICON PLANE · XY</text>
-      <text x="722" y="48" textAnchor="end" className="field-map-label">10 µm TSV · 32 DEVICE SITES</text>
-
-      <g className="field-contours" opacity={mode === "stress" ? 1 : .4}>
-        <circle cx="380" cy="230" r="205" fill="url(#tsv-field)" opacity={optimized ? .43 : .82} />
-        <ellipse cx="380" cy="230" rx="206" ry="122" fill="none" stroke="#2f9ad0" strokeOpacity=".5" />
-        <ellipse cx="380" cy="230" rx="169" ry="101" fill="none" stroke="#38c9c1" strokeOpacity=".62" />
-        <ellipse cx="380" cy="230" rx="132" ry="78" fill="none" stroke="#f1cf47" strokeOpacity=".72" />
-        <ellipse cx="380" cy="230" rx="96" ry="57" fill="none" stroke="#ff7a36" strokeOpacity=".82" />
-        <path d="M179 230c41-43 91-64 150-64s105 26 151 64 94 64 151 64" fill="none" stroke="#7bd8e6" strokeOpacity=".34" strokeDasharray="4 6" />
-        <path d="M179 230c41 43 91 64 150 64s105-26 151-64 94-64 151-64" fill="none" stroke="#ffba4a" strokeOpacity=".3" strokeDasharray="4 6" />
-      </g>
-
-      <g className="field-device-sites" opacity={mode === "devices" ? 1 : .54}>
-        {tsvDeviceSites.map((site) => {
-          const violation = site.violation && !optimized;
-          const channelRotation = optimized && site.nmos ? -45 : 0;
-          return (
-            <g className={violation ? "device-site device-violation" : "device-site device-pass"} transform={`translate(${site.x} ${site.y})`} key={site.id}>
-              {site.nmos ? <circle r="6" /> : <rect x="-6" y="-6" width="12" height="12" rx="1" />}
-              <line x1="-10" x2="10" transform={`rotate(${channelRotation})`} />
-            </g>
-          );
-        })}
-      </g>
-
-      <g className="field-tsv" filter="url(#tsv-glow)">
-        <circle cx="380" cy="230" r="57" fill="#08121b" stroke="#ffbb68" strokeOpacity=".75" strokeWidth="6" />
-        <circle cx="380" cy="230" r="46" fill="url(#tsv-copper)" stroke="#ffe0a9" strokeOpacity=".7" />
-        <circle cx="366" cy="214" r="11" fill="#fff" fillOpacity=".16" />
-      </g>
-      <text x="380" y="234" textAnchor="middle" className="tsv-core-label">TSV</text>
-
-      <g className="field-legend" transform="translate(38 398)">
-        <circle cx="5" cy="5" r="5" className="legend-pass" /><text x="18" y="9">within threshold</text>
-        <circle cx="134" cy="5" r="5" className="legend-violation" /><text x="147" y="9">screening violation</text>
-      </g>
-      <g className="field-scale" transform="translate(620 398)"><text x="0" y="-8">20 µm</text><path d="M0 3h82M0-2v10M82-2v10" /></g>
-      <rect className="field-scanline" x="-90" y="18" width="80" height="424" fill="url(#tsv-scan)" />
-    </svg>
-  );
-}
-
-function TsvSimulationStage({ snapshot, activeRun, onRun }: { snapshot: ProjectSnapshot; activeRun: RunRecord | undefined; onRun: () => void }) {
-  const [fieldMode, setFieldMode] = useState<TsvFieldMode>("stress");
-  const [optimized, setOptimized] = useState(false);
-  const running = activeRun?.workflowId === "tsv_device_screening";
-  const progress = running ? activeRun?.progress?.fraction ?? 0 : 0;
-  const displayedOptimized = running ? progress >= .58 : optimized;
-  const completed = snapshot.runs.some((run) => run.workflowId === "tsv_device_screening" && run.status === "succeeded");
-  const phase = running ? activeRun?.progress?.message ?? "Running approved lifecycle" : completed ? "Retained result linked" : "Ready to play";
-
-  return (
-    <section className={`tsv-simulation-stage ${running ? "is-running" : ""}`}>
-      <header className="tsv-stage-header">
-        <div><p className="eyebrow">Interactive field preview</p><h2>TSV stress-to-device screening</h2></div>
-        <div className="tsv-stage-status"><i /><span>{phase}</span>{running && <b>{Math.round(progress * 100)}%</b>}</div>
-      </header>
-      <div className="tsv-stage-toolbar">
-        <div role="group" aria-label="Field layer">
-          <button className={fieldMode === "stress" ? "is-active" : ""} onClick={() => setFieldMode("stress")}>Stress field</button>
-          <button className={fieldMode === "devices" ? "is-active" : ""} onClick={() => setFieldMode("devices")}>Device sites</button>
-        </div>
-        <div role="group" aria-label="Screening state">
-          <button className={!displayedOptimized ? "is-active" : ""} onClick={() => setOptimized(false)} disabled={Boolean(running)}>Baseline</button>
-          <button className={displayedOptimized ? "is-active" : ""} onClick={() => setOptimized(true)} disabled={Boolean(running)}>Orientation action</button>
-        </div>
-      </div>
-      <div className="tsv-stage-body">
-        <div className="tsv-stage-viewer">
-          <TsvFieldMap mode={fieldMode} optimized={displayedOptimized} running={Boolean(running)} />
-          <div className="tsv-viewer-caption"><span>Analytic Lamé far-field proxy</span><span>Hover-free deterministic preview</span><strong>Synthetic visualization</strong></div>
-        </div>
-        <aside className="tsv-stage-inspector">
-          <div className="tsv-inspector-title"><span>ACTIVE SCREEN</span><strong>{displayedOptimized ? "Post-action" : "Baseline [100]"}</strong><small>{displayedOptimized ? "nMOS channel −45°" : "all channels 0°"}</small></div>
-          <div className="tsv-live-metric"><span>Threshold violations</span><strong>{displayedOptimized ? siteData.tsvScreening.optimizedViolations : siteData.tsvScreening.baselineViolations}<small> / {siteData.tsvScreening.nDevices}</small></strong><i><b style={{ width: `${((displayedOptimized ? siteData.tsvScreening.optimizedViolations : siteData.tsvScreening.baselineViolations) / siteData.tsvScreening.nDevices) * 100}%` }} /></i></div>
-          <div className="tsv-live-metric"><span>Peak |mobility proxy|</span><strong>{(displayedOptimized ? siteData.tsvScreening.optimizedPeakAbsMobilityProxy : siteData.tsvScreening.baselinePeakAbsMobilityProxy).toFixed(4)}</strong><i><b style={{ width: `${Math.min(100, ((displayedOptimized ? siteData.tsvScreening.optimizedPeakAbsMobilityProxy : siteData.tsvScreening.baselinePeakAbsMobilityProxy) / siteData.tsvScreening.baselinePeakAbsMobilityProxy) * 100)}%` }} /></i></div>
-          <ol className="tsv-stage-phases">
-            <li className={running || completed ? "is-complete" : "is-active"}><i />Load named sites<span>32 IDs</span></li>
-            <li className={progress > .25 || completed ? "is-complete" : running ? "is-active" : ""}><i />Map stress proxy<span>Lamé path</span></li>
-            <li className={progress > .58 || completed ? "is-complete" : progress > .25 ? "is-active" : ""}><i />Apply orientation<span>bounded action</span></li>
-            <li className={progress > .82 || completed ? "is-complete" : progress > .58 ? "is-active" : ""}><i />Link evidence<span>retained artifacts</span></li>
-          </ol>
-          <button className="primary-action tsv-stage-run" onClick={onRun} disabled={Boolean(activeRun)}>{running ? `Screening ${Math.round(progress * 100)}%` : completed ? "Play again" : "Play screening"}<Icon name="chevron" size={16} /></button>
-        </aside>
-      </div>
-      <footer><Icon name="info" size={15} /><span>Animated browser visualization of the retained synthetic case. No solver executes in public demo mode.</span><a href={`${import.meta.env.BASE_URL}generated/tsv_device_screening/evidence.json`}>Evidence JSON <Icon name="external" size={13} /></a></footer>
-    </section>
-  );
-}
-
 function ApprovedWorkflowPanel({
   snapshot,
   workflow,
@@ -573,14 +432,7 @@ function RunsView({
   const isDemo = snapshot.mode === "demo";
   return (
     <div className="content-stack">
-      <section className="page-intro"><div><p className="eyebrow">{isDemo ? "Browser simulation" : "Execution history"}</p><h1>{isDemo ? "TSV screening workbench" : "Approved runs"}</h1><p>{isDemo ? "Explore the synthetic field, compare the baseline with the orientation action, then play the approved workflow lifecycle against retained evidence." : "Successful connected executions retain outputs, stdout/stderr, source tree state, and artifact hashes."}</p></div>{snapshot.models.length > 0 && <button className="secondary-action" onClick={onRunModel}>New model analysis <Icon name="chevron" size={16} /></button>}</section>
-      {isDemo && snapshot.approvedWorkflows[0] && (
-        <TsvSimulationStage
-          snapshot={snapshot}
-          activeRun={activeRun}
-          onRun={() => onRunWorkflow(snapshot.approvedWorkflows[0]!.id)}
-        />
-      )}
+      <section className="page-intro"><div><p className="eyebrow">{isDemo ? "Browser simulation" : "Execution history"}</p><h1>{isDemo ? "Approved workflow simulation" : "Approved runs"}</h1><p>{isDemo ? "Public-mode records simulate the interface lifecycle and link only to reviewed, retained project artifacts." : "Successful connected executions retain outputs, stdout/stderr, source tree state, and artifact hashes."}</p></div>{snapshot.models.length > 0 && <button className="secondary-action" onClick={onRunModel}>New model analysis <Icon name="chevron" size={16} /></button>}</section>
       {snapshot.approvedWorkflows.map((workflow) => (
         <ApprovedWorkflowPanel
           snapshot={snapshot}

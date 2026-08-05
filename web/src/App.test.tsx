@@ -52,16 +52,8 @@ describe("CoupFE–EDA public interface demonstration", () => {
     expect((await screen.findAllByText(demoSnapshot.project.name)).length).toBeGreaterThan(0);
     expect(screen.getByRole("note")).toHaveTextContent("Demonstration data");
     expect(screen.getByRole("note")).toHaveTextContent("No engineering solver runs");
-    expect(screen.getByRole("heading", { name: "TSV screening workbench" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Approved workflow simulation" })).toBeInTheDocument();
     expect(screen.getByText("Browser simulation", { selector: ".eyebrow" })).toBeInTheDocument();
-    const fieldStage = screen.getByRole("heading", { name: "TSV stress-to-device screening" }).closest("section");
-    expect(fieldStage).not.toBeNull();
-    expect(within(fieldStage!).getByRole("img", { name: "Baseline synthetic TSV stress field" })).toBeInTheDocument();
-    expect(within(fieldStage!).getByRole("button", { name: "Stress field" })).toHaveClass("is-active");
-    fireEvent.click(within(fieldStage!).getByRole("button", { name: "Orientation action" }));
-    expect(within(fieldStage!).getByRole("img", { name: "Orientation-screened synthetic TSV stress field" })).toBeInTheDocument();
-    fireEvent.click(within(fieldStage!).getByRole("button", { name: "Device sites" }));
-    expect(within(fieldStage!).getByRole("img", { name: "Orientation-screened synthetic TSV device-site map" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Synthetic TSV-to-device screening" })).toBeInTheDocument();
     expect(screen.getByText(TSV_CLAIM_BOUNDARY)).toBeInTheDocument();
     expect(screen.getByText(/Release validation: not claimed/i)).toBeInTheDocument();
@@ -71,7 +63,6 @@ describe("CoupFE–EDA public interface demonstration", () => {
     expect(screen.getByText("Approved simulation contract", { selector: ".eyebrow" })).toBeInTheDocument();
     expect(screen.queryByText("Server-approved workflow", { selector: ".eyebrow" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Simulate approved workflow/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Play screening/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Review simulation/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Simulated run history" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Run approved workflow/i })).not.toBeInTheDocument();
@@ -85,7 +76,7 @@ describe("CoupFE–EDA public interface demonstration", () => {
     const backend = renderWorkbench();
     expect((await screen.findAllByText(demoSnapshot.project.name)).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("button", { name: /Play screening/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Review simulation/i }));
     const dialog = screen.getByRole("dialog", { name: /Simulate Synthetic TSV-to-device screening/i });
     expect(within(dialog).getByText("Browser simulation boundary", { selector: ".eyebrow" })).toBeInTheDocument();
     expect(within(dialog).queryByText("Approved execution boundary", { selector: ".eyebrow" })).not.toBeInTheDocument();
