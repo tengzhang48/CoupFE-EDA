@@ -1,0 +1,84 @@
+{
+  "case_id": "axisymmetric_tsv_thermoelastic_field_v1",
+  "claim_boundary": "Axisymmetric plane-strain thermoelastic component verification against the declared Lam\u00e9 equation. It is not a finite-depth 3-D TSV, near-surface device field, experimental validation, keep-out-zone signoff, or transient cooling simulation.",
+  "comparison": {
+    "absolute_error_MPa": 0.22417594096549465,
+    "acceptance_threshold": 0.03,
+    "fe_sigma_rr_MPa": 354.1718002503578,
+    "lame_sigma_rr_MPa": 353.9476243093923,
+    "passed": true,
+    "query_radius_um": 20.0,
+    "reference": "published_Lame_equation",
+    "relative_error": 0.0006333590779226087
+  },
+  "inputs": {
+    "delta_temperature_K": -400.0,
+    "diameter_um": 30.0,
+    "formulation": "axisymmetric_plane_strain",
+    "liner_nm": 0.0,
+    "load": "uniform_thermal_eigenstrain",
+    "mesh_points_requested": 2400,
+    "outer_radius_um": 300.0
+  },
+  "load_sweep": {
+    "delta_temperature_K": [
+      0.0,
+      -50.0,
+      -100.0,
+      -150.0,
+      -200.0,
+      -250.0,
+      -300.0,
+      -350.0,
+      -400.0
+    ],
+    "is_transient": false,
+    "kind": "independent_static_prescribed_load_cases",
+    "steps": 9
+  },
+  "mesh": {
+    "degrees_of_freedom": 2400,
+    "dof_per_node": 1,
+    "elements": 2399,
+    "nodes": 2400,
+    "topology": "Line2"
+  },
+  "provenance": {
+    "application_module": "eda_multiphysics.tsv_stress",
+    "command": [
+      "python",
+      "examples/tsv_axisymmetric_field/run.py",
+      "--output-dir",
+      "<OUTPUT_DIR>"
+    ],
+    "core_revision": "e2f42ed5772850a0a23a2ce434f430c287eae5c8",
+    "eda_revision": "fc0aa7380e0e791376c34665d0b4d1997b099174",
+    "operator": "AxisymThermoelastic",
+    "solver": "coupfe.newton_solve"
+  },
+  "results": {
+    "max_abs_displacement_nm": 352.99397196640416,
+    "sigma_rr_at_20um_MPa": 354.1718002503578,
+    "sigma_theta_at_20um_MPa": -357.3339920435844,
+    "silicon_sigma_rr_max_MPa": 630.3398378748665,
+    "silicon_sigma_rr_min_MPa": 0.0011214842182397842
+  },
+  "schema_version": 1,
+  "solver": {
+    "absolute_residual_tolerance_N_per_m": 1e-14,
+    "converged": true,
+    "final_free_residual_norm_N_per_m": 5.46071539448707e-07,
+    "final_relative_residual": 5.4496174045276766e-12,
+    "initial_free_residual_norm_N_per_m": 100203.64713952529,
+    "newton_iterations": 2,
+    "relative_tolerance": 1e-09,
+    "residual_fraction_of_acceptance_limit": 0.0054496174045276765
+  },
+  "units": {
+    "radial_displacement": "nm",
+    "radius": "um",
+    "residual_norm": "N/m",
+    "stress": "MPa",
+    "temperature_change": "K"
+  }
+}
