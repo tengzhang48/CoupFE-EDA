@@ -180,6 +180,20 @@
       "evidencePath": "web/contracts/simulation-media.json"
     },
     {
+      "id": "design_linked_solder_screening",
+      "eyebrow": "EDA-linked CoupFE mechanics",
+      "title": "Design-linked solder response",
+      "asset": "generated/simulation-media/design-linked-solder-screening.svg",
+      "alt": "A synthetic three-by-three joint map linked by stable identity and distance-to-neutral-point to all 18 checked Hex8 solder-dissipation values",
+      "summary": "The checked runner selects stable synthetic joint SYNTH_J00 by maximum distance-to-neutral-point and carries its identity and L_D into the 18-Hex8 SAC305 block.",
+      "result": "47,273-cycle calibration screen",
+      "detail": "SYNTH_J00 · 42.4264 µm DNP · 18 elements",
+      "boundary": "Synthetic joint map and regular block; only stable identity and L_D cross the handoff. The cycle count is calibration-specific, not predictive package life.",
+      "runnerPath": "examples/design_linked_solder_screening/run.py",
+      "resultPath": "examples/design_linked_solder_screening/expected_results.json",
+      "evidencePath": "web/contracts/simulation-media.json"
+    },
+    {
       "id": "etv_partitioned_comparison",
       "eyebrow": "CoupFE partitioned mechanics",
       "title": "ETV assumption comparison",
@@ -208,6 +222,16 @@
       "evidencePath": "web/contracts/retained-tsv-artifacts.json"
     }
   ],
+  "solderComparison": {
+    "baselineMediaId": "solder_3d_dissipation",
+    "designLinkedMediaId": "design_linked_solder_screening",
+    "baselineLDOverH": 6.0,
+    "designLinkedLDOverH": 0.848528137424,
+    "baselineShearRange": 0.014256,
+    "designLinkedShearRange": 0.00201610285452,
+    "baselinePeakDissipationMPa": 0.389021354837,
+    "designLinkedPeakDissipationMPa": 0.0111335154369
+  },
   "tsvScreening": {
     "nDevices": 32,
     "threshold": 0.05,

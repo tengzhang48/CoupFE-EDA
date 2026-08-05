@@ -14,6 +14,9 @@ describe("public CoupFE-EDA site", () => {
     const { container } = render(<SiteApp />);
     expect(screen.getByRole("heading", { level: 1, name: /EDA-aware multiphysics, from design inputs to reviewable evidence/i })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByText("Measured-device comparison")).toBeInTheDocument();
+    expect(screen.getByText("Not performed")).toBeInTheDocument();
+    expect(screen.getByText("No experimental qualification claim")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /A traceable path from design inputs to engineering evidence/i })).toBeInTheDocument();
     for (const step of [
       "Design and case inputs",
@@ -57,6 +60,12 @@ describe("public CoupFE-EDA site", () => {
       expect(within(card!).getByRole("link", { name: "SHA-256 record" })).toHaveAttribute("href", expect.stringContaining(media.evidencePath));
       expect(within(card!).getByText("Claim boundary")).toBeInTheDocument();
     }
+    const designLinkedCard = screen.getByRole("heading", { name: "Design-linked solder response" }).closest("article");
+    const comparisonNote = within(designLinkedCard!).getByRole("note");
+    expect(comparisonNote).toHaveTextContent("Why this field is lower");
+    expect(comparisonNote).toHaveTextContent("L_D/h is 0.8485 versus 6.0");
+    expect(comparisonNote).toHaveTextContent("same 3 × 3 × 2 mesh and SAC305 material model");
+    expect(comparisonNote).toHaveTextContent("about 34.9× lower peak dissipation");
     expect(screen.getByText(/not stock imagery or AI-generated concepts/i)).toBeInTheDocument();
   });
 
@@ -132,8 +141,8 @@ describe("public CoupFE-EDA site", () => {
   it("labels Pages as retained evidence and does not expose a fake run action", () => {
     window.history.replaceState({}, "", "/?surface=workbench");
     render(<SiteApp />);
-    expect(screen.getByText(/Retained CoupFE field explorer — GitHub Pages does not run the solver/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Inspect the field behind the claim." })).toBeInTheDocument();
+    expect(screen.getByText(/Retained evidence · read only/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "TSV field workbench" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Retained solver run" })).toHaveTextContent(/cannot execute Python or CoupFE/i);
     expect(screen.queryByRole("button", { name: /run the fixed/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /simulate/i })).not.toBeInTheDocument();

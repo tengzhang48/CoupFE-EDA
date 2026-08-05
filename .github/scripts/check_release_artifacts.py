@@ -311,6 +311,7 @@ PUBLIC_WEB_FILES = {
         "public/generated/tsv_device_screening/device_screening.csv",
         "public/generated/tsv_device_screening/device_screening.svg",
         "public/generated/tsv_device_screening/evidence.json",
+        "public/generated/simulation-media/design-linked-solder-screening.svg",
         "public/generated/simulation-media/etv-partitioned-comparison.svg",
         "public/generated/simulation-media/solder-3d-dissipation.svg",
         "scripts/check-repository-data.mjs",
