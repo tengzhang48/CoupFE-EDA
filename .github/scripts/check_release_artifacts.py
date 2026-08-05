@@ -284,6 +284,8 @@ PUBLIC_WEB_FILES = {
         "public/generated/tsv_device_screening/device_screening.csv",
         "public/generated/tsv_device_screening/device_screening.svg",
         "public/generated/tsv_device_screening/evidence.json",
+        "public/visuals/multiphysics-package-concept.png",
+        "public/visuals/tsv-workbench-demo.webm",
         "scripts/check-repository-data.mjs",
         "scripts/prepare-repository-assets.mjs",
         "scripts/refresh-tsv-device-artifacts.mjs",

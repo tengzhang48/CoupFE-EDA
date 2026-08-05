@@ -150,7 +150,7 @@ function SimulationReel() {
         <figure className={`site-reel-stage site-reel-stage-${scene.id}`} key={scene.id}>
           <div className="site-reel-media">
             {scene.id === "field" && (
-              <img src={publicAsset("media/multiphysics-package-concept.png")} alt="Illustrative semiconductor package cutaway with a colored coupled-field overlay" />
+              <img src={publicAsset("visuals/multiphysics-package-concept.png")} alt="Illustrative semiconductor package cutaway with a colored coupled-field overlay" />
             )}
             {scene.id === "screening" && (
               <img src={publicAsset(siteData.tsvScreening.figureAsset)} alt="Retained synthetic TSV device screening result before and after orientation action" />
@@ -237,7 +237,7 @@ function PublicSite() {
             <p className="site-hero-boundary">Research alpha · checked synthetic and verification cases · no manufacturing signoff claim</p>
           </div>
           <figure className="site-hero-visual">
-            <img src={publicAsset("media/multiphysics-package-concept.png")} alt="Illustrative semiconductor package cutaway with finite-element-style field contours around copper vias" />
+            <img src={publicAsset("visuals/multiphysics-package-concept.png")} alt="Illustrative semiconductor package cutaway with finite-element-style field contours around copper vias" />
             <div className="site-hero-field-label"><i /><span>COUPLED FIELD VIEW</span><b>THERMAL · MECHANICAL</b></div>
             <div className="site-hero-legend"><span>LOW</span><i /><span>PEAK</span></div>
             <figcaption>Concept visualization · not solver output</figcaption>
@@ -291,7 +291,7 @@ function PublicSite() {
                 poster={publicAsset(siteData.tsvScreening.figureAsset)}
                 aria-label="Looping interface demonstration of the interactive TSV stress-to-device screening workbench"
               >
-                <source src={publicAsset("media/tsv-workbench-demo.webm")} type="video/webm" />
+                <source src={publicAsset("visuals/tsv-workbench-demo.webm")} type="video/webm" />
               </video>
               <img className="site-workbench-poster" src={publicAsset(siteData.tsvScreening.figureAsset)} alt="Synthetic TSV device screening visualization shown inside the workbench preview" />
               <b className="site-workbench-video-label">INTERFACE DEMO · 00:09</b>
