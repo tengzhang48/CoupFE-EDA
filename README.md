@@ -43,19 +43,27 @@ in core.
 The source under [`web/`](web/) supports two deliberately separate uses:
 
 - The default public GitHub Pages route renders checked repository examples,
-  retained benchmark records, evidence links, and their stated boundaries
-  directly from the website data manifest. Its separate workbench route uses
-  the demonstration backend, whose actions only simulate an in-browser
-  lifecycle. Neither route runs Python, CoupFE-EDA, OpenROAD, MPI, or a
-  finite-element solver, and neither persists projects.
+  retained benchmark records, evidence links, and their stated boundaries. Its
+  featured result is a retained CoupFE axisymmetric TSV stress field with raw
+  displacement/stress arrays, a solver-derived contour, and a nine-state load
+  sweep video.
+- The separate `?surface=workbench` route is a read-only real-field explorer on
+  GitHub Pages. It validates the retained `field.json`, then derives its
+  contour, radial profile, probe values, and load-state views from those arrays.
+  It has no mock execution backend or simulated run lifecycle. Neither public
+  route runs Python, CoupFE-EDA, OpenROAD, MPI, or a finite-element solver.
 - The local workbench can connect to a separately started API service. The
   browser submits domain identifiers to that service; server-owned executor
-  registrations decide which approved workflow may run. The public Pages
-  deployment does not include that API and cannot start local or remote jobs.
+  registration maps the only Run action to the fixed
+  `tsv.axisymmetric-field.v1` workflow. The public Pages deployment does not
+  include that API and cannot start local or remote jobs.
 
-The public demo uses project-authored synthetic inputs and retained
-project-generated example and benchmark outputs. Its browser-only lifecycle
-does not substitute invented solver values for those records.
+The retained field includes nine independent static CoupFE solves at prescribed
+temperature changes from `0` to `-400 K`. Their ordering supports visual
+comparison; it is not transient cooling or physical time integration. The case
+is an axisymmetric plane-strain component verification against the declared
+Lamé equation—not a finite-depth 3-D TSV, near-surface device field,
+experimental validation, keep-out-zone signoff, or transient simulation.
 
 Run and check the static frontend locally with:
 
@@ -70,13 +78,13 @@ To exercise the connected GUI, start its optional loopback-only API from the
 repository root:
 
 ```bash
+./setup.sh
 python -m pip install -e '.[workbench]'
 coupfe-eda-workbench --repository-root .
 ```
 
-The currently allowlisted TSV screening workflow is NumPy-based and does not
-require CoupFE Core. Run `./setup.sh` before using the wider finite-element
-examples that depend on Core.
+The setup step installs the pinned CoupFE Core revision used by the allowlisted
+`AxisymThermoelastic`/`coupfe.newton_solve` case.
 
 Then start the API-mode frontend in a second terminal:
 
@@ -87,10 +95,13 @@ npm run dev:api
 ```
 
 Open the Vite URL with `?surface=workbench` appended. The current API exposes
-one server-owned executor, the released synthetic TSV-to-device screening
-example. Its records retain `releaseValidation: false`; running it is not
-real-device qualification. The API is unauthenticated and intentionally
-refuses non-loopback binding, so it is not a network service template.
+one server-owned executor for
+[`examples/tsv_axisymmetric_field/run.py`](examples/tsv_axisymmetric_field/run.py).
+It fixes the 30 µm TSV, `-400 K` load, 300 µm domain, and 2,400-node mesh;
+the browser cannot supply a command, parameter, output directory, or timeout.
+Records retain `releaseValidation: false`. The API is unauthenticated and
+intentionally refuses non-loopback binding, so it is not a network-service
+template.
 
 See [`web/README.md`](web/README.md) and
 [`web/ARCHITECTURE.md`](web/ARCHITECTURE.md) for the contract and safety

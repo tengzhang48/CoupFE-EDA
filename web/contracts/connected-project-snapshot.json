@@ -5,22 +5,30 @@
   "project": {
     "id": "coupfe-eda-local",
     "name": "CoupFE-EDA local workbench",
-    "studyType": "Approved local workflows",
-    "activeDesignId": "tsv-synthetic-device-sites-v1"
+    "studyType": "Axisymmetric numerical verification",
+    "activeDesignId": "tsv-axisymmetric-field-v1"
   },
   "designs": [
     {
-      "id": "tsv-synthetic-device-sites-v1",
-      "label": "Synthetic TSV device-screening inputs",
-      "packageRevision": "examples/tsv_00_device_screening",
-      "createdAt": "2026-08-01T00:00:00.000Z",
+      "id": "tsv-axisymmetric-field-v1",
+      "label": "30 µm TSV radial field verification",
+      "packageRevision": "examples/tsv_axisymmetric_field",
+      "createdAt": "2026-08-05T00:00:00.000Z",
       "parameters": {
         "tsv_diameter": {
-          "value": 10,
+          "value": 30,
           "unit": "µm"
         },
-        "device_count": {
-          "value": 32,
+        "temperature_change": {
+          "value": -400,
+          "unit": "K"
+        },
+        "outer_radius": {
+          "value": 300,
+          "unit": "µm"
+        },
+        "radial_nodes": {
+          "value": 2400,
           "unit": "1"
         }
       }
@@ -29,18 +37,21 @@
   "models": [],
   "approvedWorkflows": [
     {
-      "id": "tsv_device_screening",
-      "executorKey": "tsv.device-screening.v1",
-      "name": "Synthetic TSV-to-device screening",
-      "description": "Run the identity-preserving stress-to-device mapping example through a server-owned executor.",
-      "driverPath": "examples/tsv_00_device_screening/run.py",
+      "id": "tsv_axisymmetric_field",
+      "executorKey": "tsv.axisymmetric-field.v1",
+      "name": "CoupFE axisymmetric TSV field verification",
+      "description": "Run the fixed 2,400-DOF CoupFE case, retain its full stress field and nine independent load solves, and compare radial stress at 20 µm with the published Lamé solution.",
+      "driverPath": "examples/tsv_axisymmetric_field/run.py",
       "releaseValidation": false,
-      "claimBoundary": "Demonstrates identity-preserving stress-to-device mapping and a deterministic orientation action. It does not validate near-surface TSV stress, transistor delay, or a signoff keep-out zone.",
+      "claimBoundary": "Axisymmetric plane-strain thermoelastic component verification against the declared Lamé equation. It is not a finite-depth 3-D TSV, near-surface device field, experimental validation, keep-out-zone signoff, or transient cooling simulation.",
       "expectedMetricKeys": [
-        "baseline_violations",
-        "optimized_violations",
-        "baseline_peak_abs_mobility_proxy",
-        "optimized_peak_abs_mobility_proxy",
+        "sigma_rr_at_20um_mpa",
+        "lame_reference_sigma_rr_at_20um_mpa",
+        "lame_relative_error_percent",
+        "degrees_of_freedom",
+        "elements",
+        "actual_load_steps",
+        "newton_iterations",
         "runtime_seconds"
       ]
     }

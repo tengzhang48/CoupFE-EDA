@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" role="img" aria-labelledby="figure-title figure-description">
+  <title id="figure-title">3-D solder accumulated inelastic dissipation</title>
+  <desc id="figure-description">Two 3 by 3 heatmaps show all 18 Hex8 element dissipation values from the checked CoupFE-EDA solder_3d_cycle runner. The center x-column has the peak values in both layers. The case is an idealized one-cycle study, not crack-location or package-life evidence.</desc>
+  <rect width="960" height="560" fill="#08111f"/>
+  <style>
+    text { font-family: Inter, ui-sans-serif, system-ui, sans-serif; fill: #edf4ff; }
+    .muted { fill: #9eb0c8; } .label { fill: #cbd8ea; font-size: 13px; }
+    .small { font-size: 12px; } .value { font: 600 13px ui-monospace, SFMono-Regular, monospace; }
+    .axis { stroke: #52647e; stroke-width: 1; }
+  </style>
+  <text x="42" y="46" font-size="24" font-weight="700">3-D solder accumulated inelastic dissipation</text>
+  <text x="42" y="72" class="muted" font-size="13">18 accepted Hex8 element values · one idealized SAC305 cycle · 1 MPa = 1 MJ/m³</text>
+  <text x="74" y="118" font-size="16" font-weight="650">Layer z1 / 2</text>
+  <rect x="74" y="346" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="122" y="389" text-anchor="middle" class="value">0.320536</text>
+  <text x="122" y="411" text-anchor="middle" class="small muted">e1,1,1</text>
+  <rect x="178" y="346" width="96" height="96" rx="8" fill="#e5bb4e" stroke="#7185a0" stroke-width="1"/>
+  <text x="226" y="389" text-anchor="middle" class="value">0.389021</text>
+  <text x="226" y="411" text-anchor="middle" class="small muted">e2,1,1</text>
+  <rect x="282" y="346" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="330" y="389" text-anchor="middle" class="value">0.320536</text>
+  <text x="330" y="411" text-anchor="middle" class="small muted">e3,1,1</text>
+  <rect x="74" y="242" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="122" y="285" text-anchor="middle" class="value">0.320536</text>
+  <text x="122" y="307" text-anchor="middle" class="small muted">e1,2,1</text>
+  <rect x="178" y="242" width="96" height="96" rx="8" fill="#e5bb4e" stroke="#7185a0" stroke-width="1"/>
+  <text x="226" y="285" text-anchor="middle" class="value">0.389021</text>
+  <text x="226" y="307" text-anchor="middle" class="small muted">e2,2,1</text>
+  <rect x="282" y="242" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="330" y="285" text-anchor="middle" class="value">0.320536</text>
+  <text x="330" y="307" text-anchor="middle" class="small muted">e3,2,1</text>
+  <rect x="74" y="138" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="122" y="181" text-anchor="middle" class="value">0.320536</text>
+  <text x="122" y="203" text-anchor="middle" class="small muted">e1,3,1</text>
+  <rect x="178" y="138" width="96" height="96" rx="8" fill="#e5bb4e" stroke="#7185a0" stroke-width="1"/>
+  <text x="226" y="181" text-anchor="middle" class="value">0.389021</text>
+  <text x="226" y="203" text-anchor="middle" class="small muted">e2,3,1</text>
+  <rect x="282" y="138" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="330" y="181" text-anchor="middle" class="value">0.320536</text>
+  <text x="330" y="203" text-anchor="middle" class="small muted">e3,3,1</text>
+  <line x1="74" y1="466" x2="370" y2="466" class="axis"/>
+  <text x="222" y="490" text-anchor="middle" class="label">x element index →</text>
+  <text x="514" y="118" font-size="16" font-weight="650">Layer z2 / 2</text>
+  <rect x="514" y="346" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="562" y="389" text-anchor="middle" class="value">0.320536</text>
+  <text x="562" y="411" text-anchor="middle" class="small muted">e1,1,2</text>
+  <rect x="618" y="346" width="96" height="96" rx="8" fill="#e5bb4e" stroke="#ffffff" stroke-width="3"/>
+  <text x="666" y="389" text-anchor="middle" class="value">0.389021</text>
+  <text x="666" y="411" text-anchor="middle" class="small muted">e2,1,2</text>
+  <rect x="722" y="346" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="770" y="389" text-anchor="middle" class="value">0.320536</text>
+  <text x="770" y="411" text-anchor="middle" class="small muted">e3,1,2</text>
+  <rect x="514" y="242" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="562" y="285" text-anchor="middle" class="value">0.320536</text>
+  <text x="562" y="307" text-anchor="middle" class="small muted">e1,2,2</text>
+  <rect x="618" y="242" width="96" height="96" rx="8" fill="#e5bb4e" stroke="#7185a0" stroke-width="1"/>
+  <text x="666" y="285" text-anchor="middle" class="value">0.389021</text>
+  <text x="666" y="307" text-anchor="middle" class="small muted">e2,2,2</text>
+  <rect x="722" y="242" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="770" y="285" text-anchor="middle" class="value">0.320536</text>
+  <text x="770" y="307" text-anchor="middle" class="small muted">e3,2,2</text>
+  <rect x="514" y="138" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="562" y="181" text-anchor="middle" class="value">0.320536</text>
+  <text x="562" y="203" text-anchor="middle" class="small muted">e1,3,2</text>
+  <rect x="618" y="138" width="96" height="96" rx="8" fill="#e5bb4e" stroke="#ffffff" stroke-width="3"/>
+  <text x="666" y="181" text-anchor="middle" class="value">0.389021</text>
+  <text x="666" y="203" text-anchor="middle" class="small muted">e2,3,2</text>
+  <rect x="722" y="138" width="96" height="96" rx="8" fill="#153358" stroke="#7185a0" stroke-width="1"/>
+  <text x="770" y="181" text-anchor="middle" class="value">0.320536</text>
+  <text x="770" y="203" text-anchor="middle" class="small muted">e3,3,2</text>
+  <line x1="514" y1="466" x2="810" y2="466" class="axis"/>
+  <text x="662" y="490" text-anchor="middle" class="label">x element index →</text>
+  <rect x="74" y="520" width="20" height="10" fill="#153358"/><text x="102" y="530" class="small muted">lower</text>
+  <rect x="160" y="520" width="20" height="10" fill="#e5bb4e"/><text x="188" y="530" class="small muted">higher</text>
+  <text x="514" y="528" class="label">mean 0.343364 MPa · peak 0.389021 MPa</text>
+</svg>

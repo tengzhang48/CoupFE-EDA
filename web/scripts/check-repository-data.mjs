@@ -68,6 +68,24 @@ function metricValue(record, metricPath) {
   return metric.value;
 }
 
+function finiteArray(value, expectedLength, label) {
+  if (!Array.isArray(value) || value.length !== expectedLength) {
+    fail(`${label}: expected ${expectedLength} values`);
+  }
+  value.forEach((item, index) => {
+    if (typeof item !== "number" || !Number.isFinite(item)) {
+      fail(`${label}[${index}] is not finite`);
+    }
+  });
+  return value;
+}
+
+function exactNumericArrays(left, right, label) {
+  if (left.length !== right.length || left.some((value, index) => value !== right[index])) {
+    fail(`${label}: retained arrays differ`);
+  }
+}
+
 async function collectTextFiles(directory) {
   const result = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -87,7 +105,7 @@ async function collectTextFiles(directory) {
 
 const site = await readJson(path.join(webRoot, "site-data.json"));
 equal(site.schemaVersion, 1, "site-data schemaVersion");
-equal(site.recordDate, "2026-08-02", "public-record date");
+equal(site.recordDate, "2026-08-05", "public-record date");
 equal(site.repository.url, "https://github.com/tengzhang48/CoupFE-EDA", "repository URL");
 equal(site.repository.branch, "main", "repository branch");
 equal(site.repository.version, "0.1.0", "project version");
@@ -121,7 +139,7 @@ if (!site.process.boundary || site.process.boundary.length < 80) {
 equal(site.workflows.length, 5, "guided workflow count");
 
 const expectedWorkflowIds = [
-  "solder_plane_cycle",
+  "tsv_axisymmetric_field",
   "etv_partitioned_cycle",
   "solder_3d_cycle",
   "design_linked_solder_screening",
@@ -144,23 +162,186 @@ const workflows = Object.fromEntries(
   site.workflows.map((workflow) => [workflow.id, workflow]),
 );
 
-const plane = await readJson(
-  await requireFile("examples/solder_plane_cycle/expected_results.json"),
-);
-close(metricValue(plane, "result.dW_last_MPa"), 0.33188439070681297, "plane-cycle energy");
-equal(metricValue(plane, "result.element_count"), 6, "plane-cycle element count");
 equal(
-  workflows.solder_plane_cycle.result,
-  `${metricValue(plane, "result.dW_last_MPa").toFixed(6)} MPa cycle dW observable`,
-  "plane-cycle displayed result",
+  workflows.tsv_axisymmetric_field.result,
+  `${site.tsvField.sigmaRrAtQueryMpa.toFixed(3)} MPa at r = ${site.tsvField.queryRadiusUm} µm`,
+  "axisymmetric TSV displayed result",
 );
 equal(
-  workflows.solder_plane_cycle.detail,
-  `Increment-summed mean inelastic energy density · ${metricValue(plane, "result.element_count")} Quad4 elements`,
-  "plane-cycle displayed detail",
+  workflows.tsv_axisymmetric_field.detail,
+  `${site.tsvField.relativeErrorPercent.toFixed(4)}% from Lamé · ${site.tsvField.elements.toLocaleString("en-US")} radial Line2 elements`,
+  "axisymmetric TSV displayed detail",
 );
-equal(workflows.solder_plane_cycle.command, "python examples/solder_plane_cycle/run.py --check", "plane-cycle command");
-equal(workflows.solder_plane_cycle.tier, "NumPy / SciPy / CoupFE", "plane-cycle tier");
+equal(
+  workflows.tsv_axisymmetric_field.command,
+  "python examples/tsv_axisymmetric_field/run.py --output-dir /tmp/tsv_axisymmetric_field",
+  "axisymmetric TSV command",
+);
+equal(workflows.tsv_axisymmetric_field.tier, "NumPy / SciPy / CoupFE", "axisymmetric TSV tier");
+equal(workflows.tsv_axisymmetric_field.boundary, site.tsvField.claimBoundary, "axisymmetric TSV workflow boundary");
+
+const retainedFieldDirectory = repositoryPath("examples/tsv_axisymmetric_field/retained");
+const retainedFieldNames = (await readdir(retainedFieldDirectory, { withFileTypes: true }))
+  .map((entry) => {
+    if (!entry.isFile()) fail(`retained field bundle contains non-file entry: ${entry.name}`);
+    return entry.name;
+  })
+  .sort();
+const expectedRetainedFieldNames = [
+  "contour.svg",
+  "field.json",
+  "load-sweep.webm",
+  "summary.json",
+  "visual-evidence.json",
+];
+equal(
+  retainedFieldNames.join(","),
+  expectedRetainedFieldNames.join(","),
+  "retained field exact file inventory",
+);
+
+const fieldManifest = await readJson(
+  await requireFile("examples/tsv_axisymmetric_field/retained/visual-evidence.json"),
+);
+const retainedField = await readJson(
+  await requireFile("examples/tsv_axisymmetric_field/retained/field.json"),
+);
+const retainedFieldSummary = await readJson(
+  await requireFile("examples/tsv_axisymmetric_field/retained/summary.json"),
+);
+equal(fieldManifest.schema_version, 1, "field manifest schema");
+equal(fieldManifest.case?.id, site.tsvField.caseId, "field manifest case ID");
+equal(fieldManifest.claim_boundary, site.tsvField.claimBoundary, "field manifest boundary");
+if (!/^[0-9a-f]{40}$/.test(fieldManifest.revisions?.eda ?? "")) {
+  fail("field manifest EDA revision is not a full lowercase Git SHA");
+}
+equal(fieldManifest.revisions?.core, site.tsvField.coreRevision, "field manifest Core revision");
+equal(
+  JSON.stringify(fieldManifest.command),
+  JSON.stringify(["python", "examples/tsv_axisymmetric_field/run.py", "--output-dir", "<OUTPUT_DIR>"]),
+  "field manifest command",
+);
+equal(fieldManifest.field?.topology, "Line2 axisymmetric plane strain", "field manifest topology");
+equal(fieldManifest.field?.mesh?.node_count, site.tsvField.nodes, "field manifest nodes");
+equal(fieldManifest.field?.mesh?.element_count, site.tsvField.elements, "field manifest elements");
+equal(fieldManifest.field?.degree_of_freedom_count, site.tsvField.degreesOfFreedom, "field manifest DOF");
+equal(fieldManifest.field?.load_steps?.length, site.tsvField.loadSteps, "field manifest load-step count");
+equal(
+  fieldManifest.field?.components?.map((component) => `${component.name}:${component.unit}:${component.location}`).join(","),
+  "radial_displacement_nm:nm:node,sigma_rr_MPa:MPa:element_center,sigma_theta_MPa:MPa:element_center",
+  "field manifest component grain",
+);
+const temporalMapping = fieldManifest.renderer?.configuration?.temporal_mapping;
+equal(temporalMapping?.interpolation, "none", "field video temporal interpolation");
+equal(temporalMapping?.is_transient, false, "field video transient flag");
+equal(
+  temporalMapping?.step_indices?.join(","),
+  "0,1,2,3,4,5,6,7,8,7,6,5,4,3,2,1",
+  "field video actual-state sequence",
+);
+equal(fieldManifest.renderer?.configuration?.output?.width_px, 960, "field video width");
+equal(fieldManifest.renderer?.configuration?.output?.height_px, 540, "field video height");
+equal(fieldManifest.renderer?.configuration?.output?.codec, "libvpx-vp9", "field video codec");
+equal(fieldManifest.renderer?.configuration?.output?.pixel_format, "yuv420p", "field video pixel format");
+if (!/not (?:a )?transient/i.test(fieldManifest.renderer?.interpretation ?? "")) {
+  fail("field video interpretation does not explicitly deny a transient simulation");
+}
+
+const expectedBoundArtifacts = new Map([
+  ["field.json", "raw-field"],
+  ["summary.json", "summary"],
+  ["contour.svg", "image"],
+  ["load-sweep.webm", "video"],
+]);
+equal(fieldManifest.artifacts?.length, expectedBoundArtifacts.size, "field manifest artifact count");
+for (const [name, role] of expectedBoundArtifacts) {
+  const records = fieldManifest.artifacts.filter((artifact) => artifact.path === name);
+  equal(records.length, 1, `field manifest ${name} record count`);
+  const record = records[0];
+  equal(record.role, role, `field manifest ${name} role`);
+  const artifactPath = await requireFile(`examples/tsv_axisymmetric_field/retained/${name}`);
+  equal((await stat(artifactPath)).size, record.size_bytes, `field manifest ${name} size`);
+  equal(await sha256(artifactPath), record.sha256, `field manifest ${name} SHA-256`);
+}
+
+equal(retainedField.schema_version, 1, "retained field schema");
+equal(retainedField.case_id, site.tsvField.caseId, "retained field case ID");
+equal(retainedField.claim_boundary, site.tsvField.claimBoundary, "retained field boundary");
+equal(retainedField.topology?.type, "Line2", "retained field topology");
+equal(retainedField.topology?.spatial_dimension, 1, "retained field dimension");
+equal(retainedField.topology?.dof_per_node, 1, "retained field DOF per node");
+close(retainedField.inputs?.diameter_um, site.tsvField.diameterUm, "retained field diameter");
+close(retainedField.inputs?.delta_temperature_K, site.tsvField.deltaTemperatureK, "retained field final load");
+close(retainedField.inputs?.outer_radius_um, site.tsvField.outerRadiusUm, "retained field outer radius");
+equal(retainedField.inputs?.mesh_points_requested, site.tsvField.nodes, "retained field requested nodes");
+equal(retainedField.inputs?.formulation, "axisymmetric_plane_strain", "retained field formulation");
+equal(retainedField.inputs?.load, "uniform_thermal_eigenstrain", "retained field load type");
+const fieldNodes = finiteArray(retainedField.mesh?.radius_nodes_um, site.tsvField.nodes, "retained field nodes");
+const fieldCenters = finiteArray(retainedField.mesh?.element_centers_um, site.tsvField.elements, "retained field centers");
+equal(retainedField.mesh?.connectivity?.length, site.tsvField.elements, "retained field connectivity count");
+retainedField.mesh.connectivity.forEach((connection, index) => {
+  if (!Array.isArray(connection) || connection.length !== 2 || connection[0] !== index || connection[1] !== index + 1) {
+    fail(`retained field connectivity[${index}] is not the ordered Line2 chain`);
+  }
+});
+equal(retainedField.mesh?.region_by_element?.length, site.tsvField.elements, "retained field region count");
+if (retainedField.mesh.region_by_element.some((region) => region !== "copper" && region !== "silicon")) {
+  fail("retained field contains a region outside the reviewed copper/silicon case");
+}
+if (!fieldNodes.every((radius, index) => index === 0 || radius > fieldNodes[index - 1])) {
+  fail("retained field nodes are not strictly increasing");
+}
+if (!fieldCenters.every((radius, index) => index === 0 || radius > fieldCenters[index - 1])) {
+  fail("retained field element centers are not strictly increasing");
+}
+const expectedLoads = [0, -50, -100, -150, -200, -250, -300, -350, -400];
+equal(retainedField.load_sweep?.sweep_kind, "independent_static_prescribed_load_cases", "retained field sweep kind");
+equal(retainedField.load_sweep?.is_transient, false, "retained field transient flag");
+equal(retainedField.load_sweep?.delta_temperature_K?.join(","), expectedLoads.join(","), "retained field load values");
+equal(retainedField.load_sweep?.steps?.length, expectedLoads.length, "retained field actual solve count");
+for (const [index, step] of retainedField.load_sweep.steps.entries()) {
+  equal(step.step_index, index, `retained field step ${index} index`);
+  close(step.delta_temperature_K, expectedLoads[index], `retained field step ${index} load`);
+  equal(step.solve_kind, "independent_static_coupfe_solve", `retained field step ${index} solve kind`);
+  equal(step.is_transient, false, `retained field step ${index} transient flag`);
+  equal(step.solver?.converged, true, `retained field step ${index} convergence`);
+  equal(step.comparison?.passed, true, `retained field step ${index} comparison`);
+  finiteArray(step.field?.radial_displacement_nm, site.tsvField.nodes, `retained field step ${index} displacement`);
+  finiteArray(step.field?.sigma_rr_MPa, site.tsvField.elements, `retained field step ${index} radial stress`);
+  finiteArray(step.field?.sigma_theta_MPa, site.tsvField.elements, `retained field step ${index} hoop stress`);
+}
+const finalSolvedField = retainedField.load_sweep.steps.at(-1).field;
+const finalDisplacement = finiteArray(retainedField.final_field?.radial_displacement_nm, site.tsvField.nodes, "retained final displacement");
+const finalRadialStress = finiteArray(retainedField.final_field?.sigma_rr_MPa, site.tsvField.elements, "retained final radial stress");
+const finalHoopStress = finiteArray(retainedField.final_field?.sigma_theta_MPa, site.tsvField.elements, "retained final hoop stress");
+exactNumericArrays(finalDisplacement, finalSolvedField.radial_displacement_nm, "final displacement identity");
+exactNumericArrays(finalRadialStress, finalSolvedField.sigma_rr_MPa, "final radial-stress identity");
+exactNumericArrays(finalHoopStress, finalSolvedField.sigma_theta_MPa, "final hoop-stress identity");
+
+equal(retainedFieldSummary.schema_version, 1, "retained field summary schema");
+equal(retainedFieldSummary.case_id, site.tsvField.caseId, "retained field summary case ID");
+equal(retainedFieldSummary.claim_boundary, site.tsvField.claimBoundary, "retained field summary boundary");
+equal(retainedFieldSummary.provenance?.eda_revision, fieldManifest.revisions.eda, "summary/manifest EDA revision");
+equal(retainedFieldSummary.provenance?.core_revision, fieldManifest.revisions.core, "summary/manifest Core revision");
+equal(retainedFieldSummary.mesh?.nodes, site.tsvField.nodes, "retained summary nodes");
+equal(retainedFieldSummary.mesh?.elements, site.tsvField.elements, "retained summary elements");
+equal(retainedFieldSummary.mesh?.degrees_of_freedom, site.tsvField.degreesOfFreedom, "retained summary DOF");
+close(retainedFieldSummary.results?.sigma_rr_at_20um_MPa, site.tsvField.sigmaRrAtQueryMpa, "retained summary radial stress");
+close(retainedFieldSummary.comparison?.lame_sigma_rr_MPa, site.tsvField.lameAtQueryMpa, "retained summary Lamé stress");
+close(retainedFieldSummary.comparison?.relative_error * 100, site.tsvField.relativeErrorPercent, "retained summary Lamé relative error percent");
+equal(retainedFieldSummary.comparison?.passed, true, "retained summary comparison pass");
+equal(retainedFieldSummary.solver?.newton_iterations, site.tsvField.newtonIterations, "retained summary Newton iterations");
+equal(retainedFieldSummary.load_sweep?.steps, site.tsvField.loadSteps, "retained summary load-step count");
+equal(retainedFieldSummary.load_sweep?.is_transient, false, "retained summary transient flag");
+for (const [key, expected] of Object.entries({
+  fieldAsset: "repository-assets/tsv_axisymmetric_field/field.json",
+  summaryAsset: "repository-assets/tsv_axisymmetric_field/summary.json",
+  contourAsset: "repository-assets/tsv_axisymmetric_field/contour.svg",
+  videoAsset: "repository-assets/tsv_axisymmetric_field/load-sweep.webm",
+  manifestAsset: "repository-assets/tsv_axisymmetric_field/visual-evidence.json",
+})) {
+  equal(site.tsvField[key], expected, `public field asset ${key}`);
+}
 
 const etv = await readJson(
   await requireFile("examples/etv_partitioned_cycle/expected_results.json"),
@@ -330,6 +511,79 @@ if (!publicSvg.includes("Synthetic TSV-to-device") || !publicSvg.includes("demon
   fail("public TSV SVG is not visibly labeled as a synthetic demonstration");
 }
 
+equal(site.simulationMedia.length, 3, "simulation-media card count");
+equal(
+  site.simulationMedia.map((media) => media.id).join(","),
+  "solder_3d_dissipation,etv_partitioned_comparison,tsv_device_screening",
+  "simulation-media card order",
+);
+for (const media of site.simulationMedia) {
+  if (!media.alt || media.alt.length < 60) {
+    fail(`simulation media ${media.id} has an inadequate text alternative`);
+  }
+  if (!media.boundary || media.boundary.length < 80) {
+    fail(`simulation media ${media.id} has an inadequate evidence boundary`);
+  }
+  await requireFile(`web/public/${media.asset}`);
+  await requireFile(media.runnerPath);
+  await requireFile(media.resultPath);
+  await requireFile(media.evidencePath);
+}
+equal(
+  site.simulationMedia.find((media) => media.id === "tsv_device_screening")?.asset,
+  site.tsvScreening.figureAsset,
+  "simulation-media TSV asset",
+);
+
+const simulationMediaContract = await readJson(
+  path.join(webRoot, "contracts", "simulation-media.json"),
+);
+equal(simulationMediaContract.schemaVersion, 1, "simulation-media contract schema");
+equal(
+  simulationMediaContract.generatedBy,
+  "web/scripts/render-simulation-media.py",
+  "simulation-media generator",
+);
+equal(
+  simulationMediaContract.core?.revision,
+  site.tsvField.coreRevision,
+  "simulation-media Core revision",
+);
+equal(
+  simulationMediaContract.core?.url,
+  "https://github.com/tengzhang48/CoupFE.git",
+  "simulation-media Core URL",
+);
+equal(simulationMediaContract.sources?.length, 2, "simulation-media source count");
+for (const source of simulationMediaContract.sources) {
+  equal(source.oraclePassed, true, `simulation-media oracle status ${source.caseId}`);
+  const runnerPath = await requireFile(source.runner);
+  const oraclePath = await requireFile(source.oracle);
+  equal(await sha256(runnerPath), source.runnerSha256, `simulation-media runner hash ${source.caseId}`);
+  equal(await sha256(oraclePath), source.oracleSha256, `simulation-media oracle hash ${source.caseId}`);
+}
+equal(simulationMediaContract.artifacts?.length, 2, "simulation-media artifact count");
+for (const artifact of simulationMediaContract.artifacts) {
+  if (!/^[a-z0-9-]+\.svg$/.test(artifact.name)) {
+    fail(`unsafe simulation-media artifact name: ${String(artifact.name)}`);
+  }
+  equal(
+    artifact.uri,
+    `generated/simulation-media/${artifact.name}`,
+    `simulation-media URI ${artifact.name}`,
+  );
+  const assetPath = await requireFile(`web/public/${artifact.uri}`);
+  equal(await sha256(assetPath), artifact.sha256, `simulation-media artifact hash ${artifact.name}`);
+  const accessibleSvg = await readFile(assetPath, "utf8");
+  if (
+    !accessibleSvg.includes('role="img"') ||
+    !accessibleSvg.includes("<title id=\"figure-title\">") ||
+    !accessibleSvg.includes("<desc id=\"figure-description\">")
+  ) {
+    fail(`simulation-media SVG lacks an accessible title/description: ${artifact.name}`);
+  }
+}
+
 for (const source of [
   site.scaling.readmePath,
   site.scaling.summaryPath,
@@ -432,10 +686,10 @@ equal(connected.models.length, 0, "connected snapshot fictional-model count");
 equal(connected.runs.length, 0, "connected snapshot initial-run count");
 equal(connected.approvedWorkflows.length, 1, "connected approved-workflow count");
 const approved = connected.approvedWorkflows[0];
-equal(approved.id, "tsv_device_screening", "approved workflow ID");
-equal(approved.executorKey, "tsv.device-screening.v1", "approved executor key");
+equal(approved.id, "tsv_axisymmetric_field", "approved workflow ID");
+equal(approved.executorKey, "tsv.axisymmetric-field.v1", "approved executor key");
 equal(approved.releaseValidation, false, "approved workflow release-validation flag");
-equal(approved.claimBoundary, site.tsvScreening.claimBoundary, "approved workflow boundary");
+equal(approved.claimBoundary, site.tsvField.claimBoundary, "approved workflow boundary");
 await requireFile(approved.driverPath);
 
 const retainedArtifacts = await readJson(
@@ -488,5 +742,5 @@ for (const file of await collectTextFiles(webRoot)) {
 }
 
 console.log(
-  `repository-data check passed: ${site.workflows.length} workflows, ${site.figures.length} figures, ${site.scorecard.categories.length} scorecard categories`,
+  `repository-data check passed: ${site.workflows.length} workflows, ${site.simulationMedia.length} simulation figures, ${site.scorecard.categories.length} scorecard categories`,
 );

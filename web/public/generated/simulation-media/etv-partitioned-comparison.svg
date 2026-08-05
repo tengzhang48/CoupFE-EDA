@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" role="img" aria-labelledby="figure-title figure-description">
+  <title id="figure-title">Partitioned ETV model comparison</title>
+  <desc id="figure-description">Two grouped-bar panels compare quasisteady and backward-Euler lumped-temperature assumptions for the checked slow and fast CoupFE-EDA mechanics cases. The fast case shows a large energy difference and a lower lumped-transient peak temperature; the slow case nearly agrees.</desc>
+  <rect width="960" height="560" fill="#08111f"/>
+  <style>
+    text { font-family: Inter, ui-sans-serif, system-ui, sans-serif; fill: #edf4ff; }
+    .muted { fill: #9eb0c8; } .label { fill: #cbd8ea; font-size: 13px; }
+    .small { font-size: 12px; } .value { font: 600 13px ui-monospace, SFMono-Regular, monospace; }
+    .axis { stroke: #52647e; stroke-width: 1; }
+  </style>
+  <defs><pattern id="transient-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#ffffff" stroke-width="2"/></pattern></defs>
+  <text x="42" y="46" font-size="24" font-weight="700">Partitioned ETV model comparison</text>
+  <text x="42" y="72" class="muted" font-size="13">Checked CoupFE mechanics · quasisteady versus backward-Euler lumped temperature · second-cycle values</text>
+  <text x="42" y="112" font-size="16" font-weight="650">Last-cycle inelastic energy</text>
+  <text x="444" y="112" text-anchor="end" class="small muted">MPa = MJ/m³</text>
+  <line x1="42" y1="382" x2="450" y2="382" class="axis"/>
+  <line x1="42" y1="382.0" x2="450" y2="382.0" stroke="#263852" stroke-width="1"/>
+  <text x="34" y="386.0" text-anchor="end" class="small muted">0.0</text>
+  <line x1="42" y1="319.5" x2="450" y2="319.5" stroke="#263852" stroke-width="1"/>
+  <text x="34" y="323.5" text-anchor="end" class="small muted">0.2</text>
+  <line x1="42" y1="257.0" x2="450" y2="257.0" stroke="#263852" stroke-width="1"/>
+  <text x="34" y="261.0" text-anchor="end" class="small muted">0.4</text>
+  <line x1="42" y1="194.5" x2="450" y2="194.5" stroke="#263852" stroke-width="1"/>
+  <text x="34" y="198.5" text-anchor="end" class="small muted">0.6</text>
+  <line x1="42" y1="132.0" x2="450" y2="132.0" stroke="#263852" stroke-width="1"/>
+  <text x="34" y="136.0" text-anchor="end" class="small muted">0.8</text>
+  <rect x="101" y="232.42293768202217" width="48" height="149.57706231797783" rx="5" fill="#3b82b8"/><text x="125.0" y="223.42293768202217" text-anchor="middle" class="value">0.479</text>
+  <rect x="165" y="232.51771444128045" width="48" height="149.48228555871955" rx="5" fill="#d7a83e"/><rect x="165" y="232.51771444128045" width="48" height="149.48228555871955" fill="url(#transient-hatch)" opacity=".45"/><text x="189.0" y="223.51771444128045" text-anchor="middle" class="value">0.478</text>
+  <text x="157" y="407" text-anchor="middle" class="label">Slow · 1,600 s</text>
+  <rect x="306" y="144.24425809535953" width="48" height="237.75574190464047" rx="5" fill="#3b82b8"/><text x="330.0" y="135.24425809535953" text-anchor="middle" class="value">0.761</text>
+  <rect x="370" y="303.1783483344662" width="48" height="78.82165166553382" rx="5" fill="#d7a83e"/><rect x="370" y="303.1783483344662" width="48" height="78.82165166553382" fill="url(#transient-hatch)" opacity=".45"/><text x="394.0" y="294.1783483344662" text-anchor="middle" class="value">0.252</text>
+  <text x="362" y="407" text-anchor="middle" class="label">Fast · 1 s</text>
+  <text x="510" y="112" font-size="16" font-weight="650">Peak temperature</text>
+  <text x="912" y="112" text-anchor="end" class="small muted">°C</text>
+  <line x1="510" y1="382" x2="918" y2="382" class="axis"/>
+  <line x1="510" y1="382.0" x2="918" y2="382.0" stroke="#263852" stroke-width="1"/>
+  <text x="502" y="386.0" text-anchor="end" class="small muted">0.0</text>
+  <line x1="510" y1="319.5" x2="918" y2="319.5" stroke="#263852" stroke-width="1"/>
+  <text x="502" y="323.5" text-anchor="end" class="small muted">40.0</text>
+  <line x1="510" y1="257.0" x2="918" y2="257.0" stroke="#263852" stroke-width="1"/>
+  <text x="502" y="261.0" text-anchor="end" class="small muted">80.0</text>
+  <line x1="510" y1="194.5" x2="918" y2="194.5" stroke="#263852" stroke-width="1"/>
+  <text x="502" y="198.5" text-anchor="end" class="small muted">120.0</text>
+  <line x1="510" y1="132.0" x2="918" y2="132.0" stroke="#263852" stroke-width="1"/>
+  <text x="502" y="136.0" text-anchor="end" class="small muted">160.0</text>
+  <rect x="569" y="155.53164131471576" width="48" height="226.46835868528424" rx="5" fill="#3b82b8"/><text x="593.0" y="146.53164131471576" text-anchor="middle" class="value">144.940</text>
+  <rect x="633" y="155.596044630337" width="48" height="226.403955369663" rx="5" fill="#d7a83e"/><rect x="633" y="155.596044630337" width="48" height="226.403955369663" fill="url(#transient-hatch)" opacity=".45"/><text x="657.0" y="146.596044630337" text-anchor="middle" class="value">144.899</text>
+  <text x="625" y="407" text-anchor="middle" class="label">Slow · 1,600 s</text>
+  <rect x="774" y="155.53164131471576" width="48" height="226.46835868528424" rx="5" fill="#3b82b8"/><text x="798.0" y="146.53164131471576" text-anchor="middle" class="value">144.940</text>
+  <rect x="838" y="227.93521525183056" width="48" height="154.06478474816944" rx="5" fill="#d7a83e"/><rect x="838" y="227.93521525183056" width="48" height="154.06478474816944" fill="url(#transient-hatch)" opacity=".45"/><text x="862.0" y="218.93521525183056" text-anchor="middle" class="value">98.601</text>
+  <text x="830" y="407" text-anchor="middle" class="label">Fast · 1 s</text>
+  <rect x="42" y="458" width="18" height="12" rx="2" fill="#3b82b8"/><text x="70" y="469" class="label">Quasisteady</text>
+  <rect x="190" y="458" width="18" height="12" rx="2" fill="#d7a83e"/><rect x="190" y="458" width="18" height="12" fill="url(#transient-hatch)"/><text x="218" y="469" class="label">Lumped transient</text>
+  <text x="42" y="514" class="label">Fast-cycle energy difference: -66.85% · slow-cycle difference: -0.063%</text>
+  <text x="42" y="538" class="small muted">Uniform lagged thermal feedback; this is not a monolithic φ–T–u formulation or measured-device validation.</text>
+</svg>

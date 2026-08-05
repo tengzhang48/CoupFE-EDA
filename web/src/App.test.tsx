@@ -1,158 +1,273 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
-import App from "./App";
-import { MockBackend } from "./backend/mock-backend";
-import { demoSnapshot, TSV_CLAIM_BOUNDARY } from "./demo/snapshot";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import siteData from "../site-data.json";
+import App, { validateTsvFieldBundle } from "./App";
+import type { CoupFEBackend } from "./backend/interface";
+import type { ProjectSnapshot, RunRecord } from "./domain/types";
 
-function renderWorkbench(mode: "demo" | "connected" = "demo") {
-  const snapshot = structuredClone(demoSnapshot);
-  snapshot.mode = mode;
-  const backend = new MockBackend(snapshot, {
-    queueDelayMs: 2,
-    runDelayMs: 12,
+function fieldBundle() {
+  const nodes = Array.from({ length: siteData.tsvField.nodes }, (_, index) =>
+    index * siteData.tsvField.outerRadiusUm / (siteData.tsvField.nodes - 1));
+  const centers = nodes.slice(0, -1).map((value, index) => (value + nodes[index + 1]!) / 2);
+  const regionByElement = centers.map((radius) => radius < siteData.tsvField.diameterUm / 2 ? "copper" : "silicon");
+  const fieldFor = (deltaTemperature: number) => {
+    const scale = Math.abs(deltaTemperature / siteData.tsvField.deltaTemperatureK);
+    return {
+      radial_displacement_nm: nodes.map((radius) => -scale * radius * .5),
+      sigma_rr_MPa: centers.map((radius) => scale * 630 / (1 + (radius / 18) ** 2)),
+      sigma_theta_MPa: centers.map((radius) => -scale * 635 / (1 + (radius / 18) ** 2)),
+    };
+  };
+  const solver = (deltaTemperature: number) => ({
+    newton_iterations: deltaTemperature === 0 ? 1 : 2,
+    final_relative_residual: deltaTemperature === 0 ? 0 : 5.45e-12,
+    residual_fraction_of_acceptance_limit: deltaTemperature === 0 ? 0 : .00545,
+    converged: true,
   });
-  render(<App backend={backend} projectId={snapshot.project.id} />);
-  return backend;
-}
-
-function renderRunningWorkbench(mode: "demo" | "connected") {
-  const snapshot = structuredClone(demoSnapshot);
-  snapshot.mode = mode;
-  snapshot.sequence = 2;
-  snapshot.runs = [{
-    id: `run-${mode}`,
-    projectId: snapshot.project.id,
-    designId: snapshot.project.activeDesignId,
-    workflowId: "tsv_device_screening",
-    clientRequestId: `request-${mode}`,
-    sequence: 2,
-    status: "running",
-    requestedAt: "2026-08-01T19:00:00.000Z",
-    startedAt: "2026-08-01T19:00:00.100Z",
-    progress: { phase: "evaluating", fraction: 0.5, message: "Running retained check" },
-    input: {
-      designRevision: snapshot.designs[0]!.label,
-      packageRevision: snapshot.designs[0]!.packageRevision,
-      codeRevision: "test-only-running-snapshot",
-      solverVersion: "not-applicable: analytic screening",
-      runtimeInputSet: "examples/tsv_00_device_screening/device_sites.csv",
-      manifestSha256: "pending",
+  const comparison = (deltaTemperature: number) => {
+    const scale = Math.abs(deltaTemperature / siteData.tsvField.deltaTemperatureK);
+    return {
+      reference: "published_Lame_equation",
+      query_radius_um: siteData.tsvField.queryRadiusUm,
+      fe_sigma_rr_MPa: siteData.tsvField.sigmaRrAtQueryMpa * scale,
+      lame_sigma_rr_MPa: siteData.tsvField.lameAtQueryMpa * scale,
+      absolute_error_MPa: Math.abs(siteData.tsvField.sigmaRrAtQueryMpa - siteData.tsvField.lameAtQueryMpa) * scale,
+      relative_error: deltaTemperature === 0 ? null : siteData.tsvField.relativeErrorPercent / 100,
+      acceptance_threshold: 0.03,
+      passed: true,
+    };
+  };
+  const temperatures = [0, -50, -100, -150, -200, -250, -300, -350, -400];
+  return {
+    schema_version: 1,
+    case_id: siteData.tsvField.caseId,
+    claim_boundary: siteData.tsvField.claimBoundary,
+    units: { radius: "um", radial_displacement: "nm", stress: "MPa", temperature_change: "K", residual_norm: "N/m" },
+    inputs: {
+      diameter_um: siteData.tsvField.diameterUm,
+      delta_temperature_K: siteData.tsvField.deltaTemperatureK,
+      outer_radius_um: siteData.tsvField.outerRadiusUm,
+      mesh_points_requested: siteData.tsvField.nodes,
+      liner_nm: 0,
+      formulation: "axisymmetric_plane_strain",
+      load: "uniform_thermal_eigenstrain",
     },
-  }];
-  const backend = new MockBackend(snapshot, { queueDelayMs: 60_000, runDelayMs: 60_000 });
-  render(<App backend={backend} projectId={snapshot.project.id} />);
+    topology: { type: "Line2", spatial_dimension: 1, dof_per_node: 1 },
+    mesh: {
+      radius_nodes_um: nodes,
+      element_centers_um: centers,
+      connectivity: centers.map((_, index) => [index, index + 1]),
+      region_by_element: regionByElement,
+      region_element_indices: {
+        copper: regionByElement.flatMap((region, index) => region === "copper" ? [index] : []),
+        silicon: regionByElement.flatMap((region, index) => region === "silicon" ? [index] : []),
+      },
+      via_radius_um: siteData.tsvField.diameterUm / 2,
+      outer_radius_um: siteData.tsvField.outerRadiusUm,
+    },
+    final_field: { delta_temperature_K: -400, ...fieldFor(-400) },
+    solver: solver(-400),
+    comparison: comparison(-400),
+    load_sweep: {
+      sweep_kind: "independent_static_prescribed_load_cases",
+      is_transient: false,
+      description: "Nine independent actual CoupFE static solves; not a transient simulation.",
+      delta_temperature_K: temperatures,
+      steps: temperatures.map((deltaTemperature, index) => ({
+        step_index: index,
+        delta_temperature_K: deltaTemperature,
+        solve_kind: "independent_static_coupfe_solve",
+        is_transient: false,
+        solver: solver(deltaTemperature),
+        results: {},
+        comparison: comparison(deltaTemperature),
+        field: fieldFor(deltaTemperature),
+      })),
+    },
+  };
 }
 
-afterEach(cleanup);
+function mockFieldFetch(value = fieldBundle()) {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => structuredClone(value),
+  }));
+}
 
-describe("CoupFE–EDA public interface demonstration", () => {
-  it("shows only the approved real workflow and its qualification boundary", async () => {
-    renderWorkbench();
+function renderExplorer(backend?: CoupFEBackend) {
+  return render(
+    <App
+      backend={backend}
+      retainedFieldUrl="/field.json"
+      summaryUrl="/summary.json"
+      manifestUrl="/visual-evidence.json"
+      runnerUrl="https://github.test/run.py"
+    />,
+  );
+}
 
-    expect((await screen.findAllByText(demoSnapshot.project.name)).length).toBeGreaterThan(0);
-    expect(screen.getByRole("note")).toHaveTextContent("Demonstration data");
-    expect(screen.getByRole("note")).toHaveTextContent("No engineering solver runs");
-    expect(screen.getByRole("heading", { name: "Approved workflow simulation" })).toBeInTheDocument();
-    expect(screen.getByText("Browser simulation", { selector: ".eyebrow" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Synthetic TSV-to-device screening" })).toBeInTheDocument();
-    expect(screen.getByText(TSV_CLAIM_BOUNDARY)).toBeInTheDocument();
-    expect(screen.getByText(/Release validation: not claimed/i)).toBeInTheDocument();
-    expect(screen.getByText(/No simulation is recorded yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/No simulated records have been created/i)).toBeInTheDocument();
-    expect(screen.getByText(/No solver executes; reviewed evidence is precomputed/i)).toBeInTheDocument();
-    expect(screen.getByText("Approved simulation contract", { selector: ".eyebrow" })).toBeInTheDocument();
-    expect(screen.queryByText("Server-approved workflow", { selector: ".eyebrow" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Simulate approved workflow/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Review simulation/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Simulated run history" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Run approved workflow/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Review and run/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Recent analyses" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Models" })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Peak temperature/i)).not.toBeInTheDocument();
+function completedConnectedSnapshot(coreRevision = "c".repeat(40)): ProjectSnapshot {
+  return {
+    schemaVersion: 1,
+    sequence: 3,
+    mode: "connected",
+    project: { id: "coupfe-eda-local", name: "Local real field", studyType: "Axisymmetric verification", activeDesignId: "fixed-tsv" },
+    designs: [{ id: "fixed-tsv", label: "Fixed 30 µm TSV", packageRevision: "v1", createdAt: "2026-08-05T00:00:00Z", parameters: {} }],
+    approvedWorkflows: [],
+    models: [], decisions: [], evidence: [], layers: [], candidates: [],
+    runs: [{
+      id: "run-local-1", projectId: "coupfe-eda-local", designId: "fixed-tsv",
+      workflowId: "tsv_axisymmetric_field", clientRequestId: "request-local", sequence: 3,
+      status: "succeeded", requestedAt: "2026-08-05T00:00:01Z", completedAt: "2026-08-05T00:00:03Z",
+      input: {
+        designRevision: "Fixed 30 µm TSV", packageRevision: "v1", codeRevision: "a".repeat(40),
+        solverVersion: coreRevision, manifestSha256: "pending",
+      },
+    }],
+    artifacts: [
+      { id: "field", runId: "run-local-1", kind: "field", uri: "/api/runs/run-local-1/artifacts/field.json", sha256: "a".repeat(64) },
+      { id: "summary", runId: "run-local-1", kind: "report", uri: "/api/runs/run-local-1/artifacts/summary.json", sha256: "b".repeat(64) },
+      { id: "manifest", runId: "run-local-1", kind: "manifest", uri: "/api/runs/run-local-1/artifacts/manifest.json", sha256: "c".repeat(64) },
+    ],
+  };
+}
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe("real CoupFE field explorer", () => {
+  it("loads arrays and exposes the retained-run boundary", async () => {
+    mockFieldFetch();
+    renderExplorer();
+
+    expect(screen.getByRole("heading", { name: "Inspect the field behind the claim." })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Retained solver run" })).toHaveTextContent(
+      "GitHub Pages reads the checked field bundle",
+    );
+    expect(await screen.findByRole("heading", { name: "Silicon radial stress σrr" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Axisymmetric radial stress at delta temperature -400 kelvin/i })).toBeInTheDocument();
+    expect(screen.getByText(siteData.tsvField.claimBoundary)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "field.json" })).toHaveAttribute("href", "/field.json");
+    expect(screen.getByText(/Every plotted field value has a route back to solver arrays/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /simulate/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Mesh nodes" }));
+    expect(screen.getByText(/sampled actual Line2 nodes/i)).toBeInTheDocument();
   });
 
-  it("simulates the workflow lifecycle without presenting it as solver evidence", async () => {
-    const backend = renderWorkbench();
-    expect((await screen.findAllByText(demoSnapshot.project.name)).length).toBeGreaterThan(0);
+  it("moves only among the nine actual solved states", async () => {
+    mockFieldFetch();
+    renderExplorer();
+    await screen.findByRole("heading", { name: "Silicon radial stress σrr" });
 
-    fireEvent.click(screen.getByRole("button", { name: /Review simulation/i }));
-    const dialog = screen.getByRole("dialog", { name: /Simulate Synthetic TSV-to-device screening/i });
-    expect(within(dialog).getByText("Browser simulation boundary", { selector: ".eyebrow" })).toBeInTheDocument();
-    expect(within(dialog).queryByText("Approved execution boundary", { selector: ".eyebrow" })).not.toBeInTheDocument();
-    expect(within(dialog).getByText(/The browser models lifecycle events/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/does not contact a solver or execute/i)).toBeInTheDocument();
-    expect(within(dialog).queryByText(/The service maps it/i)).not.toBeInTheDocument();
-    expect(within(dialog).getByText("Not claimed")).toBeInTheDocument();
-    expect(within(dialog).getByText(TSV_CLAIM_BOUNDARY)).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole("button", { name: /Start simulation/i }));
-
-    expect(await screen.findByText("run-1")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Simulation queued · run-1");
-    await waitFor(async () => {
-      const snapshot = await backend.getSnapshot(demoSnapshot.project.id);
-      expect(snapshot.runs.find((run) => run.id === "run-1")?.status).toBe("succeeded");
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText("Baseline violations")).toBeInTheDocument();
-      expect(screen.getByText("Post-action violations")).toBeInTheDocument();
-      expect(screen.getByText("Simulated interface runtime")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Interface-only history")).toBeInTheDocument();
-    expect(screen.getByText(/does not create a solver manifest/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Evidence" }));
-    expect(await screen.findByRole("heading", { name: "Retained TSV screening demonstration record" })).toBeInTheDocument();
-    expect(screen.getByText(/no solver ran in the browser/i)).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /provenance manifest/i })).not.toBeInTheDocument();
+    const slider = screen.getByRole("slider", { name: "Solved cooling-load state" });
+    fireEvent.change(slider, { target: { value: "4" } });
+    expect(screen.getByText("ΔT = -200 K")).toBeInTheDocument();
+    expect(screen.getByText(/State 5 of 9 · independent static CoupFE solve · not transient/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Play actual states" })).toBeInTheDocument();
   });
 
-  it("retains execution wording for the connected API mode", async () => {
-    const backend = renderWorkbench("connected");
-    expect((await screen.findAllByText(demoSnapshot.project.name)).length).toBeGreaterThan(0);
-
-    expect(screen.getByRole("button", { name: /Run approved workflow/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Review and run/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Approved runs" })).toBeInTheDocument();
-    expect(screen.getByText("Execution history", { selector: ".eyebrow" })).toBeInTheDocument();
-    expect(screen.getByText("Server-approved workflow", { selector: ".eyebrow" })).toBeInTheDocument();
-    expect(screen.queryByText("Approved simulation contract", { selector: ".eyebrow" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Recent analyses" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Simulate approved workflow/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Review simulation/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Simulated run history" })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /Review and run/i }));
-    const dialog = screen.getByRole("dialog", { name: /Run Synthetic TSV-to-device screening/i });
-    expect(within(dialog).getByText("Approved execution boundary", { selector: ".eyebrow" })).toBeInTheDocument();
-    expect(within(dialog).queryByText("Browser simulation boundary", { selector: ".eyebrow" })).not.toBeInTheDocument();
-    expect(within(dialog).getByText(/The service maps it/i)).toBeInTheDocument();
-    expect(within(dialog).queryByText(/does not contact a solver/i)).not.toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: /Start approved workflow/i })).toBeInTheDocument();
-    expect(within(dialog).queryByRole("button", { name: /Start simulation/i })).not.toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole("button", { name: /Start approved workflow/i }));
-
-    expect(await screen.findByText("run-1")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Approved workflow queued · run-1");
-    await waitFor(async () => {
-      const snapshot = await backend.getSnapshot(demoSnapshot.project.id);
-      expect(snapshot.runs.find((run) => run.id === "run-1")?.status).toBe("succeeded");
-    });
+  it("fails closed on a field that does not come from the reviewed case", () => {
+    const invalid = fieldBundle();
+    invalid.case_id = "concept-art-case";
+    expect(() => validateTsvFieldBundle(invalid)).toThrow(/unexpected solver case/i);
+    const synthetic = fieldBundle();
+    synthetic.load_sweep.steps[3]!.solve_kind = "browser_interpolation";
+    expect(() => validateTsvFieldBundle(synthetic)).toThrow(/not an actual CoupFE solve/i);
+    const inventedMesh = fieldBundle();
+    inventedMesh.mesh.connectivity[4] = [0, 1];
+    expect(() => validateTsvFieldBundle(inventedMesh)).toThrow(/not the reviewed Line2 chain/i);
   });
 
-  it("does not offer cancellation after a connected executor has started", async () => {
-    renderRunningWorkbench("connected");
-
-    expect(await screen.findByText("run-connected")).toBeInTheDocument();
-    expect(screen.getByText("Cannot cancel after start")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+  it("submits only the named workflow in connected mode", async () => {
+    mockFieldFetch();
+    const snapshot: ProjectSnapshot = {
+      schemaVersion: 1,
+      sequence: 0,
+      mode: "connected",
+      project: { id: "coupfe-eda-local", name: "Local real field", studyType: "Axisymmetric verification", activeDesignId: "fixed-tsv" },
+      designs: [{ id: "fixed-tsv", label: "Fixed 30 µm TSV", packageRevision: "v1", createdAt: "2026-08-05T00:00:00Z", parameters: {} }],
+      approvedWorkflows: [{
+        id: "tsv_axisymmetric_field",
+        executorKey: "tsv.axisymmetric-field.v1",
+        name: "Axisymmetric TSV stress field",
+        description: "Fixed real CoupFE solve",
+        driverPath: "examples/tsv_axisymmetric_field/run.py",
+        releaseValidation: false,
+        claimBoundary: siteData.tsvField.claimBoundary,
+        expectedMetricKeys: [],
+      }],
+      models: [], decisions: [], runs: [], evidence: [], artifacts: [], layers: [], candidates: [],
+    };
+    const accepted: RunRecord = {
+      id: "run-real-1", projectId: "coupfe-eda-local", designId: "fixed-tsv",
+      workflowId: "tsv_axisymmetric_field", clientRequestId: "request-1", sequence: 1,
+      status: "queued", requestedAt: "2026-08-05T00:00:01Z",
+      input: {
+        designRevision: "Fixed 30 µm TSV", packageRevision: "v1", codeRevision: "a".repeat(40),
+        solverVersion: `CoupFE Core ${siteData.tsvField.coreRevision}`, manifestSha256: "pending",
+      },
+    };
+    const backend: CoupFEBackend = {
+      getSnapshot: vi.fn().mockResolvedValue(snapshot),
+      startRun: vi.fn().mockResolvedValue(accepted),
+      cancelRun: vi.fn(),
+      subscribeProjectEvents: vi.fn().mockReturnValue(() => undefined),
+    };
+    renderExplorer(backend);
+    const button = await screen.findByRole("button", { name: /Run the fixed 2,400-DOF case/i });
+    fireEvent.click(button);
+    await waitFor(() => expect(backend.startRun).toHaveBeenCalledTimes(1));
+    expect(backend.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      projectId: "coupfe-eda-local",
+      designId: "fixed-tsv",
+      workflowId: "tsv_axisymmetric_field",
+    }));
   });
 
-  it("keeps active cancellation available in the browser-only simulation", async () => {
-    renderRunningWorkbench("demo");
+  it("atomically switches field, summary, manifest, and Core revision after local validation", async () => {
+    mockFieldFetch();
+    let resolveSnapshot!: (snapshot: ProjectSnapshot) => void;
+    const backend: CoupFEBackend = {
+      getSnapshot: vi.fn().mockImplementation(() => new Promise<ProjectSnapshot>((resolve) => { resolveSnapshot = resolve; })),
+      startRun: vi.fn(), cancelRun: vi.fn(), subscribeProjectEvents: vi.fn().mockReturnValue(() => undefined),
+    };
+    renderExplorer(backend);
+    await screen.findByRole("heading", { name: "Silicon radial stress σrr" });
+    expect(screen.getByText(/retained release bundle/i)).toBeInTheDocument();
 
-    expect(await screen.findByText("run-demo")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    await act(async () => { resolveSnapshot(completedConnectedSnapshot()); });
+    await waitFor(() => expect(screen.getByText(/local run run-local-1/i)).toBeInTheDocument());
+    expect(screen.getByRole("link", { name: "field.json" })).toHaveAttribute("href", "/api/runs/run-local-1/artifacts/field.json");
+    expect(screen.getByRole("link", { name: "summary.json" })).toHaveAttribute("href", "/api/runs/run-local-1/artifacts/summary.json");
+    expect(screen.getByRole("link", { name: "run manifest.json" })).toHaveAttribute("href", "/api/runs/run-local-1/artifacts/manifest.json");
+    expect(screen.getByText("cccccccccc")).toBeInTheDocument();
+  });
+
+  it("keeps retained attribution when a connected field is rejected", async () => {
+    const retained = fieldBundle();
+    const rejected = fieldBundle();
+    rejected.case_id = "wrong-local-case";
+    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: string) => Promise.resolve({
+      ok: true,
+      status: 200,
+      json: async () => structuredClone(String(input).includes("/api/runs/") ? rejected : retained),
+    })));
+    let resolveSnapshot!: (snapshot: ProjectSnapshot) => void;
+    const backend: CoupFEBackend = {
+      getSnapshot: vi.fn().mockImplementation(() => new Promise<ProjectSnapshot>((resolve) => { resolveSnapshot = resolve; })),
+      startRun: vi.fn(), cancelRun: vi.fn(), subscribeProjectEvents: vi.fn().mockReturnValue(() => undefined),
+    };
+    renderExplorer(backend);
+    await screen.findByRole("heading", { name: "Silicon radial stress σrr" });
+    await act(async () => { resolveSnapshot(completedConnectedSnapshot()); });
+    expect(await screen.findByRole("alert")).toHaveTextContent(/local run run-local-1 was rejected/i);
+    expect(screen.getByText(/retained release bundle/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "field.json" })).toHaveAttribute("href", "/field.json");
+    expect(screen.getByRole("link", { name: "visual-evidence.json" })).toHaveAttribute("href", "/visual-evidence.json");
+    expect(screen.queryByRole("link", { name: "run manifest.json" })).not.toBeInTheDocument();
   });
 });

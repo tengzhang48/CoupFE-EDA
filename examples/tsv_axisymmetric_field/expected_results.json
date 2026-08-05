@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "case_id": "axisymmetric_tsv_thermoelastic_field_v1",
+  "claim_boundary": "Axisymmetric plane-strain thermoelastic component verification against the declared Lamé equation. It is not a finite-depth 3-D TSV, near-surface device field, experimental validation, keep-out-zone signoff, or transient cooling simulation.",
+  "inputs": {
+    "diameter_um": 30.0,
+    "delta_temperature_K": -400.0,
+    "outer_radius_um": 300.0,
+    "mesh_points_requested": 2400,
+    "query_radius_um": 20.0
+  },
+  "expected": {
+    "sigma_rr_at_20um_MPa": 354.1718002503578,
+    "lame_sigma_rr_at_20um_MPa": 353.9476243093923,
+    "max_abs_displacement_nm": 352.99397196640416,
+    "silicon_sigma_rr_min_MPa": 0.0011214842182397842,
+    "silicon_sigma_rr_max_MPa": 630.3398378748665
+  },
+  "tolerances": {
+    "relative_numeric": 1e-08,
+    "lame_relative_error_max": 0.03
+  }
+}

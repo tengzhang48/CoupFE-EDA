@@ -1,13 +1,13 @@
-"""Tests for the local workbench's allowlisted execution boundary."""
+"""Focused tests for the fixed, local CoupFE workbench executor."""
 
 from __future__ import annotations
 
-import csv
+import copy
 import hashlib
+import inspect
 import json
 from pathlib import Path
 import subprocess
-import sys
 import time
 
 import pytest
@@ -20,33 +20,46 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_approved_tsv_workflow_import_path_does_not_require_core():
-    code = r'''
-import builtins
-
-original_import = builtins.__import__
-
-def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
-    if name == "coupfe" or name.startswith("coupfe."):
-        raise AssertionError(f"the lightweight TSV workflow imported Core: {name}")
-    return original_import(name, globals, locals, fromlist, level)
-
-builtins.__import__ = guarded_import
-from examples.tsv_00_device_screening.run import run
-
-_, _, evidence = run()
-assert evidence["baseline_violations"] == 12
-assert evidence["optimized_violations"] == 0
-'''
-    completed = subprocess.run(
-        [sys.executable, "-c", code],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
+@pytest.fixture(scope="module")
+def completed_workflow(tmp_path_factory):
+    from eda_multiphysics.workbench import (
+        TSV_AXISYMMETRIC_EXECUTOR,
+        execute_approved_workflow,
     )
-    assert completed.returncode == 0, completed.stderr
+
+    run_root = tmp_path_factory.mktemp("axisymmetric-workbench")
+    manifest = execute_approved_workflow(
+        TSV_AXISYMMETRIC_EXECUTOR,
+        run_root=run_root,
+        repository_root=ROOT,
+    )
+    run_dir = Path(manifest["run_directory"])
+    return {
+        "manifest": manifest,
+        "run_dir": run_dir,
+        "summary": json.loads((run_dir / "summary.json").read_text()),
+        "field": json.loads((run_dir / "field.json").read_text()),
+        "oracle": json.loads(
+            (ROOT / "examples/tsv_axisymmetric_field/expected_results.json").read_text()
+        ),
+    }
+
+
+def test_only_one_fixed_executor_is_public_and_has_no_tunable_arguments():
+    from eda_multiphysics import workbench
+
+    assert set(workbench.APPROVED_WORKFLOWS) == {
+        workbench.TSV_AXISYMMETRIC_EXECUTOR,
+    }
+    workflow = workbench.APPROVED_WORKFLOWS[workbench.TSV_AXISYMMETRIC_EXECUTOR]
+    assert workflow.driver == "examples/tsv_axisymmetric_field/run.py"
+    assert workflow.oracle == "examples/tsv_axisymmetric_field/expected_results.json"
+    assert workflow.timeout_seconds == 180.0
+    assert set(inspect.signature(workbench.execute_approved_workflow).parameters) == {
+        "executor_key",
+        "run_root",
+        "repository_root",
+    }
 
 
 def test_workbench_rejects_unknown_executor_before_creating_output(tmp_path):
@@ -61,22 +74,23 @@ def test_workbench_rejects_unknown_executor_before_creating_output(tmp_path):
     assert list(tmp_path.iterdir()) == []
 
 
-def test_tsv_device_executor_runs_real_example_and_retains_provenance(tmp_path):
-    from eda_multiphysics.workbench import TSV_DEVICE_EXECUTOR, execute_approved_workflow
+def test_axisymmetric_executor_retains_real_field_metrics_and_provenance(completed_workflow):
+    from eda_multiphysics.workbench import TSV_AXISYMMETRIC_EXECUTOR
 
-    manifest = execute_approved_workflow(
-        TSV_DEVICE_EXECUTOR,
-        run_root=tmp_path,
-        repository_root=ROOT,
-    )
-    run_dir = Path(manifest["run_directory"])
-    assert run_dir.parent == tmp_path.resolve()
+    manifest = completed_workflow["manifest"]
+    run_dir = completed_workflow["run_dir"]
+    summary = completed_workflow["summary"]
+    field = completed_workflow["field"]
+    results = manifest["results"]
+
     assert manifest["status"] == "succeeded"
-    assert manifest["executor_key"] == TSV_DEVICE_EXECUTOR
+    assert manifest["executor_key"] == TSV_AXISYMMETRIC_EXECUTOR
     assert manifest["oracle"]["path"] == (
-        "examples/tsv_00_device_screening/expected_metrics.json"
+        "examples/tsv_axisymmetric_field/expected_results.json"
     )
-    assert len(manifest["oracle"]["sha256"]) == 64
+    assert manifest["command_contract"] == (
+        "server-owned fixed Python driver and output directory"
+    )
     expected_revision = subprocess.run(
         ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
         check=True,
@@ -84,204 +98,107 @@ def test_tsv_device_executor_runs_real_example_and_retains_provenance(tmp_path):
         text=True,
     ).stdout.strip()
     assert manifest["source"]["revision"] == expected_revision
-    assert manifest["source"]["tree_state"] in {"clean", "dirty"}
-
-    evidence = manifest["evidence"]
-    expected = json.loads(
-        (ROOT / "examples/tsv_00_device_screening/expected_metrics.json").read_text()
+    assert results["eda_revision"] == expected_revision
+    assert len(results["core_revision"]) == 40
+    assert all(character in "0123456789abcdef" for character in results["core_revision"])
+    assert results["degrees_of_freedom"] == 2400
+    assert results["elements"] == 2399
+    assert results["actual_load_steps"] == 9
+    assert results["newton_iterations"] >= 1
+    assert results["lame_relative_error"] < 0.03
+    assert results["sigma_rr_at_20um_MPa"] == pytest.approx(
+        summary["results"]["sigma_rr_at_20um_MPa"]
     )
-    assert evidence["release_validation"] is False
-    assert evidence["n_devices"] == expected["n_devices"]
-    assert evidence["baseline_violations"] == expected["baseline_violations"]
-    assert evidence["optimized_violations"] == expected["optimized_violations"]
-    assert evidence["baseline_peak_abs_mobility_change"] == pytest.approx(
-        expected["baseline_peak_abs_mobility_change"],
-        abs=expected["tolerance"]["absolute"],
+    assert field["load_sweep"]["is_transient"] is False
+    assert len(field["load_sweep"]["steps"]) == 9
+    assert all(
+        step["solve_kind"] == "independent_static_coupfe_solve"
+        for step in field["load_sweep"]["steps"]
     )
-    assert evidence["optimized_peak_abs_mobility_change"] == pytest.approx(
-        expected["optimized_peak_abs_mobility_change"],
-        abs=expected["tolerance"]["absolute"],
-    )
-    assert "does not validate" in evidence["claim_boundary"].lower()
 
     artifact_names = {artifact["name"] for artifact in manifest["artifacts"]}
     assert artifact_names == {
-        "device_screening.csv",
-        "device_screening.svg",
-        "evidence.json",
+        "field.json",
+        "summary.json",
+        "contour.svg",
         "stdout.txt",
         "stderr.txt",
     }
     for artifact in manifest["artifacts"]:
+        assert artifact["size_bytes"] == (run_dir / artifact["name"]).stat().st_size
         assert artifact["sha256"] == _sha256(run_dir / artifact["name"])
+    assert _sha256(run_dir / "manifest.json") == manifest["manifest"]["sha256"]
 
-    # The committed browser files are reviewed, byte-addressed release assets.
-    # A fresh numerical run is compared semantically below: last-bit floating-point
-    # text can legitimately vary between NumPy/BLAS builds and runner CPUs.
-    retained_contract = json.loads(
-        (ROOT / "web/contracts/retained-tsv-artifacts.json").read_text()
-    )
-    for artifact in retained_contract["artifacts"]:
-        retained_path = ROOT / "web/public" / artifact["uri"]
-        assert retained_path.is_file()
-        assert artifact["sha256"] == _sha256(retained_path)
 
-    generated_evidence = json.loads((run_dir / "evidence.json").read_text())
-    retained_evidence = json.loads(
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        (lambda summary, field: summary["mesh"].__setitem__("degrees_of_freedom", 2399), "degrees_of_freedom"),
+        (lambda summary, field: summary["comparison"].__setitem__("relative_error", 0.03), "3 percent"),
+        (lambda summary, field: summary["provenance"].__setitem__("core_revision", "unknown"), "40-hex"),
+        (lambda summary, field: field["load_sweep"]["steps"].pop(), "nine approved load steps"),
         (
-            ROOT
-            / "web/public/generated/tsv_device_screening/evidence.json"
-        ).read_text()
-    )
-    assert generated_evidence.keys() == retained_evidence.keys()
-    for key, retained_value in retained_evidence.items():
-        generated_value = generated_evidence[key]
-        if isinstance(retained_value, float):
-            assert generated_value == pytest.approx(
-                retained_value,
-                rel=0.0,
-                abs=expected["tolerance"]["absolute"],
-            )
-        else:
-            assert generated_value == retained_value
-
-    generated_csv = run_dir / "device_screening.csv"
-    retained_csv = (
-        ROOT / "web/public/generated/tsv_device_screening/device_screening.csv"
-    )
-    with generated_csv.open(newline="") as stream:
-        generated_reader = csv.DictReader(stream)
-        generated_rows = list(generated_reader)
-        generated_fields = generated_reader.fieldnames
-    with retained_csv.open(newline="") as stream:
-        retained_reader = csv.DictReader(stream)
-        retained_rows = list(retained_reader)
-        retained_fields = retained_reader.fieldnames
-    assert generated_fields == retained_fields
-    assert len(generated_rows) == len(retained_rows) == 2 * expected["n_devices"]
-    exact_fields = {
-        "case",
-        "device_id",
-        "source_object_id",
-        "tsv_id",
-        "carrier",
-        "koz_violation",
-    }
-    numeric_fields = set(generated_fields or ()).difference(exact_fields)
-    for generated_row, retained_row in zip(generated_rows, retained_rows, strict=True):
-        for field in exact_fields:
-            assert generated_row[field] == retained_row[field]
-        for field in numeric_fields:
-            assert float(generated_row[field]) == pytest.approx(
-                float(retained_row[field]),
-                rel=1.0e-12,
-                abs=expected["tolerance"]["absolute"],
-            )
-
-    generated_svg = (run_dir / "device_screening.svg").read_text()
-    assert "Synthetic TSV-to-device back-annotation" in generated_svg
-    assert "demonstration" in generated_svg
-    assert generated_svg.count("<g><title>") == 2 * expected["n_devices"]
-    assert (run_dir / "manifest.json").is_file()
-    assert len(manifest["manifest"]["sha256"]) == 64
-
-
-def test_workbench_allocates_a_new_directory_per_run(tmp_path):
-    from eda_multiphysics.workbench import TSV_DEVICE_EXECUTOR, execute_approved_workflow
-
-    first = execute_approved_workflow(
-        TSV_DEVICE_EXECUTOR,
-        run_root=tmp_path,
-        repository_root=ROOT,
-    )
-    second = execute_approved_workflow(
-        TSV_DEVICE_EXECUTOR,
-        run_root=tmp_path,
-        repository_root=ROOT,
-    )
-    assert first["run_id"] != second["run_id"]
-    assert Path(first["run_directory"]).is_dir()
-    assert Path(second["run_directory"]).is_dir()
-
-
-def test_tsv_device_evidence_must_match_the_retained_oracle():
+            lambda summary, field: summary.__setitem__(
+                "claim_boundary", "Axisymmetric computation without a qualification statement."
+            ),
+            "claim boundary",
+        ),
+        (lambda summary, field: summary["results"].__setitem__("sigma_rr_at_20um_MPa", float("nan")), "non-finite"),
+    ],
+)
+def test_validator_rejects_unqualified_or_nonphysical_output(
+    completed_workflow, mutation, message
+):
     from eda_multiphysics import workbench
 
-    oracle = json.loads(
-        (ROOT / "examples/tsv_00_device_screening/expected_metrics.json").read_text()
-    )
-    record = {
-        "example_scope": "synthetic_identity_preserving_integration",
-        "model_scope": "classical_lame_far_field_device_screening_proxy",
-        "release_validation": False,
-        "device_site_provenance": "synthetic_radial_angular_sampling",
-        "n_devices": oracle["n_devices"],
-        "baseline_violations": oracle["baseline_violations"] + 1,
-        "optimized_violations": oracle["optimized_violations"],
-        "baseline_peak_abs_mobility_change": oracle[
-            "baseline_peak_abs_mobility_change"
-        ],
-        "optimized_peak_abs_mobility_change": oracle[
-            "optimized_peak_abs_mobility_change"
-        ],
-        "claim_boundary": "This does not validate an experimental TSV or device.",
-    }
-    with pytest.raises(workbench.WorkbenchExecutionError, match="retained regression oracle"):
-        workbench._validate_tsv_device_evidence(record, oracle=oracle)
+    summary = copy.deepcopy(completed_workflow["summary"])
+    field = copy.deepcopy(completed_workflow["field"])
+    mutation(summary, field)
+    with pytest.raises(workbench.WorkbenchExecutionError, match=message):
+        workbench._validate_tsv_axisymmetric_outputs(
+            summary,
+            field,
+            oracle=completed_workflow["oracle"],
+            eda_identity=completed_workflow["manifest"]["source"],
+        )
 
 
-def test_run_store_is_idempotent_and_does_not_expose_server_paths(tmp_path):
-    from eda_multiphysics.workbench import TSV_DEVICE_EXECUTOR, WorkbenchRunStore
+def test_run_store_is_idempotent_and_does_not_expose_server_paths(
+    tmp_path, completed_workflow, monkeypatch
+):
+    from eda_multiphysics import workbench
 
-    store = WorkbenchRunStore(run_root=tmp_path, repository_root=ROOT)
+    retained = completed_workflow["manifest"]
+
+    def fixed_result(*_args, **_kwargs):
+        return copy.deepcopy(retained)
+
+    monkeypatch.setattr(workbench, "execute_approved_workflow", fixed_result)
+    store = workbench.WorkbenchRunStore(run_root=tmp_path, repository_root=ROOT)
     try:
         accepted = store.start_run(
-            executor_key=TSV_DEVICE_EXECUTOR,
+            executor_key=workbench.TSV_AXISYMMETRIC_EXECUTOR,
             client_request_id="browser-request-1",
         )
         duplicate = store.start_run(
-            executor_key=TSV_DEVICE_EXECUTOR,
+            executor_key=workbench.TSV_AXISYMMETRIC_EXECUTOR,
             client_request_id="browser-request-1",
         )
         assert duplicate["id"] == accepted["id"]
-        deadline = time.monotonic() + 10.0
+        deadline = time.monotonic() + 2.0
         while time.monotonic() < deadline:
             completed = store.get_run(accepted["id"])
             if completed["status"] in {"succeeded", "failed"}:
                 break
-            time.sleep(0.02)
+            time.sleep(0.01)
         assert completed["status"] == "succeeded"
         serialized = json.dumps(completed)
         assert str(tmp_path) not in serialized
+        assert str(completed_workflow["run_dir"]) not in serialized
         assert "run_directory" not in serialized
-        assert completed["output"]["evidence"]["release_validation"] is False
-        assert store.artifact_path(accepted["id"], "evidence.json").is_file()
-        with pytest.raises(Exception, match="invalid artifact name"):
-            store.artifact_path(accepted["id"], "../evidence.json")
+        assert completed["output"]["results"]["degrees_of_freedom"] == 2400
+        assert store.artifact_path(accepted["id"], "field.json").is_file()
+        with pytest.raises(workbench.WorkbenchExecutionError, match="invalid artifact name"):
+            store.artifact_path(accepted["id"], "../field.json")
     finally:
         store.close()
-
-
-def test_run_store_rejects_idempotency_key_reuse_for_another_executor(tmp_path):
-    from eda_multiphysics import workbench
-
-    second = workbench.ApprovedWorkflow(
-        executor_key="test.second.v1",
-        label="Test-only second workflow",
-        driver="examples/tsv_00_device_screening/run.py",
-        oracle="examples/tsv_00_device_screening/expected_metrics.json",
-        timeout_seconds=120.0,
-    )
-    original = workbench.APPROVED_WORKFLOWS
-    workbench.APPROVED_WORKFLOWS = {**original, second.executor_key: second}
-    store = workbench.WorkbenchRunStore(run_root=tmp_path, repository_root=ROOT)
-    try:
-        store.start_run(
-            executor_key=workbench.TSV_DEVICE_EXECUTOR,
-            client_request_id="same-key",
-        )
-        with pytest.raises(workbench.WorkbenchExecutionError, match="different executor"):
-            store.start_run(executor_key=second.executor_key, client_request_id="same-key")
-    finally:
-        store.close()
-        workbench.APPROVED_WORKFLOWS = original
