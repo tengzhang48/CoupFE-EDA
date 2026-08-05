@@ -16,8 +16,8 @@ jobs:
       COUPFE_BRANCH: main
       COUPFE_REF: e2f42ed5772850a0a23a2ce434f430c287eae5c8
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip

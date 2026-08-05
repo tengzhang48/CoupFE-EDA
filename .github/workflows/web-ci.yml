@@ -13,6 +13,10 @@ on:
       - "eda_multiphysics/workbench_api.py"
       - "eda_multiphysics/tsv_device.py"
       - "eda_multiphysics/tsv_stress.py"
+      - "eda_multiphysics/visual_evidence.py"
+      - "tests/test_tsv_axisymmetric_field.py"
+      - "tests/test_tsv_axisymmetric_visual_media.py"
+      - "tests/test_visual_evidence.py"
       - "tests/test_workbench.py"
       - "tests/test_workbench_api.py"
       - "pyproject.toml"
@@ -35,6 +39,10 @@ on:
       - "eda_multiphysics/workbench_api.py"
       - "eda_multiphysics/tsv_device.py"
       - "eda_multiphysics/tsv_stress.py"
+      - "eda_multiphysics/visual_evidence.py"
+      - "tests/test_tsv_axisymmetric_field.py"
+      - "tests/test_tsv_axisymmetric_visual_media.py"
+      - "tests/test_visual_evidence.py"
       - "tests/test_workbench.py"
       - "tests/test_workbench_api.py"
       - "pyproject.toml"
@@ -57,7 +65,7 @@ jobs:
     timeout-minutes: 10
     env:
       VITE_BASE_PATH: /CoupFE-EDA/
-      VITE_COUPFE_BACKEND: mock
+      VITE_COUPFE_BACKEND: retained
     defaults:
       run:
         working-directory: web
@@ -77,10 +85,10 @@ jobs:
 
       - name: Reject unreviewed prototype evidence
         run: |
-          if grep -En \
+          if grep -RInE \
             'coupfe-eda@8a3d91e|coupfe-core 0\.7\.0|thermal-validation-v2|mesh-study-04|interface-limit-v2|margin-validation-v1' \
-            src/demo/snapshot.ts; then
-            echo "The public snapshot still contains the unreviewed prototype evidence record." >&2
+            src; then
+            echo "The frontend still contains an unreviewed prototype evidence record." >&2
             exit 1
           fi
 
@@ -101,8 +109,9 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      - name: Install the optional localhost API and its test client
+      - name: Install exact CoupFE source, localhost API, and test client
         run: |
+          ./setup.sh
           python -m pip install -e ".[workbench]" "httpx>=0.27,<1" "pytest>=7"
           python -m pip check
 

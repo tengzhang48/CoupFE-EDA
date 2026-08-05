@@ -1,0 +1,40 @@
+{
+  "artifacts": [
+    {
+      "name": "solder-3d-dissipation.svg",
+      "sha256": "178aef77eee2ddbfde3105b052a73885ec3fb9722bf934a3477fd81c566d3c6e",
+      "uri": "generated/simulation-media/solder-3d-dissipation.svg"
+    },
+    {
+      "name": "etv-partitioned-comparison.svg",
+      "sha256": "b38b609b065cdf6e0ee52531cd67ea6c006478073893f76a5152c5f15d1a9794",
+      "uri": "generated/simulation-media/etv-partitioned-comparison.svg"
+    }
+  ],
+  "core": {
+    "revision": "e2f42ed5772850a0a23a2ce434f430c287eae5c8",
+    "sourceKind": "verified-pep610-vcs-install",
+    "url": "https://github.com/tengzhang48/CoupFE.git"
+  },
+  "edaBaseRevision": "63225a2f3b79bc013c3e88e9a42c1d76e4f1e5f9",
+  "generatedBy": "web/scripts/render-simulation-media.py",
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "caseId": "solder_3d_cycle",
+      "oracle": "examples/solder_3d_cycle/expected_results.json",
+      "oraclePassed": true,
+      "oracleSha256": "cb939592aeafe3f8e8168dbbabd6c38b1ef6d77661189fb1ed802c3e91d970d4",
+      "runner": "examples/solder_3d_cycle/run.py",
+      "runnerSha256": "263092c093f37162c589d0f33c710be70b979274241acf9a1e22bb456d06fdb6"
+    },
+    {
+      "caseId": "etv_partitioned_cycle",
+      "oracle": "examples/etv_partitioned_cycle/expected_results.json",
+      "oraclePassed": true,
+      "oracleSha256": "65a946b0b2e3301575dd0b9806d47db75394fe4964c7930b31e43813e9325d45",
+      "runner": "examples/etv_partitioned_cycle/run.py",
+      "runnerSha256": "efc72ba6a9fbfb6df74ed669c4d34e86f87a2213b0204cd5ae19f3bbb2f44742"
+    }
+  ]
+}

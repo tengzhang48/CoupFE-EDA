@@ -48,6 +48,11 @@ recursive-include eda_multiphysics *.py *.md *.csv *.json *.sp *.tcl
 prune eda_multiphysics/_tm_*
 
 recursive-include examples *.py *.md *.csv *.json
+include examples/tsv_axisymmetric_field/retained/field.json
+include examples/tsv_axisymmetric_field/retained/summary.json
+include examples/tsv_axisymmetric_field/retained/contour.svg
+include examples/tsv_axisymmetric_field/retained/load-sweep.webm
+include examples/tsv_axisymmetric_field/retained/visual-evidence.json
 recursive-include skills *.md *.yaml
 
 # Retain the reviewed frontend source in the source distribution. The wheel
@@ -66,8 +71,11 @@ include tests/test_integration_regressions.py
 include tests/test_native_element_evaluation.py
 include tests/test_periodic_adapter.py
 include tests/test_toolchain.py
+include tests/test_tsv_axisymmetric_field.py
+include tests/test_tsv_axisymmetric_visual_media.py
 include tests/test_tsv_device.py
 include tests/test_tsv_local_3d.py
+include tests/test_visual_evidence.py
 include tests/test_workbench.py
 include tests/test_workbench_api.py
 

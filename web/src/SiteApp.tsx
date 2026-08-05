@@ -1,15 +1,34 @@
 import App from "./App";
 import { createBackend } from "./backend/factory";
 import siteData from "../site-data.json";
+import { useEffect, useState } from "react";
 
 type Workflow = (typeof siteData.workflows)[number];
 type WorkflowKind = "integration" | "verification";
+type SimulationMedia = (typeof siteData.simulationMedia)[number];
 
 const repositoryFile = (sourcePath: string) =>
   `${siteData.repository.url}/blob/${siteData.repository.branch}/${sourcePath}`;
 
 const publicAsset = (assetPath: string) =>
   `${import.meta.env.BASE_URL}${assetPath.replace(/^\//, "")}`;
+
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(() =>
+    typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false,
+  );
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(query.matches);
+    update();
+    query.addEventListener?.("change", update);
+    return () => query.removeEventListener?.("change", update);
+  }, []);
+  return reduced;
+}
 
 function Mark() {
   return <span className="site-mark" aria-hidden="true"><i /><i /><i /></span>;
@@ -54,6 +73,32 @@ function WorkflowCard({ workflow, kind, displayIndex }: { workflow: Workflow; ki
   );
 }
 
+function SimulationMediaCard({ media }: { media: SimulationMedia }) {
+  return (
+    <article className="site-media-card">
+      <figure>
+        <img src={publicAsset(media.asset)} alt={media.alt} loading="lazy" />
+        <figcaption>{media.eyebrow}</figcaption>
+      </figure>
+      <div className="site-media-card-copy">
+        <header><span>{media.eyebrow}</span><h3>{media.title}</h3></header>
+        <p>{media.summary}</p>
+        <div className="site-result-strip">
+          <strong>{media.result}</strong>
+          <span>{media.detail}</span>
+        </div>
+        <Boundary compact>{media.boundary}</Boundary>
+        <nav className="site-inline-links" aria-label={`${media.title} evidence`}>
+          <a href={publicAsset(media.asset)}>Open SVG</a>
+          <SourceLink path={media.runnerPath}>Runner</SourceLink>
+          <SourceLink path={media.resultPath}>Oracle</SourceLink>
+          <SourceLink path={media.evidencePath}>SHA-256 record</SourceLink>
+        </nav>
+      </div>
+    </article>
+  );
+}
+
 function ScalingFigure() {
   const maximum = Math.max(...siteData.scaling.medianSeconds);
   const first = siteData.scaling.medianSeconds[0]!;
@@ -74,7 +119,7 @@ function ScalingFigure() {
 }
 
 function PublicSite() {
-  const thresholdPercent = siteData.tsvScreening.threshold * 100;
+  const prefersReducedMotion = usePrefersReducedMotion();
   const firstMedian = siteData.scaling.medianSeconds[0]!;
   const lastMedian = siteData.scaling.medianSeconds.at(-1)!;
   const firstRank = siteData.scaling.ranks[0]!;
@@ -90,17 +135,19 @@ function PublicSite() {
     workflowFor("design_linked_solder_screening"),
   ];
   const verificationWorkflows = [
+    workflowFor("tsv_axisymmetric_field"),
     workflowFor("etv_partitioned_cycle"),
     workflowFor("solder_3d_cycle"),
-    workflowFor("solder_plane_cycle"),
   ];
 
   return (
     <div className="site-shell">
+      <a className="site-skip-link" href="#main-content">Skip to content</a>
       <header className="site-header">
         <a className="site-brand" href={import.meta.env.BASE_URL}><Mark /><strong>CoupFE<span>–EDA</span></strong></a>
         <nav className="site-desktop-nav" aria-label="Project website">
           <a href="#how-it-works">How it works</a>
+          <a href="#simulations">Simulations</a>
           <a href="#examples">Examples</a>
           <a href="#validation">Evidence</a>
           <a href="#performance">Performance</a>
@@ -117,16 +164,17 @@ function PublicSite() {
             }}
           >
             <a href="#how-it-works">How it works</a>
+            <a href="#simulations">Simulations</a>
             <a href="#examples">Examples</a>
             <a href="#validation">Evidence</a>
             <a href="#performance">Performance</a>
             <a href={repositoryFile("docs/README.md")}>Documentation</a>
           </nav>
         </details>
-        <a className="site-header-action" href={`${import.meta.env.BASE_URL}?surface=workbench`}>Interface demo <span>→</span></a>
+        <a className="site-header-action" href={`${import.meta.env.BASE_URL}?surface=workbench`}>Real field explorer <span>→</span></a>
       </header>
 
-      <main>
+      <main id="main-content">
         <section className="site-hero">
           <div className="site-hero-copy">
             <p className="site-kicker"><span /> Open research software · built on CoupFE</p>
@@ -176,44 +224,72 @@ function PublicSite() {
           </div>
         </section>
 
-        <section className="site-feature" id="device-screening">
+        <section className="site-feature" id="solver-field">
           <div className="site-feature-visual">
-            <img
-              src={publicAsset(siteData.tsvScreening.figureAsset)}
-              alt="Synthetic TSV device sites before and after the deterministic orientation-screening action"
-            />
-            <a href={publicAsset(siteData.tsvScreening.figureAsset)}>Open full-size SVG <span>↗</span></a>
+            <figure className="site-feature-player">
+              <video
+                src={publicAsset(siteData.tsvField.videoAsset)}
+                poster={publicAsset(siteData.tsvField.contourAsset)}
+                aria-describedby="tsv-load-sweep-caption"
+                autoPlay={!prefersReducedMotion}
+                controls
+                loop={!prefersReducedMotion}
+                muted
+                playsInline
+                preload="metadata"
+              />
+              <figcaption id="tsv-load-sweep-caption"><strong>{siteData.tsvField.caseId}</strong><span>{siteData.tsvField.videoInterpretation}</span></figcaption>
+            </figure>
+            <a href={publicAsset(siteData.tsvField.contourAsset)}>Open solver-derived contour <span>↗</span></a>
           </div>
           <div className="site-feature-copy">
-            <p className="site-kicker"><span /> Retained synthetic integration demonstration</p>
-            <div className="site-feature-title"><h2>Identity-preserving TSV-to-device screening</h2><span>Synthetic inputs</span></div>
+            <p className="site-kicker"><span /> Retained CoupFE field · raw arrays included</p>
+            <div className="site-feature-title"><h2>A stress field generated by the package, not a concept image</h2><span>Actual solver output</span></div>
             <p>
-              The project runner maps {siteData.tsvScreening.nDevices} synthetic device IDs
-              through a classical Lamé far-field stress proxy and channel-oriented mobility
-              proxies. A deterministic orientation action is then re-screened at a {thresholdPercent}% threshold.
+              The named reference runner solves a {siteData.tsvField.diameterUm} µm copper TSV under
+              {` ${siteData.tsvField.deltaTemperatureK} K`} prescribed cooling with CoupFE Core. The retained
+              bundle contains all {siteData.tsvField.nodes.toLocaleString()} radial nodes, displacement,
+              σrr, σθθ, convergence telemetry, and nine independently solved load states.
             </p>
-            <div className="site-feature-process" aria-label="Synthetic TSV screening process">
-              <span>Stable IDs</span><span>Stress proxy</span><span>Mobility proxy</span><span>Threshold screen</span><span>Synthetic orientation action</span>
+            <div className="site-feature-process" aria-label="Axisymmetric TSV field evidence process">
+              <span>Line2 mesh</span><span>CoupFE Newton solve</span><span>σrr + σθθ recovery</span><span>Lamé comparison</span><span>Hash-bound media</span>
             </div>
             <div className="site-feature-metrics">
-              <article><span>Synthetic proxy violations</span><strong>{siteData.tsvScreening.baselineViolations} <i>→</i> {siteData.tsvScreening.optimizedViolations}</strong></article>
-              <article><span>Peak |mobility proxy|</span><strong>{siteData.tsvScreening.baselinePeakAbsMobilityProxy.toFixed(4)} <i>→</i> {siteData.tsvScreening.optimizedPeakAbsMobilityProxy.toFixed(4)}</strong></article>
+              <article><span>Radial stress at r = {siteData.tsvField.queryRadiusUm} µm</span><strong>{siteData.tsvField.sigmaRrAtQueryMpa.toFixed(2)} MPa</strong></article>
+              <article><span>Difference from declared Lamé reference</span><strong>{siteData.tsvField.relativeErrorPercent.toFixed(4)}%</strong></article>
+              <article><span>Mesh / unknowns</span><strong>{siteData.tsvField.elements.toLocaleString()} / {siteData.tsvField.degreesOfFreedom.toLocaleString()}</strong></article>
+              <article><span>Accepted load states</span><strong>{siteData.tsvField.loadSteps} actual solves</strong></article>
             </div>
-            <Boundary>{siteData.tsvScreening.displayBoundary}</Boundary>
-            <nav className="site-inline-links" aria-label="TSV screening evidence">
-              <a href={publicAsset(siteData.tsvScreening.evidenceAsset)}>Evidence JSON</a>
-              <a href={publicAsset(siteData.tsvScreening.csvAsset)}>Device CSV</a>
-              <SourceLink path={siteData.tsvScreening.readmePath}>Method and limits</SourceLink>
-              <SourceLink path={siteData.tsvScreening.expectedPath}>Regression oracle</SourceLink>
+            <Boundary>{siteData.tsvField.claimBoundary}</Boundary>
+            <nav className="site-inline-links" aria-label="Axisymmetric TSV field evidence">
+              <a href={publicAsset(siteData.tsvField.fieldAsset)}>Raw field JSON</a>
+              <a href={publicAsset(siteData.tsvField.summaryAsset)}>Numerical summary</a>
+              <a href={publicAsset(siteData.tsvField.manifestAsset)}>SHA-256 manifest</a>
+              <SourceLink path={siteData.tsvField.runnerPath}>Exact runner</SourceLink>
+              <SourceLink path={siteData.tsvField.readmePath}>Method and limits</SourceLink>
             </nav>
           </div>
         </section>
 
+        <section className="site-section site-simulation-gallery" id="simulations">
+          <div className="site-section-heading">
+            <div><p className="site-kicker"><span /> Simulation media</p><h2>More views generated from checked CoupFE-EDA runs</h2></div>
+            <p>These are data-driven exports, not stock imagery or AI-generated concepts. Each figure names its runner, retained oracle, checksum record, and evidence boundary.</p>
+          </div>
+          <div className="site-media-grid">
+            {siteData.simulationMedia.map((media) => <SimulationMediaCard media={media} key={media.id} />)}
+          </div>
+          <div className="site-media-provenance" role="note">
+            <strong>How these figures are built</strong>
+            <span>The solder and ETV images rerun the named CoupFE mechanics examples and refuse output unless their numerical oracles pass. The device map is regenerated from its EDA screening runner. Artifact and source hashes are retained in the linked contracts.</span>
+          </div>
+        </section>
+
         <section className="site-interface-cta" id="interface">
-          <div><p className="site-kicker"><span /> Supervision interface</p><h2>Explore models, evidence, and simulated lifecycle events</h2></div>
-          <p>The public interface demonstrates the review and supervision contract. It does not execute CoupFE-EDA solvers; connected execution remains a separate loopback-only local setup.</p>
-          <nav aria-label="Interface demonstration">
-            <a className="site-primary-link" href={`${import.meta.env.BASE_URL}?surface=workbench`}>Open interface demonstration <span>→</span></a>
+          <div><p className="site-kicker"><span /> Real field workbench</p><h2>Probe the mesh, fields, load sweep, and solver evidence</h2></div>
+          <p>GitHub Pages explores the retained, hash-verified CoupFE run. A local connected checkout exposes one fixed server-owned Run action that executes the same case; the browser never supplies a command, mesh size, or solver argument.</p>
+          <nav aria-label="Real field workbench">
+            <a className="site-primary-link" href={`${import.meta.env.BASE_URL}?surface=workbench`}>Open real field explorer <span>→</span></a>
             <a className="site-secondary-link" href={repositoryFile("web/README.md")}>Local setup documentation <span>↗</span></a>
           </nav>
         </section>
@@ -299,10 +375,17 @@ function WorkbenchSurface() {
     <div className="prototype-route">
       <div className="prototype-boundary" role="note">
         <a href={import.meta.env.BASE_URL}>← Project website</a>
-        <strong>{apiMode ? "Local connected workbench" : "Interface demonstration — no solver runs in this public page"}</strong>
-        <span>{apiMode ? "Only server-approved workflows are available." : "Values and lifecycle events inside the cockpit are illustrative unless linked to the retained TSV demonstration record."}</span>
+        <strong>{apiMode ? "Local CoupFE solver connected" : "Retained CoupFE field explorer — GitHub Pages does not run the solver"}</strong>
+        <span>{apiMode ? "The only Run action maps to one fixed server-owned case." : "Field colors, curves, probes, and solved load states come from the build-verified axisymmetric TSV bundle."}</span>
       </div>
-      <App backend={createBackend()} projectId={apiMode ? "coupfe-eda-local" : "tsv-thermal-001"} />
+      <App
+        backend={apiMode ? createBackend() : undefined}
+        projectId="coupfe-eda-local"
+        retainedFieldUrl={publicAsset(siteData.tsvField.fieldAsset)}
+        summaryUrl={publicAsset(siteData.tsvField.summaryAsset)}
+        manifestUrl={publicAsset(siteData.tsvField.manifestAsset)}
+        runnerUrl={repositoryFile(siteData.tsvField.runnerPath)}
+      />
     </div>
   );
 }

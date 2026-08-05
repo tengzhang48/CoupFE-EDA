@@ -1,0 +1,271 @@
+{
+  "artifacts": [
+    {
+      "path": "field.json",
+      "role": "raw-field",
+      "sha256": "b7136cb5d05b27b76325eec954f2805e35e2701d8365c701d36b20b257d2da4c",
+      "size_bytes": 2469084
+    },
+    {
+      "path": "summary.json",
+      "role": "summary",
+      "sha256": "d691c60d236e18fb0eb9865b831798cf5dccbb898ed1f1ae6768037e856ba104",
+      "size_bytes": 2586
+    },
+    {
+      "path": "contour.svg",
+      "role": "image",
+      "sha256": "f0f0414ccd88d6dd6b73d58f3bf8a6a7f5a3c296284ccbf033107a9a4f9ec799",
+      "size_bytes": 50121
+    },
+    {
+      "path": "load-sweep.webm",
+      "role": "video",
+      "sha256": "5255cfc3cf97701304a9d297f962fd417fb4d05e541f2d14f894d7fa2c811bb3",
+      "size_bytes": 247412
+    }
+  ],
+  "case": {
+    "description": "Solver-derived axisymmetric TSV thermoelastic field and prescribed cooling-sweep media",
+    "id": "axisymmetric_tsv_thermoelastic_field_v1"
+  },
+  "claim_boundary": "Axisymmetric plane-strain thermoelastic component verification against the declared Lam\u00e9 equation. It is not a finite-depth 3-D TSV, near-surface device field, experimental validation, keep-out-zone signoff, or transient cooling simulation.",
+  "command": [
+    "python",
+    "examples/tsv_axisymmetric_field/run.py",
+    "--output-dir",
+    "<OUTPUT_DIR>"
+  ],
+  "field": {
+    "components": [
+      {
+        "location": "node",
+        "name": "radial_displacement_nm",
+        "unit": "nm"
+      },
+      {
+        "location": "element_center",
+        "name": "sigma_rr_MPa",
+        "unit": "MPa"
+      },
+      {
+        "location": "element_center",
+        "name": "sigma_theta_MPa",
+        "unit": "MPa"
+      }
+    ],
+    "degree_of_freedom_count": 2400,
+    "load_steps": [
+      {
+        "index": 0,
+        "name": "prescribed_static_cooling_0",
+        "unit": "K",
+        "value": 0.0
+      },
+      {
+        "index": 1,
+        "name": "prescribed_static_cooling_1",
+        "unit": "K",
+        "value": -50.0
+      },
+      {
+        "index": 2,
+        "name": "prescribed_static_cooling_2",
+        "unit": "K",
+        "value": -100.0
+      },
+      {
+        "index": 3,
+        "name": "prescribed_static_cooling_3",
+        "unit": "K",
+        "value": -150.0
+      },
+      {
+        "index": 4,
+        "name": "prescribed_static_cooling_4",
+        "unit": "K",
+        "value": -200.0
+      },
+      {
+        "index": 5,
+        "name": "prescribed_static_cooling_5",
+        "unit": "K",
+        "value": -250.0
+      },
+      {
+        "index": 6,
+        "name": "prescribed_static_cooling_6",
+        "unit": "K",
+        "value": -300.0
+      },
+      {
+        "index": 7,
+        "name": "prescribed_static_cooling_7",
+        "unit": "K",
+        "value": -350.0
+      },
+      {
+        "index": 8,
+        "name": "prescribed_static_cooling_8",
+        "unit": "K",
+        "value": -400.0
+      }
+    ],
+    "mesh": {
+      "element_count": 2399,
+      "name": "axisymmetric_tsv_thermoelastic_field_v1_2400_nodes",
+      "node_count": 2400,
+      "spatial_dimension": 1
+    },
+    "topology": "Line2 axisymmetric plane strain"
+  },
+  "renderer": {
+    "configuration": {
+      "axisymmetric_reconstruction": {
+        "field": "sigma_rr_MPa",
+        "mapping": "radial value revolved about the TSV axis for display only",
+        "physical_dimension": "axisymmetric plane-strain component model",
+        "radial_crop_um": 60.0,
+        "region": "silicon",
+        "spatial_sampling": "piecewise-linear display sampling between retained element centers"
+      },
+      "color_scale": {
+        "fixed_across_frames": true,
+        "normalization": "linear",
+        "palette": "cividis_restrained_sequential_v1",
+        "palette_rgb": [
+          [
+            0,
+            32,
+            77
+          ],
+          [
+            40,
+            52,
+            110
+          ],
+          [
+            74,
+            74,
+            113
+          ],
+          [
+            107,
+            95,
+            112
+          ],
+          [
+            140,
+            116,
+            107
+          ],
+          [
+            173,
+            139,
+            100
+          ],
+          [
+            203,
+            165,
+            88
+          ],
+          [
+            229,
+            195,
+            76
+          ],
+          [
+            253,
+            231,
+            69
+          ]
+        ],
+        "range_mpa": [
+          0.0,
+          630.3398378748665
+        ],
+        "scope": "all retained silicon solved states"
+      },
+      "encoder_options": {
+        "cpu_used": 0,
+        "deadline": "good",
+        "frame_parallel": false,
+        "metadata": "fixed",
+        "row_multithreading": false,
+        "threads": 1,
+        "tile_columns": 0
+      },
+      "labels": {
+        "case_id": "axisymmetric_tsv_thermoelastic_field_v1",
+        "degrees_of_freedom": 2400,
+        "diameter_um": 30.0,
+        "font": "Pillow bundled default scalable font",
+        "interpretation": "prescribed load sweep \u2014 not transient"
+      },
+      "output": {
+        "audio": "none",
+        "bitrate": "1200k",
+        "codec": "libvpx-vp9",
+        "container": "webm",
+        "fps": 12,
+        "height_px": 540,
+        "pixel_format": "yuv420p",
+        "width_px": 960
+      },
+      "radial_curve": {
+        "fields": [
+          "FE sigma_rr_MPa",
+          "published Lame sigma_rr_MPa"
+        ],
+        "fixed_across_frames": true,
+        "radius_range_um": [
+          14.999999999999998,
+          80.0
+        ],
+        "stress_range_mpa": [
+          -25.21359351499466,
+          655.5534313898611
+        ]
+      },
+      "software_versions": {
+        "ffmpeg": "7.0.2-static",
+        "imageio_ffmpeg": "0.6.0",
+        "numpy": "1.26.4",
+        "pillow": "12.3.0"
+      },
+      "temporal_mapping": {
+        "frames_per_solved_state": 4,
+        "interpolation": "none",
+        "is_transient": false,
+        "source": "field.json#load_sweep.steps",
+        "state_order": "forward_then_reverse_exact_solved_states",
+        "step_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          7,
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ]
+      }
+    },
+    "interpretation": "The axisymmetric display reconstructs each retained solved static field. The animation is a prescribed load sweep, not a transient simulation, and contains no interpolated physical states.",
+    "name": "examples.tsv_axisymmetric_field.render_video",
+    "version": "1"
+  },
+  "revisions": {
+    "core": "e2f42ed5772850a0a23a2ce434f430c287eae5c8",
+    "eda": "fc0aa7380e0e791376c34665d0b4d1997b099174"
+  },
+  "schema_version": 1
+}

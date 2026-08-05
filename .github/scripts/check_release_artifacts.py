@@ -12,6 +12,7 @@ import re
 import stat
 import subprocess
 import tarfile
+import tempfile
 import zipfile
 from collections import Counter
 from fnmatch import fnmatchcase
@@ -96,6 +97,7 @@ PUBLIC_PACKAGE_FILES = SCHEMA_ASSETS | SYNTHETIC_CASE_ASSETS | {
         "run.py",
         "scaling_bench.py",
         "solder_joint.py",
+        "source_identity.py",
         "tet_3d.py",
         "tet_element.py",
         "thermal_runaway.py",
@@ -110,6 +112,7 @@ PUBLIC_PACKAGE_FILES = SCHEMA_ASSETS | SYNTHETIC_CASE_ASSETS | {
         "tsv_stress.py",
         "tsv_validation.py",
         "validate.py",
+        "visual_evidence.py",
         "workbench.py",
         "workbench_api.py",
     }
@@ -123,8 +126,11 @@ PUBLIC_TEST_FILES = {
     "tests/test_native_element_evaluation.py",
     "tests/test_periodic_adapter.py",
     "tests/test_toolchain.py",
+    "tests/test_tsv_axisymmetric_field.py",
+    "tests/test_tsv_axisymmetric_visual_media.py",
     "tests/test_tsv_device.py",
     "tests/test_tsv_local_3d.py",
+    "tests/test_visual_evidence.py",
     "tests/test_workbench.py",
     "tests/test_workbench_api.py",
 }
@@ -239,7 +245,22 @@ PUBLIC_DOC_FILES = PUBLIC_HISTORY_FILES | {
     "docs/validation_guide/generate_figures.py",
     "docs/validation_guide/README.md",
 }
-PUBLIC_EXAMPLE_FILES = {
+RETAINED_VISUAL_EVIDENCE_PREFIX = "examples/tsv_axisymmetric_field/retained"
+RETAINED_VISUAL_EVIDENCE_MANIFEST = (
+    f"{RETAINED_VISUAL_EVIDENCE_PREFIX}/visual-evidence.json"
+)
+RETAINED_VISUAL_EVIDENCE_CASE_ID = "axisymmetric_tsv_thermoelastic_field_v1"
+RETAINED_VISUAL_EVIDENCE_FILES = {
+    f"{RETAINED_VISUAL_EVIDENCE_PREFIX}/{name}"
+    for name in {
+        "contour.svg",
+        "field.json",
+        "load-sweep.webm",
+        "summary.json",
+        "visual-evidence.json",
+    }
+}
+PUBLIC_EXAMPLE_FILES = RETAINED_VISUAL_EVIDENCE_FILES | {
     "examples/REFERENCES.md",
     "examples/design_linked_solder_screening/README.md",
     "examples/design_linked_solder_screening/expected_results.json",
@@ -259,6 +280,11 @@ PUBLIC_EXAMPLE_FILES = {
     "examples/tsv_00_device_screening/expected_metrics.json",
     "examples/tsv_00_device_screening/materials.json",
     "examples/tsv_00_device_screening/run.py",
+    "examples/tsv_axisymmetric_field/README.md",
+    "examples/tsv_axisymmetric_field/build_visual_evidence.py",
+    "examples/tsv_axisymmetric_field/expected_results.json",
+    "examples/tsv_axisymmetric_field/render_video.py",
+    "examples/tsv_axisymmetric_field/run.py",
 }
 PUBLIC_SKILL_FILES = {
     "skills/SKILL.md",
@@ -277,6 +303,7 @@ PUBLIC_WEB_FILES = {
         "README.md",
         "contracts/connected-project-snapshot.json",
         "contracts/retained-tsv-artifacts.json",
+        "contracts/simulation-media.json",
         "favicon.svg",
         "index.html",
         "package-lock.json",
@@ -284,9 +311,13 @@ PUBLIC_WEB_FILES = {
         "public/generated/tsv_device_screening/device_screening.csv",
         "public/generated/tsv_device_screening/device_screening.svg",
         "public/generated/tsv_device_screening/evidence.json",
+        "public/generated/simulation-media/etv-partitioned-comparison.svg",
+        "public/generated/simulation-media/solder-3d-dissipation.svg",
         "scripts/check-repository-data.mjs",
         "scripts/prepare-repository-assets.mjs",
+        "scripts/refresh-simulation-media.mjs",
         "scripts/refresh-tsv-device-artifacts.mjs",
+        "scripts/render-simulation-media.py",
         "site-data.json",
         "src/App.test.tsx",
         "src/App.tsx",
@@ -295,11 +326,6 @@ PUBLIC_WEB_FILES = {
         "src/backend/factory.ts",
         "src/backend/fastapi-backend.ts",
         "src/backend/interface.ts",
-        "src/backend/mock-backend.test.ts",
-        "src/backend/mock-backend.ts",
-        "src/demo/snapshot.ts",
-        "src/domain/selectors.test.ts",
-        "src/domain/selectors.ts",
         "src/domain/types.ts",
         "src/hooks/use-workbench.ts",
         "src/main.tsx",
@@ -523,6 +549,13 @@ def _is_allowed_public_image(path: PurePosixPath) -> bool:
         and (
             (len(parts) >= 4 and parts[:3] == ("docs", "validation_guide", "figures"))
             or (len(parts) >= 2 and parts[0] == "web")
+            or parts
+            == (
+                "examples",
+                "tsv_axisymmetric_field",
+                "retained",
+                "contour.svg",
+            )
         )
     )
 
@@ -1549,6 +1582,43 @@ def _validate_openroad_redistribution_notice(
         )
 
 
+def _validate_retained_visual_evidence(
+    files: set[str],
+    read_bytes,
+    artifact: Path,
+) -> None:
+    """Run the public bundle validator against the retained source/sdist media."""
+
+    missing = sorted(RETAINED_VISUAL_EVIDENCE_FILES - files)
+    if missing:
+        raise SystemExit(
+            f"{artifact.name} is missing retained visual evidence files: {missing}"
+        )
+
+    from eda_multiphysics.visual_evidence import (
+        VisualEvidenceValidationError,
+        validate_manifest,
+    )
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="coupfe-eda-visual-evidence-") as raw:
+            bundle_root = Path(raw)
+            for name in sorted(RETAINED_VISUAL_EVIDENCE_FILES):
+                destination = bundle_root / PurePosixPath(name).name
+                destination.write_bytes(read_bytes(name))
+            manifest = validate_manifest(bundle_root / "visual-evidence.json")
+    except (OSError, VisualEvidenceValidationError) as exc:
+        raise SystemExit(
+            f"{artifact.name}:{RETAINED_VISUAL_EVIDENCE_MANIFEST} failed validation: {exc}"
+        ) from exc
+
+    if manifest["case"]["id"] != RETAINED_VISUAL_EVIDENCE_CASE_ID:
+        raise SystemExit(
+            f"{artifact.name}:{RETAINED_VISUAL_EVIDENCE_MANIFEST} must bind case "
+            f"{RETAINED_VISUAL_EVIDENCE_CASE_ID!r}"
+        )
+
+
 def _validate_source_tree(
     source_root: Path,
     *,
@@ -1688,6 +1758,11 @@ def _validate_source_tree(
         notice_name="NOTICE",
     )
     _validate_entry_point_ledger(
+        releasable,
+        lambda name: (source_root / PurePosixPath(name)).read_bytes(),
+        source_root,
+    )
+    _validate_retained_visual_evidence(
         releasable,
         lambda name: (source_root / PurePosixPath(name)).read_bytes(),
         source_root,
@@ -1854,6 +1929,7 @@ def _validate_sdist(
             notice_name="NOTICE",
         )
         _validate_entry_point_ledger(files, _read_sdist_file, sdist)
+        _validate_retained_visual_evidence(files, _read_sdist_file, sdist)
     return len(files)
 
 

@@ -26,6 +26,8 @@ Run:  python -m eda_multiphysics.tsv_stress
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 # --- material properties (PMC8472814 Table 1) ---
@@ -36,6 +38,57 @@ SIO2 = dict(E=70e9, nu=0.17, a=0.5e-6)      # compliant STI/liner
 
 _G = 1.0 / np.sqrt(3.0)
 _GP = [(-_G, 1.0), (_G, 1.0)]
+
+
+@dataclass(frozen=True)
+class AxisymmetricTSVMesh:
+    """The one-dimensional radial mesh used by the axisymmetric TSV model."""
+
+    radius_nodes_m: np.ndarray
+    element_centers_m: np.ndarray
+    connectivity: np.ndarray
+    via_radius_m: float
+    outer_radius_m: float
+
+    @property
+    def node_count(self):
+        return int(self.radius_nodes_m.size)
+
+    @property
+    def element_count(self):
+        return int(self.element_centers_m.size)
+
+
+@dataclass(frozen=True)
+class AxisymmetricSolverTelemetry:
+    """Convergence evidence recovered around the CoupFE Newton solve."""
+
+    newton_iterations: int
+    relative_tolerance: float
+    absolute_residual_tolerance_n_per_m: float
+    initial_free_residual_norm_n_per_m: float
+    final_free_residual_norm_n_per_m: float
+    final_relative_residual: float
+    residual_fraction_of_acceptance_limit: float
+    converged: bool
+
+
+@dataclass(frozen=True)
+class AxisymmetricTSVFieldResult:
+    """Structured displacement, stress, mesh, region, and solver result."""
+
+    mesh: AxisymmetricTSVMesh
+    regions: dict[str, np.ndarray]
+    region_by_element: np.ndarray
+    node_displacement_m: np.ndarray
+    element_sigma_rr_pa: np.ndarray
+    element_sigma_theta_pa: np.ndarray
+    telemetry: AxisymmetricSolverTelemetry
+    delta_temperature_k: float
+
+    @property
+    def degrees_of_freedom(self):
+        return self.mesh.node_count
 
 
 def lame_sigma_r(r_um, D_um, dT, cu=CU, si=SI):
@@ -124,32 +177,147 @@ def _build_mesh(D_um, R_out_um=300.0, n=2400, barrier_nm=0.0):
     return np.sort(rs), a
 
 
-def solve_tsv(D_um, dT, liner_nm=0.0, liner_mat=TAN, **mesh_kw):
+def _materials_and_regions(element_centers_m, via_radius_m, liner_nm, liner_mat):
+    """Return per-element materials and stable region labels."""
+    liner_outer_m = via_radius_m + liner_nm * 1e-9
+    mats = []
+    labels = []
+    for center in element_centers_m:
+        if center < via_radius_m:
+            mats.append(CU)
+            labels.append("copper")
+        elif liner_nm > 0 and center < liner_outer_m:
+            mats.append(liner_mat)
+            labels.append("liner")
+        else:
+            mats.append(SI)
+            labels.append("silicon")
+    return mats, np.asarray(labels, dtype="U8")
+
+
+def _recover_element_stresses(radius_nodes_m, displacement_m, mats, dT):
+    """Recover radial and hoop stress at every Line2 element center (Pa)."""
+    ne = len(radius_nodes_m) - 1
+    sigma_rr = np.empty(ne, dtype=float)
+    sigma_theta = np.empty(ne, dtype=float)
+    for e in range(ne):
+        lam, mu = _lame_mu(mats[e])
+        th = (3 * lam + 2 * mu) * mats[e]["a"] * dT
+        r1, r2 = radius_nodes_m[e:e + 2]
+        u1, u2 = displacement_m[e:e + 2]
+        eps_rr = (u2 - u1) / (r2 - r1)
+        eps_theta = 0.5 * (u1 + u2) / (0.5 * (r1 + r2))
+        trace = eps_rr + eps_theta
+        sigma_rr[e] = lam * trace + 2 * mu * eps_rr - th
+        sigma_theta[e] = lam * trace + 2 * mu * eps_theta - th
+    return sigma_rr, sigma_theta
+
+
+def _free_residual_norm(operator, displacement_m):
+    residual = np.asarray(
+        operator.residual(displacement_m, None, 1.0, 1.0).values,
+        dtype=float,
+    ).copy()
+    residual[0] = 0.0
+    return float(np.linalg.norm(residual))
+
+
+def solve_tsv_field(D_um, dT, liner_nm=0.0, liner_mat=TAN, **mesh_kw):
+    """Solve a TSV case and return its full, structured axisymmetric FE field.
+
+    Stress is recovered at Line2 element centers.  The radial displacement is
+    stored at nodes.  Residual norms have units N/m because the weak form omits
+    the common ``2*pi`` factor and reports force per unit out-of-plane length.
+    """
     from coupfe import newton_solve
 
     r, a = _build_mesh(D_um, barrier_nm=liner_nm, **mesh_kw)
     rc = 0.5 * (r[:-1] + r[1:])
-    mats = []
-    for c in rc:
-        if c < a:
-            mats.append(CU)
-        elif liner_nm > 0 and c < a + liner_nm * 1e-9:
-            mats.append(liner_mat)
-        else:
-            mats.append(SI)
+    mats, region_by_element = _materials_and_regions(rc, a, liner_nm, liner_mat)
     op = AxisymThermoelastic(r, mats, dT)
-    U, _, _ = newton_solve([op], np.zeros(op.ndof), None, op.ndof, {0: 0.0})
-    # recover sigma_rr at element centres (Si side)
-    s_rr = np.empty(op.ne)
-    for e in range(op.ne):
-        lam, mu = _lame_mu(mats[e])
-        th = (3 * lam + 2 * mu) * mats[e]["a"] * dT
-        L = r[e + 1] - r[e]
-        N = np.array([0.5, 0.5]); rr = N @ r[e:e + 2]
-        e_rr = (np.array([-1.0, 1.0]) / L) @ U[e:e + 2]
-        e_tt = (N @ U[e:e + 2]) / rr
-        s_rr[e] = lam * (e_rr + e_tt) + 2 * mu * e_rr - th
-    return r, rc, s_rr, a
+    U0 = np.zeros(op.ndof, dtype=float)
+    initial_norm = _free_residual_norm(op, U0)
+    rtol = 1e-9
+    atol = 1e-14
+    maxit = 60
+    displacement, _, iterations = newton_solve(
+        [op], U0, None, op.ndof, {0: 0.0}, rtol=rtol, maxit=maxit
+    )
+    displacement = np.asarray(displacement, dtype=float)
+    final_norm = _free_residual_norm(op, displacement)
+    acceptance_limit = max(rtol * initial_norm, atol)
+    final_relative = final_norm / initial_norm if initial_norm > 0.0 else 0.0
+    fraction = final_norm / acceptance_limit
+    finite_scalars = np.asarray([
+        D_um,
+        dT,
+        liner_nm,
+        a,
+        initial_norm,
+        final_norm,
+        final_relative,
+        fraction,
+    ], dtype=float)
+    if not (
+        np.all(np.isfinite(finite_scalars))
+        and np.all(np.isfinite(r))
+        and np.all(np.isfinite(displacement))
+    ):
+        raise FloatingPointError("TSV field solve produced a non-finite value")
+    converged = bool(final_norm < acceptance_limit)
+    if not converged:
+        raise RuntimeError(
+            "CoupFE Newton solve did not satisfy the residual acceptance limit "
+            f"after {iterations} iterations ({final_norm:.6e} >= {acceptance_limit:.6e})"
+        )
+
+    sigma_rr, sigma_theta = _recover_element_stresses(r, displacement, mats, dT)
+    if not (np.all(np.isfinite(sigma_rr)) and np.all(np.isfinite(sigma_theta))):
+        raise FloatingPointError("TSV stress recovery produced a non-finite value")
+
+    regions = {
+        name: np.flatnonzero(region_by_element == name)
+        for name in ("copper", "liner", "silicon")
+        if np.any(region_by_element == name)
+    }
+    mesh = AxisymmetricTSVMesh(
+        radius_nodes_m=r.copy(),
+        element_centers_m=rc.copy(),
+        connectivity=np.column_stack((np.arange(op.ne), np.arange(1, op.ne + 1))),
+        via_radius_m=float(a),
+        outer_radius_m=float(r[-1]),
+    )
+    telemetry = AxisymmetricSolverTelemetry(
+        newton_iterations=int(iterations),
+        relative_tolerance=rtol,
+        absolute_residual_tolerance_n_per_m=atol,
+        initial_free_residual_norm_n_per_m=initial_norm,
+        final_free_residual_norm_n_per_m=final_norm,
+        final_relative_residual=final_relative,
+        residual_fraction_of_acceptance_limit=fraction,
+        converged=converged,
+    )
+    return AxisymmetricTSVFieldResult(
+        mesh=mesh,
+        regions=regions,
+        region_by_element=region_by_element,
+        node_displacement_m=displacement.copy(),
+        element_sigma_rr_pa=sigma_rr,
+        element_sigma_theta_pa=sigma_theta,
+        telemetry=telemetry,
+        delta_temperature_k=float(dT),
+    )
+
+
+def solve_tsv(D_um, dT, liner_nm=0.0, liner_mat=TAN, **mesh_kw):
+    """Backward-compatible tuple API; see :func:`solve_tsv_field` for fields."""
+    result = solve_tsv_field(D_um, dT, liner_nm, liner_mat, **mesh_kw)
+    return (
+        result.mesh.radius_nodes_m.copy(),
+        result.mesh.element_centers_m.copy(),
+        result.element_sigma_rr_pa.copy(),
+        result.mesh.via_radius_m,
+    )
 
 
 def sigma_at(rc, s_rr, r_query_um):

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "record_date": "2026-08-02",
+  "record_date": "2026-08-05",
   "evidence_guide": "docs/VALIDATION_GUIDE.md",
   "scope": "Forward evidence roadmap for the TSV-to-device path; not a software-test summary, overall project score, or manufacturing-signoff claim.",
   "public_status_labels": {

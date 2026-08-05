@@ -1,705 +1,767 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import siteData from "../site-data.json";
 import type { CoupFEBackend } from "./backend/interface";
-import {
-  formatDateTime,
-  formatDuration,
-  formatQuantity,
-  formatUncertainty,
-  runDurationSeconds,
-  selectActiveDecision,
-  selectActiveDesign,
-  selectCandidateComparison,
-  selectEvidenceByIds,
-  selectEvidenceIntegrity,
-  selectEvidenceSummary,
-  selectGateEvaluations,
-  selectLastCompletedRun,
-  selectLatestRun,
-  selectLatestSuccessfulRun,
-  selectMetric,
-  selectModel,
-  selectModelAdequacy,
-  selectPreferredCandidate,
-  selectStackThicknessMicrometers,
-  selectTemperatureField,
-  selectWorkflow,
-  uncertaintyPercent,
-} from "./domain/selectors";
-import type {
-  ApprovedWorkflowDefinition,
-  GenericMetricResult,
-  MetricKey,
-  MetricResult,
-  ModelFidelity,
-  PackageLayer,
-  ProjectSnapshot,
-  RunRecord,
-} from "./domain/types";
 import { useWorkbench } from "./hooks/use-workbench";
 
-type ViewId = "overview" | "geometry" | "models" | "runs" | "compare" | "evidence";
+const WORKFLOW_ID = "tsv_axisymmetric_field";
+const EXPECTED_LOADS_K = [0, -50, -100, -150, -200, -250, -300, -350, -400] as const;
+const VIEWBOX_SIZE = 500;
+const FIELD_CENTER = VIEWBOX_SIZE / 2;
+const FIELD_RADIUS = 214;
+const NEAR_FIELD_RADIUS_UM = 60;
+const PALETTE = ["#101b43", "#234b8f", "#227f9d", "#2aa889", "#78c679", "#d8d85f", "#f2b84b"];
 
-type IconName =
-  | ViewId
-  | "shield"
-  | "clock"
-  | "thermometer"
-  | "warpage"
-  | "margin"
-  | "runtime"
-  | "check"
-  | "chevron"
-  | "menu"
-  | "close"
-  | "info"
-  | "external"
-  | "layers";
+interface SolverRecord {
+  newton_iterations: number;
+  final_relative_residual: number;
+  residual_fraction_of_acceptance_limit: number;
+  converged: boolean;
+}
 
-const navItems: Array<{ id: ViewId; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "geometry", label: "Geometry" },
-  { id: "models", label: "Models" },
-  { id: "runs", label: "Runs" },
-  { id: "compare", label: "Compare" },
-  { id: "evidence", label: "Evidence" },
-];
+interface ComparisonRecord {
+  query_radius_um: number;
+  fe_sigma_rr_MPa: number;
+  lame_sigma_rr_MPa: number;
+  relative_error: number | null;
+  passed: boolean;
+}
 
-const metricIcons: Record<MetricKey, IconName> = {
-  temperature: "thermometer",
-  warpage: "warpage",
-  margin: "margin",
-  runtime: "runtime",
-};
+interface FieldArrays {
+  radial_displacement_nm: number[];
+  sigma_rr_MPa: number[];
+  sigma_theta_MPa: number[];
+}
 
-function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
-  const common = {
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.8,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
+interface LoadStep {
+  step_index: number;
+  delta_temperature_K: number;
+  solve_kind: string;
+  is_transient: false;
+  solver: SolverRecord;
+  comparison: ComparisonRecord;
+  field: FieldArrays;
+}
+
+export interface TsvFieldBundle {
+  schema_version: 1;
+  case_id: string;
+  claim_boundary: string;
+  units: Record<string, string>;
+  inputs: {
+    diameter_um: number;
+    delta_temperature_K: number;
+    outer_radius_um: number;
+    mesh_points_requested: number;
   };
-  const paths: Record<IconName, ReactNode> = {
-    overview: <><path d="M3 10.8 12 3l9 7.8" /><path d="M5 9.6V21h14V9.6" /><path d="M9 21v-7h6v7" /></>,
-    geometry: <><path d="m12 2 8 4.5v11L12 22l-8-4.5v-11L12 2Z" /><path d="m4.2 6.7 7.8 4.5 7.8-4.5M12 11.2V22" /></>,
-    models: <><circle cx="12" cy="4" r="2" /><circle cx="5" cy="20" r="2" /><circle cx="19" cy="20" r="2" /><path d="M12 6v5M5 18v-4h14v4M12 11v3" /></>,
-    runs: <><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4V8Z" /></>,
-    compare: <><path d="M5 20V10M10 20V4M15 20v-7M20 20V7" /><path d="M3 20h19" /></>,
-    evidence: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 8h6M9 12h6M9 16h4" /></>,
-    shield: <><path d="M12 3 5 6v5c0 4.8 2.8 8.1 7 10 4.2-1.9 7-5.2 7-10V6l-7-3Z" /><path d="m9.2 12 1.8 1.8 4-4" /></>,
-    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>,
-    thermometer: <><path d="M9 4a3 3 0 0 1 6 0v9.1a5 5 0 1 1-6 0V4Z" /><path d="M12 6v9" /></>,
-    warpage: <><path d="M3 10c4 4 14 4 18 0" /><path d="M4 17h2M9 17h2M14 17h2M19 17h1" /></>,
-    margin: <><path d="M12 3 5 6v5c0 4.8 2.8 8.1 7 10 4.2-1.9 7-5.2 7-10V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></>,
-    runtime: <><circle cx="12" cy="12" r="9" /><path d="M12 6v6h5" /></>,
-    check: <path d="m5 12 4 4L19 6" />,
-    chevron: <path d="m9 5 7 7-7 7" />,
-    menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
-    close: <><path d="m6 6 12 12M18 6 6 18" /></>,
-    info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>,
-    external: <><path d="M14 4h6v6M20 4l-9 9" /><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6" /></>,
-    layers: <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5" /></>,
+  topology: {
+    type: "Line2";
+    spatial_dimension: 1;
+    dof_per_node: 1;
   };
-  return <svg {...common}>{paths[name]}</svg>;
+  mesh: {
+    radius_nodes_um: number[];
+    element_centers_um: number[];
+    connectivity: number[][];
+    region_by_element: string[];
+    region_element_indices: Record<string, number[]>;
+    via_radius_um: number;
+    outer_radius_um: number;
+  };
+  final_field: FieldArrays & { delta_temperature_K: number };
+  solver: SolverRecord;
+  comparison: ComparisonRecord;
+  load_sweep: {
+    sweep_kind: string;
+    is_transient: false;
+    description: string;
+    delta_temperature_K: number[];
+    steps: LoadStep[];
+  };
 }
 
-function worstAssessedMetric(run: RunRecord | undefined): MetricResult | undefined {
-  return (run?.output?.metrics ?? [])
-    .filter((metric) => metric.key !== "runtime" && metric.uncertainty?.kind === "validation-error")
-    .sort((a, b) => (uncertaintyPercent(b) ?? 0) - (uncertaintyPercent(a) ?? 0))[0];
+interface AppProps {
+  backend?: CoupFEBackend;
+  projectId?: string;
+  retainedFieldUrl: string;
+  summaryUrl: string;
+  manifestUrl: string;
+  runnerUrl: string;
 }
 
-function formatGenericMetric(metric: GenericMetricResult): string {
-  if (metric.unit === "count" || metric.unit === "devices") {
-    const value = Math.round(metric.value).toLocaleString();
-    return metric.unit === "devices" ? `${value} devices` : value;
-  }
-  if (metric.unit === "s") return `${metric.value.toFixed(2)} s`;
-  return `${metric.value.toPrecision(5)}${metric.unit === "1" ? "" : ` ${metric.unit}`}`;
+interface FieldEvidenceSource {
+  fieldUrl: string;
+  summaryUrl: string;
+  manifestUrl: string;
+  manifestLabel: string;
+  coreRevision: string;
+  label: string;
 }
 
-function layerContent(layer: PackageLayer, fieldHotspotComponentId?: string) {
-  if (layer.id === "die") {
-    return fieldHotspotComponentId === layer.id ? <span className="hotspot-anchor" /> : null;
-  }
-  if (layer.id === "bumps") {
-    return <span className="repeater bump-repeater">{Array.from({ length: 20 }, (_, index) => <i key={index} />)}</span>;
-  }
-  if (layer.id === "interposer") {
-    return (
-      <span className="interposer-features">
-        <span className="rdl-lines"><i /><i /><i /><i /></span>
-        <span className="repeater tsv-repeater">{Array.from({ length: 14 }, (_, index) => <i key={index} />)}</span>
-      </span>
-    );
-  }
-  if (layer.id === "substrate") {
-    return <span className="substrate-traces"><i /><i /><i /><i /><i /></span>;
-  }
-  if (layer.id === "sink") {
-    return <span className="repeater fin-repeater">{Array.from({ length: 16 }, (_, index) => <i key={index} />)}</span>;
-  }
-  return null;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function PackageDiagram({
-  snapshot,
-  run,
-  selectedLayerId,
-  onSelectLayer,
-  expanded = false,
+function finiteNumber(value: unknown, location: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`${location} must be a finite number`);
+  }
+  return value;
+}
+
+function finiteArray(value: unknown, location: string, length: number): number[] {
+  if (!Array.isArray(value) || value.length !== length) {
+    throw new Error(`${location} must contain exactly ${length} values`);
+  }
+  return value.map((item, index) => finiteNumber(item, `${location}[${index}]`));
+}
+
+function solverRecord(value: unknown, location: string): SolverRecord {
+  if (!isRecord(value)) throw new Error(`${location} must be an object`);
+  const iterations = finiteNumber(value.newton_iterations, `${location}.newton_iterations`);
+  const relativeResidual = finiteNumber(value.final_relative_residual, `${location}.final_relative_residual`);
+  const acceptanceFraction = finiteNumber(
+    value.residual_fraction_of_acceptance_limit,
+    `${location}.residual_fraction_of_acceptance_limit`,
+  );
+  if (!Number.isInteger(iterations) || iterations < 1 || value.converged !== true) {
+    throw new Error(`${location} must describe a converged CoupFE solve`);
+  }
+  if (relativeResidual < 0 || acceptanceFraction < 0 || acceptanceFraction >= 1) {
+    throw new Error(`${location} residual evidence is outside its acceptance boundary`);
+  }
+  return {
+    newton_iterations: iterations,
+    final_relative_residual: relativeResidual,
+    residual_fraction_of_acceptance_limit: acceptanceFraction,
+    converged: true,
+  };
+}
+
+function comparisonRecord(value: unknown, location: string): ComparisonRecord {
+  if (!isRecord(value)) throw new Error(`${location} must be an object`);
+  if (value.reference !== "published_Lame_equation") {
+    throw new Error(`${location} does not identify the reviewed Lamé reference`);
+  }
+  const queryRadius = finiteNumber(value.query_radius_um, `${location}.query_radius_um`);
+  const acceptanceThreshold = finiteNumber(value.acceptance_threshold, `${location}.acceptance_threshold`);
+  const absoluteError = finiteNumber(value.absolute_error_MPa, `${location}.absolute_error_MPa`);
+  const feStress = finiteNumber(value.fe_sigma_rr_MPa, `${location}.fe_sigma_rr_MPa`);
+  const lameStress = finiteNumber(value.lame_sigma_rr_MPa, `${location}.lame_sigma_rr_MPa`);
+  const relative = value.relative_error;
+  const relativeNumber = relative === null
+    ? null
+    : finiteNumber(relative, `${location}.relative_error`);
+  if (
+    queryRadius !== siteData.tsvField.queryRadiusUm ||
+    acceptanceThreshold !== 0.03 ||
+    absoluteError < 0 ||
+    (relativeNumber !== null && (relativeNumber < 0 || relativeNumber > acceptanceThreshold))
+  ) {
+    throw new Error(`${location} is outside the reviewed 20 µm / 3% comparison contract`);
+  }
+  const calculatedAbsoluteError = Math.abs(feStress - lameStress);
+  if (Math.abs(absoluteError - calculatedAbsoluteError) > 1e-9 * Math.max(1, calculatedAbsoluteError)) {
+    throw new Error(`${location} absolute error is inconsistent with its FE/Lamé values`);
+  }
+  if (lameStress === 0) {
+    if (feStress !== 0 || relativeNumber !== null) {
+      throw new Error(`${location} zero-load comparison is inconsistent`);
+    }
+  } else {
+    const calculatedRelativeError = calculatedAbsoluteError / Math.abs(lameStress);
+    if (relativeNumber === null || Math.abs(relativeNumber - calculatedRelativeError) > 1e-12) {
+      throw new Error(`${location} relative error is inconsistent with its FE/Lamé values`);
+    }
+  }
+  if (value.passed !== true) throw new Error(`${location} did not pass its declared comparison`);
+  return {
+    query_radius_um: queryRadius,
+    fe_sigma_rr_MPa: feStress,
+    lame_sigma_rr_MPa: lameStress,
+    relative_error: relativeNumber,
+    passed: true,
+  };
+}
+
+function fieldArrays(value: unknown, location: string, nodes: number, elements: number): FieldArrays {
+  if (!isRecord(value)) throw new Error(`${location} must be an object`);
+  return {
+    radial_displacement_nm: finiteArray(value.radial_displacement_nm, `${location}.radial_displacement_nm`, nodes),
+    sigma_rr_MPa: finiteArray(value.sigma_rr_MPa, `${location}.sigma_rr_MPa`, elements),
+    sigma_theta_MPa: finiteArray(value.sigma_theta_MPa, `${location}.sigma_theta_MPa`, elements),
+  };
+}
+
+export function validateTsvFieldBundle(value: unknown): TsvFieldBundle {
+  if (!isRecord(value) || value.schema_version !== 1) {
+    throw new Error("field.json must use schema_version 1");
+  }
+  if (value.case_id !== siteData.tsvField.caseId) {
+    throw new Error(`unexpected solver case: ${String(value.case_id)}`);
+  }
+  if (typeof value.claim_boundary !== "string" || value.claim_boundary !== siteData.tsvField.claimBoundary) {
+    throw new Error("field.json claim boundary does not match the reviewed public boundary");
+  }
+  if (!isRecord(value.mesh) || !isRecord(value.topology) || !isRecord(value.inputs)) {
+    throw new Error("field.json is missing mesh, topology, or input records");
+  }
+  if (
+    value.inputs.diameter_um !== siteData.tsvField.diameterUm ||
+    value.inputs.delta_temperature_K !== siteData.tsvField.deltaTemperatureK ||
+    value.inputs.outer_radius_um !== siteData.tsvField.outerRadiusUm ||
+    value.inputs.mesh_points_requested !== siteData.tsvField.nodes ||
+    value.inputs.formulation !== "axisymmetric_plane_strain" ||
+    value.inputs.load !== "uniform_thermal_eigenstrain"
+  ) {
+    throw new Error("field.json inputs do not match the fixed reviewed case");
+  }
+  if (
+    !isRecord(value.units) ||
+    value.units.radius !== "um" ||
+    value.units.radial_displacement !== "nm" ||
+    value.units.stress !== "MPa" ||
+    value.units.temperature_change !== "K" ||
+    value.units.residual_norm !== "N/m"
+  ) {
+    throw new Error("field.json units do not match the displayed µm/nm/MPa/K contract");
+  }
+  if (
+    value.topology.type !== "Line2" ||
+    value.topology.spatial_dimension !== 1 ||
+    value.topology.dof_per_node !== 1
+  ) {
+    throw new Error("field.json does not describe the reviewed radial Line2 topology");
+  }
+
+  const radiusNodes = Array.isArray(value.mesh.radius_nodes_um) ? value.mesh.radius_nodes_um : [];
+  const centers = Array.isArray(value.mesh.element_centers_um) ? value.mesh.element_centers_um : [];
+  const nodeCount = radiusNodes.length;
+  const elementCount = centers.length;
+  if (nodeCount !== siteData.tsvField.nodes || elementCount !== siteData.tsvField.elements) {
+    throw new Error("field.json mesh size does not match the reviewed case");
+  }
+  const nodes = finiteArray(radiusNodes, "mesh.radius_nodes_um", nodeCount);
+  const elementCenters = finiteArray(centers, "mesh.element_centers_um", elementCount);
+  if (!nodes.every((item, index) => index === 0 || item > nodes[index - 1]!) ||
+      !elementCenters.every((item, index) => index === 0 || item > elementCenters[index - 1]!)) {
+    throw new Error("field.json radial coordinates must be strictly increasing");
+  }
+  if (!Array.isArray(value.mesh.connectivity) || value.mesh.connectivity.length !== elementCount) {
+    throw new Error("field.json connectivity length is invalid");
+  }
+  value.mesh.connectivity.forEach((connection, index) => {
+    if (!Array.isArray(connection) || connection.length !== 2 || connection[0] !== index || connection[1] !== index + 1) {
+      throw new Error(`field.json connectivity[${index}] is not the reviewed Line2 chain`);
+    }
+  });
+  if (!Array.isArray(value.mesh.region_by_element) || value.mesh.region_by_element.length !== elementCount) {
+    throw new Error("field.json region labels are invalid");
+  }
+  const regions = value.mesh.region_by_element.map((item, index) => {
+    if (item !== "copper" && item !== "silicon") {
+      throw new Error(`mesh.region_by_element[${index}] is not reviewed`);
+    }
+    return item;
+  });
+  const viaRadius = finiteNumber(value.mesh.via_radius_um, "mesh.via_radius_um");
+  const outerRadius = finiteNumber(value.mesh.outer_radius_um, "mesh.outer_radius_um");
+  if (viaRadius !== siteData.tsvField.diameterUm / 2 || outerRadius !== siteData.tsvField.outerRadiusUm) {
+    throw new Error("field.json geometric radii do not match the reviewed case");
+  }
+  if (
+    !regions.includes("copper") ||
+    !regions.includes("silicon") ||
+    regions.some((region, index) => region !== (elementCenters[index]! < viaRadius ? "copper" : "silicon"))
+  ) {
+    throw new Error("field.json regions do not match the reviewed copper/silicon interface");
+  }
+
+  const finalFieldValue = value.final_field;
+  if (!isRecord(finalFieldValue)) throw new Error("field.json final_field is missing");
+  const finalField = {
+    delta_temperature_K: finiteNumber(finalFieldValue.delta_temperature_K, "final_field.delta_temperature_K"),
+    ...fieldArrays(finalFieldValue, "final_field", nodeCount, elementCount),
+  };
+  if (finalField.delta_temperature_K !== siteData.tsvField.deltaTemperatureK) {
+    throw new Error("field.json final field does not use the reviewed prescribed load");
+  }
+  const finalSolver = solverRecord(value.solver, "solver");
+  const finalComparison = comparisonRecord(value.comparison, "comparison");
+
+  if (
+    !isRecord(value.load_sweep) ||
+    value.load_sweep.is_transient !== false ||
+    value.load_sweep.sweep_kind !== "independent_static_prescribed_load_cases" ||
+    typeof value.load_sweep.description !== "string" ||
+    !/not (?:a )?transient/i.test(value.load_sweep.description)
+  ) {
+    throw new Error("field.json load sweep must be explicitly non-transient");
+  }
+  if (!Array.isArray(value.load_sweep.steps) || value.load_sweep.steps.length !== siteData.tsvField.loadSteps) {
+    throw new Error("field.json must contain all nine solved load states");
+  }
+  const temperatures = finiteArray(
+    value.load_sweep.delta_temperature_K,
+    "load_sweep.delta_temperature_K",
+    siteData.tsvField.loadSteps,
+  );
+  if (temperatures.some((temperature, index) => temperature !== EXPECTED_LOADS_K[index])) {
+    throw new Error("field.json load sweep does not contain the reviewed prescribed loads");
+  }
+  const steps = value.load_sweep.steps.map((item, index): LoadStep => {
+    if (!isRecord(item) || item.step_index !== index || item.is_transient !== false) {
+      throw new Error(`load_sweep.steps[${index}] is not an ordered static solve`);
+    }
+    if (item.solve_kind !== "independent_static_coupfe_solve") {
+      throw new Error(`load_sweep.steps[${index}] is not an actual CoupFE solve`);
+    }
+    const temperature = finiteNumber(item.delta_temperature_K, `load_sweep.steps[${index}].delta_temperature_K`);
+    if (temperature !== temperatures[index]) {
+      throw new Error(`load_sweep.steps[${index}] temperature is inconsistent`);
+    }
+    return {
+      step_index: index,
+      delta_temperature_K: temperature,
+      solve_kind: item.solve_kind,
+      is_transient: false,
+      solver: solverRecord(item.solver, `load_sweep.steps[${index}].solver`),
+      comparison: comparisonRecord(item.comparison, `load_sweep.steps[${index}].comparison`),
+      field: fieldArrays(item.field, `load_sweep.steps[${index}].field`, nodeCount, elementCount),
+    };
+  });
+  if (steps.at(-1)?.delta_temperature_K !== finalField.delta_temperature_K) {
+    throw new Error("final field and last solved load state are inconsistent");
+  }
+  const lastStep = steps.at(-1)!;
+  for (const key of ["radial_displacement_nm", "sigma_rr_MPa", "sigma_theta_MPa"] as const) {
+    if (finalField[key].some((item, index) => item !== lastStep.field[key][index])) {
+      throw new Error(`final field ${key} differs from the last actual solved state`);
+    }
+  }
+  if (
+    finalComparison.fe_sigma_rr_MPa !== lastStep.comparison.fe_sigma_rr_MPa ||
+    finalComparison.lame_sigma_rr_MPa !== lastStep.comparison.lame_sigma_rr_MPa ||
+    finalComparison.relative_error !== lastStep.comparison.relative_error
+  ) {
+    throw new Error("final comparison differs from the last actual solved state");
+  }
+
+  return {
+    schema_version: 1,
+    case_id: value.case_id,
+    claim_boundary: value.claim_boundary,
+    units: isRecord(value.units) ? value.units as Record<string, string> : {},
+    inputs: value.inputs as TsvFieldBundle["inputs"],
+    topology: { type: "Line2", spatial_dimension: 1, dof_per_node: 1 },
+    mesh: {
+      radius_nodes_um: nodes,
+      element_centers_um: elementCenters,
+      connectivity: value.mesh.connectivity as number[][],
+      region_by_element: regions,
+      region_element_indices: isRecord(value.mesh.region_element_indices)
+        ? value.mesh.region_element_indices as Record<string, number[]>
+        : {},
+      via_radius_um: viaRadius,
+      outer_radius_um: outerRadius,
+    },
+    final_field: finalField,
+    solver: finalSolver,
+    comparison: finalComparison,
+    load_sweep: {
+      sweep_kind: String(value.load_sweep.sweep_kind),
+      is_transient: false,
+      description: String(value.load_sweep.description),
+      delta_temperature_K: temperatures,
+      steps,
+    },
+  };
+}
+
+function parseHex(value: string): [number, number, number] {
+  return [1, 3, 5].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16)) as [number, number, number];
+}
+
+function fieldColor(value: number, maximum: number): string {
+  const scaled = Math.min(1, Math.max(0, maximum > 0 ? value / maximum : 0)) * (PALETTE.length - 1);
+  const index = Math.min(PALETTE.length - 2, Math.floor(scaled));
+  const local = scaled - index;
+  const left = parseHex(PALETTE[index]!);
+  const right = parseHex(PALETTE[index + 1]!);
+  const channel = (position: number) => Math.round(left[position]! + (right[position]! - left[position]!) * local);
+  return `rgb(${channel(0)} ${channel(1)} ${channel(2)})`;
+}
+
+function interpolateAt(radius: number, coordinates: number[], values: number[]): number {
+  if (radius <= coordinates[0]!) return values[0]!;
+  if (radius >= coordinates.at(-1)!) return values.at(-1)!;
+  let low = 0;
+  let high = coordinates.length - 1;
+  while (high - low > 1) {
+    const middle = Math.floor((low + high) / 2);
+    if (coordinates[middle]! <= radius) low = middle;
+    else high = middle;
+  }
+  const fraction = (radius - coordinates[low]!) / (coordinates[high]! - coordinates[low]!);
+  return values[low]! + (values[high]! - values[low]!) * fraction;
+}
+
+function linePath(
+  coordinates: number[],
+  values: number[],
+  minimumRadius: number,
+  maximumRadius: number,
+  maximumValue: number,
+): string {
+  const samples = coordinates
+    .map((radius, index) => ({ radius, value: values[index]! }))
+    .filter(({ radius }) => radius >= minimumRadius && radius <= maximumRadius);
+  const stride = Math.max(1, Math.ceil(samples.length / 220));
+  return samples
+    .filter((_, index) => index % stride === 0 || index === samples.length - 1)
+    .map(({ radius, value }, index) => {
+      const x = 54 + ((radius - minimumRadius) / (maximumRadius - minimumRadius)) * 500;
+      const y = 238 - (Math.max(0, value) / maximumValue) * 190;
+      return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
+function ConnectedRunControl({
+  backend,
+  projectId,
+  onEvidenceAvailable,
 }: {
-  snapshot: ProjectSnapshot;
-  run: RunRecord | undefined;
-  selectedLayerId: string;
-  onSelectLayer: (id: string) => void;
-  expanded?: boolean;
-}) {
-  const selectedLayer = snapshot.layers.find((layer) => layer.id === selectedLayerId) ?? snapshot.layers[0];
-  const field = selectTemperatureField(run);
-  const stackThickness = selectStackThicknessMicrometers(snapshot);
-
-  return (
-    <section className={`viewer-panel ${expanded ? "viewer-panel-expanded" : ""}`}>
-      <div className="panel-heading">
-        <div><p className="eyebrow">Geometry + field</p><h2>Package cross-section</h2></div>
-        <div className={`overlay-label ${field ? "" : "overlay-empty"}`}>
-          <span className="status-dot" />
-          {field ? `${field.label} overlay · ${field.unit}` : "No completed field for this model"}
-        </div>
-      </div>
-
-      <div className="viewer-canvas">
-        <div className="viewer-meta"><span>ORTHOGRAPHIC</span><span>X–Z SECTION</span></div>
-        <div className="package-layout">
-          <div className="package-stack">
-            {snapshot.layers.map((layer) => (
-              <div className={`package-row package-row-${layer.id}`} key={layer.id}>
-                <button className="layer-label" onClick={() => onSelectLayer(layer.id)} aria-pressed={selectedLayer?.id === layer.id}>
-                  {layer.name}<span />
-                </button>
-                <button
-                  className={`package-layer layer-${layer.id} ${selectedLayer?.id === layer.id ? "is-selected" : ""}`}
-                  onClick={() => onSelectLayer(layer.id)}
-                  aria-label={`Inspect ${layer.name}`}
-                  aria-pressed={selectedLayer?.id === layer.id}
-                >
-                  {field?.hotspotComponentId === layer.id && <span className="hotspot-tag">{field.hotspotValue.toFixed(1)} {field.unit}</span>}
-                  {layerContent(layer, field?.hotspotComponentId)}
-                </button>
-              </div>
-            ))}
-          </div>
-          {field && (
-            <aside className="temperature-legend" aria-label={`${field.label} legend`}>
-              <span>{field.maximum.toFixed(1)}</span><i /><span>{field.minimum.toFixed(1)}</span>
-            </aside>
-          )}
-        </div>
-
-        <div className="viewer-footer">
-          <div className="axis-glyph" aria-label="X Y Z axis"><b>Z</b><span className="axis-z" /><b>Y</b><span className="axis-y" /><b>X</b><span className="axis-x" /></div>
-          <div className="selected-layer-summary">
-            <span>Selected</span><strong>{selectedLayer?.name ?? "No layer"}</strong>
-            <span>{selectedLayer ? `${selectedLayer.material} · ${formatQuantity(selectedLayer.thickness)}` : "—"}</span>
-          </div>
-          <div className="scale-bar"><span>Stack</span><i /><span>{formatQuantity({ value: stackThickness / 1000, unit: "mm" }, 2)}</span></div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FidelityPanel({ snapshot, selected, onSelect }: { snapshot: ProjectSnapshot; selected: ModelFidelity; onSelect: (model: ModelFidelity) => void }) {
-  const adequacy = selectModelAdequacy(snapshot, selected);
-  const selectedModel = selectModel(snapshot, selected);
-  const passCount = adequacy.gates.filter((gate) => gate.status === "pass").length;
-  return (
-    <section className="fidelity-panel">
-      <div className="panel-heading compact-heading">
-        <div><p className="eyebrow">Decision policy</p><h2>Model fidelity</h2></div>
-        <span className={`gate-state gate-${adequacy.status}`}><Icon name={adequacy.status === "adequate" ? "check" : "info"} size={16} />{adequacy.label}</span>
-      </div>
-      <div className="fidelity-list">
-        {snapshot.models.map((model, index) => {
-          const run = selectLatestSuccessfulRun(snapshot, model.id);
-          const worst = worstAssessedMetric(run);
-          return (
-            <button key={model.id} className={`fidelity-option ${selected === model.id ? "is-selected" : ""}`} onClick={() => onSelect(model.id)} aria-pressed={selected === model.id}>
-              <span className="fidelity-index">{index + 1}</span>
-              <span className="fidelity-copy"><strong>{model.shortName}</strong><small>{model.description}</small></span>
-              <span className="fidelity-stats"><b>{worst ? `max ±${uncertaintyPercent(worst)}%` : "not assessed"}</b><small>{formatDuration(model.expectedRuntimeSeconds)}</small></span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="selection-summary">
-        <div className={`gate-count gate-${adequacy.status}`}><span>{passCount}/{adequacy.gates.length}</span></div>
-        <div><span>Live policy gates pass</span><strong>{selectedModel?.name ?? "Unknown model"}</strong></div>
-      </div>
-    </section>
-  );
-}
-
-function MetricCards({ metrics, onInspect }: { metrics: MetricResult[]; onInspect: (key: MetricKey) => void }) {
-  if (!metrics.length) return <section className="empty-panel">No completed metrics are available for this model.</section>;
-  return (
-    <section className="metrics-grid" aria-label="Selected model metrics">
-      {metrics.map((metric) => (
-        <button className="metric-card" key={metric.key} onClick={() => onInspect(metric.key)}>
-          <span className={`metric-icon metric-${metric.assessment}`}><Icon name={metricIcons[metric.key]} size={26} /></span>
-          <span className="metric-copy"><span>{metric.label}</span><strong>{formatQuantity(metric.quantity)}</strong></span>
-          <span className="metric-evidence">Evidence <Icon name="chevron" size={14} /></span>
-        </button>
-      ))}
-    </section>
-  );
-}
-
-function DecisionPanel({ snapshot, selected, run }: { snapshot: ProjectSnapshot; selected: ModelFidelity; run: RunRecord | undefined }) {
-  const adequacy = selectModelAdequacy(snapshot, selected);
-  const model = selectModel(snapshot, selected);
-  const decision = selectActiveDecision(snapshot);
-  const passCount = adequacy.gates.filter((gate) => gate.status === "pass").length;
-  const policySelected = decision?.selectedModelId === selected;
-  return (
-    <section className={`decision-panel ${adequacy.status === "adequate" ? "decision-recommended" : ""}`}>
-      <div className="decision-badge"><Icon name={adequacy.status === "adequate" ? "shield" : "info"} size={19} /></div>
-      <div className="decision-copy">
-        <span>{policySelected ? `Policy-selected · ${decision?.status}` : "Alternative fidelity inspected"}</span>
-        <strong>{adequacy.label}</strong>
-        <p>{run?.output?.nextAction ?? adequacy.summary}</p>
-      </div>
-      <dl><div><dt>Gates passed</dt><dd>{passCount} / {adequacy.gates.length}</dd></div><div><dt>Expected cost</dt><dd>{model?.costClass.replace("-", " ") ?? "Unknown"}</dd></div></dl>
-    </section>
-  );
-}
-
-function WorkflowPanel({ snapshot, selected }: { snapshot: ProjectSnapshot; selected: ModelFidelity }) {
-  const workflow = selectWorkflow(snapshot, selected);
-  const latest = selectLatestRun(snapshot, selected);
-  const running = latest?.status === "queued" || latest?.status === "running";
-  return (
-    <section className="workflow-panel">
-      <div className="workflow-title">
-        <div><p className="eyebrow">Execution</p><h2>Workflow status</h2></div>
-        <span className={`run-state ${running ? "is-running" : ""}`}><i />{running ? latest.progress?.message ?? latest.status : `${workflow.readyCount} of ${workflow.stages.length} stages ready`}</span>
-      </div>
-      <div className="workflow-stages">
-        {workflow.stages.map((stage, index) => (
-          <div className={`workflow-stage stage-${stage.state}`} key={stage.id}>
-            <span className="stage-node">{stage.state === "complete" ? <Icon name="check" size={17} /> : index + 1}</span>
-            <div><strong>{stage.name}</strong><span>{stage.summary}</span><small>{stage.timestamp ?? "Waiting for upstream evidence"}</small></div>
-            {index < workflow.stages.length - 1 && <i className="stage-connector" />}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function OverviewView({ snapshot, selectedModel, setSelectedModel, selectedLayer, setSelectedLayer, onInspectMetric }: {
-  snapshot: ProjectSnapshot;
-  selectedModel: ModelFidelity;
-  setSelectedModel: (model: ModelFidelity) => void;
-  selectedLayer: string;
-  setSelectedLayer: (layer: string) => void;
-  onInspectMetric: (metric: MetricKey) => void;
-}) {
-  const run = selectLatestSuccessfulRun(snapshot, selectedModel);
-  return <>
-    <div className="overview-grid">
-      <PackageDiagram snapshot={snapshot} run={run} selectedLayerId={selectedLayer} onSelectLayer={setSelectedLayer} />
-      <FidelityPanel snapshot={snapshot} selected={selectedModel} onSelect={setSelectedModel} />
-    </div>
-    <MetricCards metrics={run?.output?.metrics ?? []} onInspect={onInspectMetric} />
-    <DecisionPanel snapshot={snapshot} selected={selectedModel} run={run} />
-    <WorkflowPanel snapshot={snapshot} selected={selectedModel} />
-  </>;
-}
-
-function GeometryView({ snapshot, selectedModel, selectedLayer, setSelectedLayer }: { snapshot: ProjectSnapshot; selectedModel: ModelFidelity; selectedLayer: string; setSelectedLayer: (layer: string) => void }) {
-  const layer = snapshot.layers.find((item) => item.id === selectedLayer) ?? snapshot.layers[0];
-  const run = selectLatestSuccessfulRun(snapshot, selectedModel);
-  const field = selectTemperatureField(run);
-  return (
-    <div className="detail-layout">
-      <PackageDiagram snapshot={snapshot} run={run} selectedLayerId={selectedLayer} onSelectLayer={setSelectedLayer} expanded />
-      <aside className="inspector-panel">
-        <div className="inspector-heading"><Icon name="layers" /><span>Layer inspector</span></div>
-        <h2>{layer?.name ?? "No layer selected"}</h2><p>{layer?.role}</p>
-        <dl className="inspector-list">
-          <div><dt>Material</dt><dd>{layer?.material ?? "—"}</dd></div>
-          <div><dt>Thickness</dt><dd>{layer ? formatQuantity(layer.thickness) : "—"}</dd></div>
-          <div><dt>Embedded features</dt><dd>{layer?.embeddedFeatures?.map((feature) => feature.name).join(", ") || "None"}</dd></div>
-          <div><dt>Displayed field</dt><dd>{field ? `${field.minimum.toFixed(1)}–${field.maximum.toFixed(1)} ${field.unit}` : "No completed field"}</dd></div>
-          <div><dt>Source revision</dt><dd>{selectActiveDesign(snapshot)?.packageRevision ?? "Not recorded"}</dd></div>
-        </dl>
-        <div className="inspector-note"><Icon name="info" size={18} /><p>This is a derived sanity-check view. Authoritative solver geometry, mesh, and quantitative fields remain checksummed artifacts.</p></div>
-        <div className="layer-index">{snapshot.layers.map((item) => <button key={item.id} className={item.id === layer?.id ? "is-active" : ""} onClick={() => setSelectedLayer(item.id)}><span />{item.name}<Icon name="chevron" size={14} /></button>)}</div>
-      </aside>
-    </div>
-  );
-}
-
-function ModelsView({ snapshot, selectedModel, setSelectedModel }: { snapshot: ProjectSnapshot; selectedModel: ModelFidelity; setSelectedModel: (model: ModelFidelity) => void }) {
-  const decision = selectActiveDecision(snapshot);
-  const adequacy = selectModelAdequacy(snapshot, selectedModel);
-  return (
-    <div className="content-stack">
-      <section className="page-intro"><div><p className="eyebrow">Fidelity management</p><h1>Choose the cheapest adequate model</h1><p>{decision ? `${decision.policyVersion} evaluates model validity, assessed error, reliability margin, and reduced/reference discrepancy.` : "No active decision policy is recorded."}</p></div><span className={`policy-status policy-${decision?.status ?? "missing"}`}><Icon name="shield" size={18} />{decision ? `${decision.status} policy` : "Policy unavailable"}</span></section>
-      <section className="model-comparison">
-        {snapshot.models.map((model, index) => {
-          const isSelected = selectedModel === model.id;
-          const run = selectLatestSuccessfulRun(snapshot, model.id);
-          const worst = worstAssessedMetric(run);
-          const modelAdequacy = selectModelAdequacy(snapshot, model.id);
-          return (
-            <button key={model.id} className={`model-card ${isSelected ? "is-selected" : ""}`} onClick={() => setSelectedModel(model.id)}>
-              <span className="model-number">{String(index + 1).padStart(2, "0")}</span>
-              <div className="model-card-heading"><div><span>{model.validityClass}</span><h2>{model.shortName}</h2></div>{isSelected && <i><Icon name="check" size={15} /></i>}</div>
-              <p>{model.description}</p>
-              <dl><div><dt>Worst assessed error</dt><dd>{worst ? `±${uncertaintyPercent(worst)}%` : "Not assessed"}</dd></div><div><dt>Expected runtime</dt><dd>{formatDuration(model.expectedRuntimeSeconds)}</dd></div><div><dt>Live decision</dt><dd>{modelAdequacy.status}</dd></div></dl>
-              <div className="assumption-list"><span>Key assumptions</span>{model.assumptions.map((assumption) => <small key={assumption}><Icon name="check" size={13} />{assumption}</small>)}</div>
-            </button>
-          );
-        })}
-      </section>
-      <section className="policy-grid">
-        <article><div className="section-label"><Icon name="shield" size={18} /> Live gate evaluation</div><ul>{adequacy.gates.map((gate) => <li className={`gate-list-${gate.status}`} key={gate.id}><strong>{gate.label}: {gate.status}</strong><span>{gate.observed} · policy {gate.threshold}</span></li>)}</ul></article>
-        <article className="trigger-card"><div className="section-label"><Icon name="info" size={18} /> Decision explanation</div><p className="policy-summary">{adequacy.summary}</p><ul>{adequacy.gates.filter((gate) => gate.status !== "pass").map((gate) => <li key={gate.id}>{gate.explanation}</li>)}</ul></article>
-      </section>
-    </div>
-  );
-}
-
-function ApprovedWorkflowPanel({
-  snapshot,
-  workflow,
-  onRun,
-  disabled,
-}: {
-  snapshot: ProjectSnapshot;
-  workflow: ApprovedWorkflowDefinition;
-  onRun: () => void;
-  disabled: boolean;
-}) {
-  const isDemo = snapshot.mode === "demo";
-  const latest = snapshot.runs.find(
-    (run) => run.workflowId === workflow.id && run.status === "succeeded",
-  );
-  return (
-    <section className="approved-workflow-panel">
-      <div className="approved-workflow-heading">
-        <span className="dialog-icon"><Icon name="runs" size={22} /></span>
-        <div><p className="eyebrow">{isDemo ? "Approved simulation contract" : "Server-approved workflow"}</p><h2>{workflow.name}</h2><code>{workflow.executorKey}</code></div>
-        <button className="primary-action" onClick={onRun} disabled={disabled}>{isDemo ? "Review simulation" : "Review and run"} <Icon name="chevron" size={16} /></button>
-      </div>
-      <p>{isDemo ? "Browser simulation of the approved local workflow contract using reviewed, retained TSV evidence." : workflow.description}</p>
-      {latest?.output?.genericMetrics?.length ? (
-        <div className="generic-metric-grid">
-          {latest.output.genericMetrics.map((metric) => (
-            <article key={metric.key}><span>{metric.label}</span><strong>{formatGenericMetric(metric)}</strong></article>
-          ))}
-        </div>
-      ) : (
-        <div className="approved-workflow-empty">{isDemo ? "No simulation is recorded yet. The browser models lifecycle events and links reviewed, precomputed evidence." : "No local run is recorded yet. Connected mode executes the server allowlist."}</div>
-      )}
-      <div className="workflow-boundary"><Icon name="info" size={17} /><div><strong>Release validation: {workflow.releaseValidation ? "claimed" : "not claimed"}</strong><p>{workflow.claimBoundary}</p></div></div>
-      <footer><span>{isDemo ? "Browser simulation: approved workflow ID" : "Browser request: workflow ID only"}</span><span>{isDemo ? "No solver executes; reviewed evidence is precomputed" : "Server owns driver, arguments, output root, and timeout"}</span></footer>
-    </section>
-  );
-}
-
-function RunsView({
-  snapshot,
-  onRunModel,
-  onRunWorkflow,
-  onCancel,
-  activeRun,
-}: {
-  snapshot: ProjectSnapshot;
-  onRunModel: () => void;
-  onRunWorkflow: (workflowId: string) => void;
-  onCancel: (runId: string) => void;
-  activeRun: RunRecord | undefined;
-}) {
-  const isDemo = snapshot.mode === "demo";
-  return (
-    <div className="content-stack">
-      <section className="page-intro"><div><p className="eyebrow">{isDemo ? "Browser simulation" : "Execution history"}</p><h1>{isDemo ? "Approved workflow simulation" : "Approved runs"}</h1><p>{isDemo ? "Public-mode records simulate the interface lifecycle and link only to reviewed, retained project artifacts." : "Successful connected executions retain outputs, stdout/stderr, source tree state, and artifact hashes."}</p></div>{snapshot.models.length > 0 && <button className="secondary-action" onClick={onRunModel}>New model analysis <Icon name="chevron" size={16} /></button>}</section>
-      {snapshot.approvedWorkflows.map((workflow) => (
-        <ApprovedWorkflowPanel
-          snapshot={snapshot}
-          workflow={workflow}
-          onRun={() => onRunWorkflow(workflow.id)}
-          disabled={Boolean(activeRun)}
-          key={workflow.id}
-        />
-      ))}
-      <section className="table-panel"><div className="table-heading"><h2>{isDemo ? "Simulated run history" : "Recent analyses"}</h2><span>{snapshot.runs.length} records</span></div><div className="data-table run-table">
-        <div className="data-row data-header"><span>{isDemo ? "Simulation" : "Run"}</span><span>Target</span><span>Design revision</span><span>Started</span><span>Duration</span><span>Evidence</span></div>
-        {snapshot.runs.map((run) => {
-          const model = run.modelId ? selectModel(snapshot, run.modelId) : undefined;
-          const workflow = snapshot.approvedWorkflows.find((item) => item.id === run.workflowId);
-          const evidenceCount = selectEvidenceByIds(snapshot, run.output?.evidenceIds ?? []).length;
-          const active = run.status === "queued" || run.status === "running";
-          const cancellable = run.status === "queued" || (snapshot.mode === "demo" && run.status === "running");
-          return <div className="data-row" key={run.id}><span><b className={`run-dot run-${run.status === "succeeded" ? "complete" : run.status}`} /><strong>{run.id}</strong></span><span>{workflow?.name ?? model?.shortName ?? "Unknown target"}</span><span>{run.input.designRevision}</span><span>{formatDateTime(run.startedAt ?? run.requestedAt)}</span><span>{active ? run.progress?.message ?? run.status : formatDuration(runDurationSeconds(run))}</span><span>{cancellable ? <button className="table-action" onClick={() => onCancel(run.id)}>Cancel</button> : active ? "Cannot cancel after start" : `${evidenceCount} linked`}</span></div>;
-        })}
-        {snapshot.runs.length === 0 && <div className="empty-panel">{isDemo ? "No simulated records have been created in this browser session." : "No run records have been created by this backend."}</div>}
-      </div></section>
-      <section className="provenance-strip"><Icon name="shield" size={20} /><div><strong>{snapshot.mode === "connected" ? "Current-process run index" : "Interface-only history"}</strong><span>{snapshot.mode === "connected" ? "Successful entries retain source revision and tree state, the regression-oracle hash, and checksummed output artifacts. The API index resets when the service restarts." : "The browser simulation does not create a solver manifest; linked TSV artifacts are precomputed repository records."}</span></div></section>
-    </div>
-  );
-}
-
-function WorkflowRunDialog({
-  snapshot,
-  workflowId,
-  onClose,
-  onConfirm,
-  busy,
-}: {
-  snapshot: ProjectSnapshot;
-  workflowId: string | null;
-  onClose: () => void;
-  onConfirm: () => void;
-  busy: boolean;
-}) {
-  const workflow = snapshot.approvedWorkflows.find((item) => item.id === workflowId);
-  const design = selectActiveDesign(snapshot);
-  const isDemo = snapshot.mode === "demo";
-  if (!workflow) return null;
-  return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <section className="run-dialog" role="dialog" aria-modal="true" aria-labelledby="workflow-dialog-title" onMouseDown={(event) => event.stopPropagation()}>
-        <button className="dialog-close" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
-        <span className="dialog-icon"><Icon name="runs" size={24} /></span>
-        <p className="eyebrow">{isDemo ? "Browser simulation boundary" : "Approved execution boundary"}</p>
-        <h2 id="workflow-dialog-title">{isDemo ? "Simulate" : "Run"} {workflow.name}</h2>
-        <p>{isDemo ? <>The browser models lifecycle events for <strong>{workflow.id}</strong> and links reviewed, precomputed evidence. It does not contact a solver or execute <code>{workflow.executorKey}</code>.</> : <>The browser submits <strong>{workflow.id}</strong>. The service maps it to <code>{workflow.executorKey}</code> and owns the driver, arguments, output root, and timeout.</>}</p>
-        <dl><div><dt>Design</dt><dd>{design?.label ?? "Not recorded"}</dd></div><div><dt>Release validation</dt><dd>{workflow.releaseValidation ? "Claimed" : "Not claimed"}</dd></div><div><dt>Driver record</dt><dd>{workflow.driverPath}</dd></div></dl>
-        <div className="dialog-note dialog-note-boundary"><Icon name="info" size={18} />{workflow.claimBoundary}</div>
-        <div className="dialog-actions"><button onClick={onClose}>Cancel</button><button className="primary-action" onClick={onConfirm} disabled={busy}>{isDemo ? "Start simulation" : "Start approved workflow"} <Icon name="chevron" size={16} /></button></div>
-      </section>
-    </div>
-  );
-}
-
-function CompareView({ snapshot }: { snapshot: ProjectSnapshot }) {
-  const comparison = selectCandidateComparison(snapshot);
-  const preferred = selectPreferredCandidate(snapshot);
-  const baseline = snapshot.candidates[0];
-  const temperatures = comparison.map(({ candidate }) => candidate.metrics.peakTemperature.value);
-  const minimum = Math.min(...temperatures);
-  const maximum = Math.max(...temperatures);
-  const range = Math.max(maximum - minimum, Number.EPSILON);
-  const tempImprovement = baseline && preferred ? baseline.metrics.peakTemperature.value - preferred.metrics.peakTemperature.value : undefined;
-  const warpageImprovement = baseline && preferred ? ((baseline.metrics.warpage.value - preferred.metrics.warpage.value) / baseline.metrics.warpage.value) * 100 : undefined;
-  return (
-    <div className="content-stack">
-      <section className="page-intro"><div><p className="eyebrow">Design decision</p><h1>Compare candidates</h1><p>Physical performance, reliability margin, and computational cost use the same recorded metric basis.</p></div><span className="policy-status"><Icon name="check" size={18} />{preferred ? `${preferred.name} preferred` : "No feasible candidate"}</span></section>
-      <section className="candidate-grid">{comparison.map(({ candidate, recommendation }) => {
-        const width = 65 + ((maximum - candidate.metrics.peakTemperature.value) / range) * 35;
-        return <article className={`candidate-card candidate-${recommendation}`} key={candidate.id}><div className="candidate-heading"><span>{candidate.id}</span><div><small>{candidate.revision}</small><h2>{candidate.name}</h2></div><b>{recommendation}</b></div><div className="temperature-bar"><span style={{ width: `${width}%` }} /><i>{formatQuantity(candidate.metrics.peakTemperature)}</i></div><dl><div><dt>Peak temperature</dt><dd>{formatQuantity(candidate.metrics.peakTemperature)}</dd></div><div><dt>Warpage</dt><dd>{formatQuantity(candidate.metrics.warpage)}</dd></div><div><dt>Failure margin</dt><dd>{formatQuantity(candidate.metrics.failureMargin)}</dd></div><div><dt>Runtime</dt><dd>{formatDuration(candidate.metrics.runtime.value)}</dd></div></dl><button>Open revision <Icon name="external" size={15} /></button></article>;
-      })}</section>
-      <section className="tradeoff-panel"><div><p className="eyebrow">Recommendation</p><h2>{preferred ? `${preferred.name} is the lowest-temperature feasible candidate.` : "No candidate clears the active margin gate."}</h2></div><p>{preferred && baseline && tempImprovement !== undefined && warpageImprovement !== undefined ? `Relative to ${baseline.name}, ${preferred.name} lowers peak temperature by ${tempImprovement.toFixed(1)} °C, changes warpage by ${warpageImprovement.toFixed(1)}%, and moves failure margin from ${formatQuantity(baseline.metrics.failureMargin)} to ${formatQuantity(preferred.metrics.failureMargin)}.` : "Add a feasible candidate or revise the active policy before selecting a design."}</p></section>
-    </div>
-  );
-}
-
-function EvidenceView({ snapshot, selectedModel }: { snapshot: ProjectSnapshot; selectedModel: ModelFidelity }) {
-  const summary = selectEvidenceSummary(snapshot);
-  const design = selectActiveDesign(snapshot);
-  const decision = selectActiveDecision(snapshot);
-  const run = selectLatestSuccessfulRun(snapshot, selectedModel);
-  const margin = selectMetric(run, "margin");
-  return (
-    <div className="content-stack">
-      <section className="page-intro"><div><p className="eyebrow">Engineering trust</p><h1>Evidence</h1><p>Results remain linked to source data, verification checks, artifacts, and run provenance.</p></div><span className="policy-status"><Icon name="shield" size={18} />{summary.verified} verified · {summary.review} review · {summary.generated} generated</span></section>
-      <section className="evidence-grid">{snapshot.evidence.map((evidence) => {
-        const artifacts = snapshot.artifacts.filter((artifact) => evidence.artifactIds.includes(artifact.id));
-        const artifactState = artifacts.length === evidence.artifactIds.length ? "linked" : "missing";
-        return <article key={evidence.id}><div className="evidence-top"><span className={`evidence-icon evidence-${evidence.status}`}><Icon name={evidence.category === "provenance" ? "evidence" : "shield"} size={20} /></span><b>{evidence.status}</b></div><small>{evidence.category} · {evidence.authority}</small><h2>{evidence.title}</h2><p>{evidence.description}</p><div className="artifact-source"><span>{evidence.source}</span><span>{artifacts.length} {artifactState}</span></div><footer>Updated {formatDateTime(evidence.updatedAt)}</footer></article>;
-      })}</section>
-      <section className="provenance-map"><div><span>Design revision</span><strong>{run?.input.designRevision ?? design?.label ?? "Not recorded"}</strong></div><i /><div><span>Model decision</span><strong>{decision ? `${selectModel(snapshot, decision.selectedModelId)?.shortName ?? decision.selectedModelId} · ${decision.status}` : "Not recorded"}</strong></div><i /><div><span>Run manifest</span><strong>{run?.id ?? "No successful run"}</strong></div><i /><div><span>Decision metric</span><strong>{margin ? `${margin.label} ${formatQuantity(margin.quantity)}` : "No margin result"}</strong></div></section>
-    </div>
-  );
-}
-
-function RunDialog({ snapshot, open, selectedModel, onClose, onConfirm, busy }: { snapshot: ProjectSnapshot; open: boolean; selectedModel: ModelFidelity; onClose: () => void; onConfirm: () => void; busy: boolean }) {
-  const model = selectModel(snapshot, selectedModel);
-  const design = selectActiveDesign(snapshot);
-  const validity = selectGateEvaluations(snapshot, selectedModel).find((gate) => gate.id === "validity");
-  if (!open || !model) return null;
-  return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <section className="run-dialog" role="dialog" aria-modal="true" aria-labelledby="run-dialog-title" onMouseDown={(event) => event.stopPropagation()}>
-        <button className="dialog-close" onClick={onClose} aria-label="Close"><Icon name="close" /></button><span className="dialog-icon"><Icon name="runs" size={24} /></span><p className="eyebrow">Review before execution</p><h2 id="run-dialog-title">Run {model.name}</h2><p>The backend will create a retained run record from <strong>{design?.label ?? "the active design"}</strong> and preserve its manifest.</p>
-        <dl><div><dt>Expected runtime</dt><dd>{formatDuration(model.expectedRuntimeSeconds)}</dd></div><div><dt>Validity gate</dt><dd>{validity?.status ?? "not evaluable"}</dd></div><div><dt>Package revision</dt><dd>{design?.packageRevision ?? "Not recorded"}</dd></div></dl>
-        <div className="dialog-note"><Icon name="shield" size={18} />{snapshot.mode === "demo" ? "Demonstration mode simulates the run lifecycle and returns labeled precomputed data; it does not execute a solver." : "No solver command is exposed to the browser. The backend resolves the approved executor."}</div>
-        <div className="dialog-actions"><button onClick={onClose}>Cancel</button><button className="primary-action" onClick={onConfirm} disabled={busy}>Start analysis <Icon name="chevron" size={16} /></button></div>
-      </section>
-    </div>
-  );
-}
-
-function EvidenceDrawer({ snapshot, run, metricKey, onClose }: { snapshot: ProjectSnapshot; run: RunRecord | undefined; metricKey: MetricKey | null; onClose: () => void }) {
-  const metric = metricKey ? selectMetric(run, metricKey) : undefined;
-  if (!metric || !run) return null;
-  const evidenceIds = [...new Set([...metric.evidenceIds, ...(metric.uncertainty?.evidenceIds ?? [])])];
-  const evidence = selectEvidenceByIds(snapshot, evidenceIds);
-  const integrity = selectEvidenceIntegrity(snapshot, evidenceIds);
-  return (
-    <aside className="evidence-drawer" aria-label={`${metric.label} evidence`}>
-      <div className="drawer-heading"><span className="metric-icon"><Icon name={metricIcons[metric.key]} /></span><div><small>Metric evidence</small><h2>{metric.label}</h2></div><button onClick={onClose} aria-label="Close evidence"><Icon name="close" /></button></div>
-      <div className="drawer-value"><strong>{formatQuantity(metric.quantity)}</strong><span className={`metric-status status-${metric.assessment}`}>{metric.assessment}</span></div>
-      {metric.uncertainty && <article className="uncertainty-evidence"><span>{metric.uncertainty.kind}</span><h3>{formatUncertainty(metric)}</h3><p>{metric.uncertainty.method}</p><small>Validity domain: {metric.uncertainty.domain}{metric.uncertainty.kind === "validation-error" ? ` · ${metric.uncertainty.sampleCount} cases · ${metric.uncertainty.statistic}` : ""}</small></article>}
-      {evidence.map((record) => <article key={record.id}><span>{record.category} · {record.authority}</span><h3>{record.title}</h3><p>{record.description}</p><small>{record.source}</small></article>)}
-      <div className={`drawer-foot ${integrity.valid ? "" : "drawer-foot-error"}`}><Icon name={integrity.valid ? "shield" : "info"} size={18} />{integrity.valid ? `All requested evidence and artifact IDs resolve. ${run.id} records design ${run.input.designRevision}.` : `Missing evidence: ${integrity.missingIds.join(", ")}`}</div>
-    </aside>
-  );
-}
-
-export interface AppProps {
   backend: CoupFEBackend;
   projectId: string;
+  onEvidenceAvailable: (source: FieldEvidenceSource) => void;
+}) {
+  const { snapshot, loading, error, startWorkflow } = useWorkbench(backend, projectId);
+  const [starting, setStarting] = useState(false);
+  const latest = snapshot?.runs[0];
+  const latestField = latest?.status === "succeeded" ? snapshot?.artifacts.find((item) => item.runId === latest.id && item.kind === "field") : undefined;
+  const latestSummary = latest?.status === "succeeded" ? snapshot?.artifacts.find((item) => item.runId === latest.id && item.kind === "report") : undefined;
+  const latestManifest = latest?.status === "succeeded" ? snapshot?.artifacts.find((item) => item.runId === latest.id && item.kind === "manifest") : undefined;
+  const latestCoreRevision = latest?.input.solverVersion;
+
+  useEffect(() => {
+    if (
+      latestField &&
+      latestSummary &&
+      latestManifest &&
+      latest &&
+      typeof latestCoreRevision === "string" &&
+      /^[0-9a-f]{40}$/.test(latestCoreRevision)
+    ) {
+      onEvidenceAvailable({
+        fieldUrl: latestField.uri,
+        summaryUrl: latestSummary.uri,
+        manifestUrl: latestManifest.uri,
+        manifestLabel: "run manifest.json",
+        coreRevision: latestCoreRevision,
+        label: `local run ${latest.id}`,
+      });
+    }
+  }, [latest?.id, latestCoreRevision, latestField?.uri, latestManifest?.uri, latestSummary?.uri, onEvidenceAvailable]);
+
+  const run = async () => {
+    setStarting(true);
+    try {
+      await startWorkflow(WORKFLOW_ID);
+    } finally {
+      setStarting(false);
+    }
+  };
+  const active = latest?.status === "queued" || latest?.status === "running";
+  return (
+    <section className="field-run-control field-run-control-connected" aria-label="Connected CoupFE solver">
+      <div><span className="field-status-dot" /><strong>Local solver connected</strong><p>One fixed server-owned case; no browser-supplied command or solver arguments.</p></div>
+      <button type="button" onClick={() => void run()} disabled={loading || starting || active}>
+        {active ? `CoupFE ${latest.status}` : starting ? "Submitting…" : "Run the fixed 2,400-DOF case"}
+      </button>
+      {latest && <small>Latest run: <b>{latest.id}</b> · {latest.status}{latest.input.solverVersion ? ` · ${latest.input.solverVersion}` : ""}</small>}
+      {error && <small className="field-run-error">{error}</small>}
+    </section>
+  );
 }
 
-export default function App({ backend, projectId }: AppProps) {
-  const { snapshot, loading, error, startRun, startWorkflow, cancelRun } = useWorkbench(backend, projectId);
-  const [view, setView] = useState<ViewId>("overview");
-  const [selectedModel, setSelectedModel] = useState<ModelFidelity>("reduced");
-  const [selectedLayer, setSelectedLayer] = useState("interposer");
-  const [mobileNav, setMobileNav] = useState(false);
-  const [runDialog, setRunDialog] = useState(false);
-  const [workflowDialog, setWorkflowDialog] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState("");
-  const [inspectedMetric, setInspectedMetric] = useState<MetricKey | null>(null);
-  const initializedSelection = useRef(false);
+function RetainedRunBoundary() {
+  return (
+    <section className="field-run-control" aria-label="Retained solver run">
+      <div><span className="field-status-dot" /><strong>Retained solver output</strong><p>GitHub Pages reads the checked field bundle; it cannot execute Python or CoupFE.</p></div>
+      <span className="field-mode-label">Explore, probe, verify</span>
+    </section>
+  );
+}
+
+export default function App({
+  backend,
+  projectId = "coupfe-eda-local",
+  retainedFieldUrl,
+  summaryUrl,
+  manifestUrl,
+  runnerUrl,
+}: AppProps) {
+  const retainedSource = useMemo<FieldEvidenceSource>(() => ({
+    fieldUrl: retainedFieldUrl,
+    summaryUrl,
+    manifestUrl,
+    manifestLabel: "visual-evidence.json",
+    coreRevision: siteData.tsvField.coreRevision,
+    label: "retained release bundle",
+  }), [manifestUrl, retainedFieldUrl, summaryUrl]);
+  const [requestedSource, setRequestedSource] = useState<FieldEvidenceSource>(retainedSource);
+  const [loadedSource, setLoadedSource] = useState<FieldEvidenceSource | null>(null);
+  const [bundle, setBundle] = useState<TsvFieldBundle | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadingSource, setLoadingSource] = useState(true);
+  const [selectedStep, setSelectedStep] = useState(siteData.tsvField.loadSteps - 1);
+  const [playing, setPlaying] = useState(false);
+  const [playDirection, setPlayDirection] = useState<1 | -1>(-1);
+  const [fullDomain, setFullDomain] = useState(false);
+  const [meshVisible, setMeshVisible] = useState(false);
+  const [probeRadius, setProbeRadius] = useState(siteData.tsvField.queryRadiusUm);
+  const fieldSurfaceRef = useRef<SVGSVGElement>(null);
+
+  const selectConnectedEvidence = useCallback((source: FieldEvidenceSource) => {
+    setRequestedSource((current) => current.fieldUrl === source.fieldUrl ? current : source);
+  }, []);
 
   useEffect(() => {
-    if (!snapshot || initializedSelection.current) return;
-    const decision = selectActiveDecision(snapshot);
-    if (decision) setSelectedModel(decision.selectedModelId);
-    if (snapshot.models.length === 0 && snapshot.approvedWorkflows.length > 0) setView("runs");
-    if (snapshot.layers[0] && !snapshot.layers.some((layer) => layer.id === selectedLayer)) setSelectedLayer(snapshot.layers[0].id);
-    initializedSelection.current = true;
-  }, [selectedLayer, snapshot]);
+    const controller = new AbortController();
+    setLoadError(null);
+    setLoadingSource(true);
+    fetch(requestedSource.fieldUrl, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`field request failed with HTTP ${response.status}`);
+        return response.json() as Promise<unknown>;
+      })
+      .then((value) => {
+        const validated = validateTsvFieldBundle(value);
+        if (controller.signal.aborted) return;
+        setBundle(validated);
+        setLoadedSource(requestedSource);
+        setSelectedStep(siteData.tsvField.loadSteps - 1);
+      })
+      .catch((cause: unknown) => {
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+        if (controller.signal.aborted) return;
+        const detail = cause instanceof Error ? cause.message : "Unable to load solver field evidence.";
+        setLoadError(`${requestedSource.label} was rejected: ${detail}`);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingSource(false);
+      });
+    return () => controller.abort();
+  }, [requestedSource]);
+
+  const activeSource = loadedSource ?? retainedSource;
 
   useEffect(() => {
-    if (!runDialog && !workflowDialog && !inspectedMetric) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { setRunDialog(false); setWorkflowDialog(null); setInspectedMetric(null); }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [runDialog, workflowDialog, inspectedMetric]);
+    if (!playing) return;
+    const timer = window.setInterval(() => {
+      setSelectedStep((current) => {
+        let next = current + playDirection;
+        if (next <= 0) {
+          next = 0;
+          setPlayDirection(1);
+        } else if (next >= siteData.tsvField.loadSteps - 1) {
+          next = siteData.tsvField.loadSteps - 1;
+          setPlayDirection(-1);
+        }
+        return next;
+      });
+    }, 700);
+    return () => window.clearInterval(timer);
+  }, [playDirection, playing]);
+
+  const step = bundle?.load_sweep.steps[selectedStep];
+  const viewRadius = fullDomain ? siteData.tsvField.outerRadiusUm : NEAR_FIELD_RADIUS_UM;
+  const siliconElementIndices = useMemo(() => bundle
+    ? bundle.mesh.region_by_element.flatMap((region, index) => region === "silicon" ? [index] : [])
+    : [], [bundle]);
+  const siliconCenters = useMemo(() => bundle
+    ? siliconElementIndices.map((index) => bundle.mesh.element_centers_um[index]!)
+    : [], [bundle, siliconElementIndices]);
+  const probeMinimum = siliconCenters[0] ?? siteData.tsvField.diameterUm / 2;
 
   useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(""), 4200);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
+    setProbeRadius((current) => Math.min(viewRadius, Math.max(probeMinimum, current)));
+  }, [probeMinimum, viewRadius]);
 
-  const activeRun = useMemo(() => snapshot?.runs.find((run) => run.status === "queued" || run.status === "running"), [snapshot]);
-  const selectedSuccessfulRun = snapshot ? selectLatestSuccessfulRun(snapshot, selectedModel) : undefined;
+  const maximumStress = useMemo(() => {
+    if (!bundle) return 1;
+    const final = bundle.load_sweep.steps.at(-1)!;
+    return Math.max(
+      1,
+      ...final.field.sigma_rr_MPa.filter((_, index) => bundle.mesh.region_by_element[index] === "silicon"),
+    );
+  }, [bundle]);
 
-  if (loading && !snapshot) return <main className="loading-screen"><span className="brand-mark"><i /><i /><i /></span><strong>Loading the engineering record…</strong></main>;
-  if (!snapshot) return <main className="loading-screen error-screen"><Icon name="info" size={28} /><strong>Workbench unavailable</strong><span>{error ?? "No project snapshot was returned."}</span></main>;
+  const rings = useMemo(() => {
+    if (!bundle || !step) return [];
+    const indices = siliconElementIndices
+      .map((index) => ({ radius: bundle.mesh.element_centers_um[index]!, index }))
+      .filter(({ radius }) => radius <= viewRadius);
+    const stride = Math.max(1, Math.ceil(indices.length / 150));
+    const sampled = indices.filter((_, index) => index % stride === 0 || index === indices.length - 1);
+    return sampled.map(({ radius, index }, sampleIndex) => {
+      const nextRadius = sampled[sampleIndex + 1]?.radius ?? Math.min(viewRadius, bundle.mesh.radius_nodes_um[index + 1]!);
+      const widthUm = Math.max(nextRadius - radius, viewRadius / 500);
+      return {
+        radius: (radius / viewRadius) * FIELD_RADIUS,
+        width: Math.max(1, (widthUm / viewRadius) * FIELD_RADIUS * 1.25),
+        color: fieldColor(step.field.sigma_rr_MPa[index]!, maximumStress),
+      };
+    }).reverse();
+  }, [bundle, maximumStress, siliconElementIndices, step, viewRadius]);
 
-  const model = selectModel(snapshot, selectedModel);
-  const gates = selectGateEvaluations(snapshot, selectedModel);
-  const gatePassCount = gates.filter((gate) => gate.status === "pass").length;
-  const lastCompleted = selectLastCompletedRun(snapshot);
-  const design = selectActiveDesign(snapshot);
-  const effectiveView: ViewId = snapshot.models.length === 0 && !["runs", "evidence"].includes(view)
-    ? "runs"
-    : view;
-  const activeTargetLabel = activeRun
-    ? snapshot.approvedWorkflows.find((item) => item.id === activeRun.workflowId)?.name
-      ?? (activeRun.modelId ? selectModel(snapshot, activeRun.modelId)?.shortName : undefined)
-      ?? "Run"
+  const meshRings = useMemo(() => {
+    if (!bundle) return [];
+    const visibleNodes = bundle.mesh.radius_nodes_um.filter(
+      (radius) => radius > 0 && radius <= viewRadius,
+    );
+    const stride = Math.max(1, Math.ceil(visibleNodes.length / 48));
+    return visibleNodes.filter(
+      (_, index) => index % stride === 0 || index === visibleNodes.length - 1,
+    );
+  }, [bundle, viewRadius]);
+
+  const handleProbe = (clientX: number, clientY: number) => {
+    if (!bundle || !fieldSurfaceRef.current) return;
+    const rect = fieldSurfaceRef.current.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const x = (clientX - rect.left) * (VIEWBOX_SIZE / rect.width) - FIELD_CENTER;
+    const y = (clientY - rect.top) * (VIEWBOX_SIZE / rect.height) - FIELD_CENTER;
+    const radius = Math.hypot(x, y) / FIELD_RADIUS * viewRadius;
+    setProbeRadius(Math.min(viewRadius, Math.max(probeMinimum, radius)));
+  };
+
+  const siliconSigmaRr = bundle && step
+    ? siliconElementIndices.map((index) => step.field.sigma_rr_MPa[index]!)
+    : [];
+  const siliconSigmaTheta = bundle && step
+    ? siliconElementIndices.map((index) => step.field.sigma_theta_MPa[index]!)
+    : [];
+  const probe = bundle && step ? {
+    sigmaRr: interpolateAt(probeRadius, siliconCenters, siliconSigmaRr),
+    sigmaTheta: interpolateAt(probeRadius, siliconCenters, siliconSigmaTheta),
+    displacement: interpolateAt(probeRadius, bundle.mesh.radius_nodes_um, step.field.radial_displacement_nm),
+  } : null;
+  const chartPath = bundle && step
+    ? linePath(siliconCenters, siliconSigmaRr, probeMinimum, viewRadius, maximumStress)
     : "";
-
-  const chooseView = (nextView: ViewId) => { setView(nextView); setMobileNav(false); };
-  const handleStartRun = async () => {
-    setSubmitting(true);
-    try {
-      const run = await startRun(selectedModel);
-      setRunDialog(false);
-      setToast(`${model?.shortName ?? selectedModel} analysis queued · ${run.id}`);
-    } catch (cause) {
-      setToast(cause instanceof Error ? cause.message : "Unable to start the analysis.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-  const handleStartWorkflow = async () => {
-    if (!workflowDialog) return;
-    setSubmitting(true);
-    try {
-      const run = await startWorkflow(workflowDialog);
-      setWorkflowDialog(null);
-      setToast(`${snapshot.mode === "demo" ? "Simulation" : "Approved workflow"} queued · ${run.id}`);
-    } catch (cause) {
-      setToast(cause instanceof Error ? cause.message : snapshot.mode === "demo" ? "Unable to start the simulation." : "Unable to start the approved workflow.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-  const handleCancel = async (runId: string) => {
-    try {
-      const run = await cancelRun(runId);
-      setToast(`${run.id} ${run.status}`);
-    } catch (cause) {
-      setToast(cause instanceof Error ? cause.message : "Unable to cancel the run.");
-    }
-  };
+  const queryX = bundle
+    ? 54 + ((siteData.tsvField.queryRadiusUm - probeMinimum) / (viewRadius - probeMinimum)) * 500
+    : 0;
+  const queryFe = step ? step.comparison.fe_sigma_rr_MPa : 0;
+  const queryLame = step ? step.comparison.lame_sigma_rr_MPa : 0;
+  const queryFeY = 238 - Math.max(0, queryFe) / maximumStress * 190;
+  const queryLameY = 238 - Math.max(0, queryLame) / maximumStress * 190;
 
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <button className="mobile-menu" onClick={() => setMobileNav((value) => !value)} aria-label="Toggle navigation"><Icon name="menu" /></button>
-        <div className="brand"><span className="brand-mark"><i /><i /><i /></span><strong>CoupFE<span>–EDA</span></strong></div>
-        <div className="project-title"><span /><div><small>Active project</small><strong>{snapshot.project.name}</strong></div></div>
-        <div className="topbar-meta"><div><Icon name="shield" size={19} /><span>{snapshot.models.length ? "Live gates" : "Approved workflows"}<strong>{snapshot.models.length ? `${gatePassCount} / ${gates.length} pass` : snapshot.approvedWorkflows.length}</strong></span></div><div><Icon name="clock" size={19} /><span>Last completed<strong>{lastCompleted ? formatDateTime(lastCompleted.completedAt) : "No completed run"}</strong></span></div></div>
-        <button
-          className="primary-action topbar-action"
-          onClick={() => snapshot.models.length ? setRunDialog(true) : setWorkflowDialog(snapshot.approvedWorkflows[0]?.id ?? null)}
-          disabled={Boolean(activeRun) || (!snapshot.models.length && !snapshot.approvedWorkflows.length)}
-        >{activeRun ? `${activeTargetLabel} ${Math.round((activeRun.progress?.fraction ?? 0) * 100)}%` : snapshot.models.length ? "Run selected model" : snapshot.mode === "demo" ? "Simulate approved workflow" : "Run approved workflow"}<Icon name="chevron" size={17} /></button>
+    <main className="field-workbench">
+      <header className="field-workbench-hero">
+        <div>
+          <p className="field-kicker">CoupFE Core field explorer · {activeSource.label}</p>
+          <h1>Inspect the field behind the claim.</h1>
+          <p>The color bands, curves, probe values, and animation below are read from the named solver artifact. No CSS contour, invented mesh, or simulated lifecycle is used.</p>
+        </div>
+        <aside><span>Case</span><strong>{siteData.tsvField.caseId}</strong><small>D = {siteData.tsvField.diameterUm} µm · ΔT = {siteData.tsvField.deltaTemperatureK} K · Line2</small></aside>
       </header>
 
-      <nav className={`sidebar ${mobileNav ? "is-open" : ""}`} aria-label="Primary navigation">
-        <div className="sidebar-cap"><span>{design?.label ?? "No active design"}</span><small>{design?.packageRevision ?? "No package revision"}</small></div>
-        {navItems.filter((item) => snapshot.models.length > 0 || ["runs", "evidence"].includes(item.id)).map((item) => <button key={item.id} className={effectiveView === item.id ? "is-active" : ""} onClick={() => chooseView(item.id)} aria-current={effectiveView === item.id ? "page" : undefined}><Icon name={item.id} size={23} /><span>{item.label}</span></button>)}
-        <div className="sidebar-foot"><span className="connection-dot" /><div><strong>{snapshot.mode === "demo" ? "Demonstration backend" : "Connected backend"}</strong><small>{snapshot.mode === "demo" ? "Precomputed data adapter" : "API event stream"}</small></div></div>
-      </nav>
+      {backend
+        ? <ConnectedRunControl backend={backend} projectId={projectId} onEvidenceAvailable={selectConnectedEvidence} />
+        : <RetainedRunBoundary />}
 
-      <section className="workspace">
-        <div className={`mode-banner mode-${snapshot.mode}`} role="note"><Icon name="info" size={16} /><span><strong>{snapshot.mode === "demo" ? "Demonstration data" : "Connected project"}</strong>{snapshot.mode === "demo" ? "No engineering solver runs in this browser demo. Simulation actions model lifecycle events and return labeled precomputed results." : "Results and run events are provided by the configured CoupFE–EDA API."}</span>{error && <b>{error}</b>}</div>
-        <div className="workspace-mobile-title"><span>{navItems.find((item) => item.id === effectiveView)?.label}</span><small>{snapshot.project.name}</small></div>
-        {effectiveView === "overview" && <OverviewView snapshot={snapshot} selectedModel={selectedModel} setSelectedModel={setSelectedModel} selectedLayer={selectedLayer} setSelectedLayer={setSelectedLayer} onInspectMetric={setInspectedMetric} />}
-        {effectiveView === "geometry" && <GeometryView snapshot={snapshot} selectedModel={selectedModel} selectedLayer={selectedLayer} setSelectedLayer={setSelectedLayer} />}
-        {effectiveView === "models" && <ModelsView snapshot={snapshot} selectedModel={selectedModel} setSelectedModel={setSelectedModel} />}
-        {effectiveView === "runs" && <RunsView snapshot={snapshot} onRunModel={() => setRunDialog(true)} onRunWorkflow={setWorkflowDialog} onCancel={(runId) => void handleCancel(runId)} activeRun={activeRun} />}
-        {effectiveView === "compare" && <CompareView snapshot={snapshot} />}
-        {effectiveView === "evidence" && <EvidenceView snapshot={snapshot} selectedModel={selectedModel} />}
-      </section>
+      {loadError && <div className="field-load-state field-load-error" role="alert"><strong>Field evidence rejected</strong><span>{loadError}</span></div>}
+      {loadingSource && <div className={`field-load-state ${bundle ? "field-load-pending" : ""}`} role="status">Loading and validating {requestedSource.label} field.json…{bundle ? ` The ${activeSource.label} remains displayed until validation succeeds.` : ""}</div>}
 
-      <RunDialog snapshot={snapshot} open={runDialog} selectedModel={selectedModel} onClose={() => setRunDialog(false)} onConfirm={() => void handleStartRun()} busy={submitting} />
-      <WorkflowRunDialog snapshot={snapshot} workflowId={workflowDialog} onClose={() => setWorkflowDialog(null)} onConfirm={() => void handleStartWorkflow()} busy={submitting} />
-      <EvidenceDrawer snapshot={snapshot} run={selectedSuccessfulRun} metricKey={inspectedMetric} onClose={() => setInspectedMetric(null)} />
-      {toast && <div className="toast" role="status"><Icon name="check" size={17} />{toast}</div>}
-      {mobileNav && <button className="nav-scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)} />}
+      {bundle && step && (
+        <>
+          <section className="field-stage" aria-label="Solver field and radial profile">
+            <article className="field-contour-panel">
+              <header><div><span>Recovered field</span><h2>Silicon radial stress σrr</h2></div><nav aria-label="Field view"><button aria-pressed={!fullDomain} className={!fullDomain ? "is-active" : ""} onClick={() => setFullDomain(false)}>Near field</button><button aria-pressed={fullDomain} className={fullDomain ? "is-active" : ""} onClick={() => setFullDomain(true)}>Full domain</button><button aria-pressed={meshVisible} className={meshVisible ? "is-active" : ""} onClick={() => setMeshVisible((value) => !value)}>Mesh nodes</button></nav></header>
+              <div className="field-contour-wrap">
+                <svg
+                  ref={fieldSurfaceRef}
+                  viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}
+                  role="img"
+                  aria-label={`Axisymmetric radial stress at delta temperature ${step.delta_temperature_K} kelvin`}
+                  onPointerMove={(event) => handleProbe(event.clientX, event.clientY)}
+                  onPointerDown={(event) => handleProbe(event.clientX, event.clientY)}
+                >
+                  <circle cx={FIELD_CENTER} cy={FIELD_CENTER} r={FIELD_RADIUS} fill="#0b1730" stroke="#31425e" />
+                  {rings.map((ring, index) => <circle key={index} cx={FIELD_CENTER} cy={FIELD_CENTER} r={ring.radius} fill="none" stroke={ring.color} strokeWidth={ring.width} />)}
+                  <circle cx={FIELD_CENTER} cy={FIELD_CENTER} r={(bundle.mesh.via_radius_um / viewRadius) * FIELD_RADIUS} fill="#c57847" stroke="#f4d0b5" strokeWidth="2" />
+                  {meshVisible && meshRings.map((radiusUm) => (
+                    <circle key={radiusUm} cx={FIELD_CENTER} cy={FIELD_CENTER} r={(radiusUm / viewRadius) * FIELD_RADIUS} fill="none" stroke="#f8fafc" strokeOpacity=".18" strokeWidth=".7" />
+                  ))}
+                  <line x1={FIELD_CENTER} y1={FIELD_CENTER} x2={FIELD_CENTER + (probeRadius / viewRadius) * FIELD_RADIUS} y2={FIELD_CENTER} stroke="#fff" strokeWidth="1.5" />
+                  <circle cx={FIELD_CENTER + (probeRadius / viewRadius) * FIELD_RADIUS} cy={FIELD_CENTER} r="5" fill="#fff" stroke="#07101f" strokeWidth="2" />
+                  <text x={FIELD_CENTER} y={FIELD_CENTER + 5} textAnchor="middle">Cu</text>
+                  <text x="22" y="476">Axisymmetric reconstruction · {meshVisible ? "sampled actual Line2 nodes" : `solved radius 0–${viewRadius} µm`}</text>
+                </svg>
+                <div className="field-colorbar"><span>{maximumStress.toFixed(0)} MPa</span><i /><span>0</span></div>
+              </div>
+              <dl className="field-probe">
+                <div><dt>Si-side probe radius</dt><dd>{probeRadius.toFixed(2)} µm</dd></div>
+                <div><dt>σrr</dt><dd>{probe?.sigmaRr.toFixed(3)} MPa</dd></div>
+                <div><dt>σθθ</dt><dd>{probe?.sigmaTheta.toFixed(3)} MPa</dd></div>
+                <div><dt>u<sub>r</sub></dt><dd>{probe?.displacement.toFixed(3)} nm</dd></div>
+              </dl>
+              <label className="field-probe-slider">
+                <span>Silicon probe radius</span>
+                <input aria-label="Silicon probe radius" type="range" min={probeMinimum} max={viewRadius} step="0.05" value={probeRadius} onChange={(event) => setProbeRadius(Number(event.target.value))} />
+                <output>{probeRadius.toFixed(2)} µm</output>
+              </label>
+            </article>
+
+            <article className="field-profile-panel">
+              <header><span>Element-center values</span><h2>Stress versus radius</h2><p>Fixed y-scale across every solved load state.</p></header>
+              <svg viewBox="0 0 600 290" role="img" aria-label="Finite element radial stress profile with Lamé reference at 20 micrometres">
+                {[0, .25, .5, .75, 1].map((fraction) => {
+                  const y = 238 - fraction * 190;
+                  return <g key={fraction}><line x1="54" y1={y} x2="554" y2={y} /><text x="44" y={y + 4} textAnchor="end">{(fraction * maximumStress).toFixed(0)}</text></g>;
+                })}
+                <line x1="54" y1="238" x2="554" y2="238" className="field-axis" />
+                <path d={chartPath} className="field-profile-line" />
+                {queryX >= 54 && queryX <= 554 && <>
+                  <line x1={queryX} y1="42" x2={queryX} y2="238" className="field-query-line" />
+                  <circle cx={queryX} cy={queryFeY} r="5" className="field-fe-point" />
+                  <path d={`M${queryX - 6},${queryLameY} h12 M${queryX},${queryLameY - 6} v12`} className="field-lame-point" />
+                </>}
+                <text x="304" y="278" textAnchor="middle">radius r (µm)</text>
+                <text x="14" y="24">σrr (MPa)</text>
+              </svg>
+              <div className="field-profile-legend"><span><i className="field-fe-key" />CoupFE field</span><span><i className="field-lame-key" />Lamé at 20 µm</span></div>
+              <dl className="field-comparison">
+                <div><dt>CoupFE</dt><dd>{queryFe.toFixed(4)} MPa</dd></div>
+                <div><dt>Lamé</dt><dd>{queryLame.toFixed(4)} MPa</dd></div>
+                <div><dt>Relative difference</dt><dd>{step.comparison.relative_error === null ? "zero-load identity" : `${(step.comparison.relative_error * 100).toFixed(4)}%`}</dd></div>
+              </dl>
+            </article>
+          </section>
+
+          <section className="field-timeline" aria-label="Actual solved load states">
+            <div><span>Prescribed load sweep</span><strong>ΔT = {step.delta_temperature_K.toFixed(0)} K</strong><small>State {selectedStep + 1} of {bundle.load_sweep.steps.length} · independent static CoupFE solve · not transient</small></div>
+            <button type="button" onClick={() => setPlaying((value) => !value)}>{playing ? "Pause actual states" : "Play actual states"}</button>
+            <input aria-label="Solved cooling-load state" type="range" min="0" max={bundle.load_sweep.steps.length - 1} step="1" value={selectedStep} onChange={(event) => { setPlaying(false); setSelectedStep(Number(event.target.value)); }} />
+            <div className="field-step-dots" aria-hidden="true">{bundle.load_sweep.steps.map((item, index) => <i key={item.step_index} className={index === selectedStep ? "is-active" : ""} />)}</div>
+          </section>
+
+          <section className="field-metrics" aria-label="Solver evidence">
+            <article><span>Mesh / DOF</span><strong>{bundle.mesh.element_centers_um.length.toLocaleString()} / {bundle.mesh.radius_nodes_um.length.toLocaleString()}</strong><small>radial Line2 / displacement unknowns</small></article>
+            <article><span>Newton iterations</span><strong>{step.solver.newton_iterations}</strong><small>actual selected-state solve</small></article>
+            <article><span>Final relative residual</span><strong>{step.solver.final_relative_residual.toExponential(2)}</strong><small>{(step.solver.residual_fraction_of_acceptance_limit * 100).toFixed(2)}% of acceptance limit</small></article>
+            <article><span>Core revision</span><strong>{activeSource.coreRevision.slice(0, 10)}</strong><small>full SHA in matching manifest</small></article>
+          </section>
+
+          <section className="field-evidence">
+            <div><span>Evidence bundle</span><h2>Every plotted field value has a route back to solver arrays.</h2><p>{bundle.claim_boundary}</p></div>
+            <nav aria-label="Field evidence artifacts"><a href={activeSource.fieldUrl}>field.json</a><a href={activeSource.summaryUrl}>summary.json</a><a href={activeSource.manifestUrl}>{activeSource.manifestLabel}</a><a href={runnerUrl}>runner source ↗</a></nav>
+          </section>
+        </>
+      )}
     </main>
   );
 }

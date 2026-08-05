@@ -26,15 +26,19 @@ except ImportError:  # pragma: no cover - create_app reports the actionable erro
     Field = None
 
 from .workbench import (
-    TSV_DEVICE_EXECUTOR,
+    APPROVED_WORKFLOWS,
+    TSV_AXISYMMETRIC_CLAIM_BOUNDARY,
+    TSV_AXISYMMETRIC_EXECUTOR,
     WorkbenchExecutionError,
     WorkbenchRunStore,
 )
 
 
 LOCAL_PROJECT_ID = "coupfe-eda-local"
-TSV_DEVICE_WORKFLOW_ID = "tsv_device_screening"
-_WORKFLOW_EXECUTORS = {TSV_DEVICE_WORKFLOW_ID: TSV_DEVICE_EXECUTOR}
+TSV_AXISYMMETRIC_WORKFLOW_ID = "tsv_axisymmetric_field"
+_WORKFLOW_EXECUTORS = {
+    TSV_AXISYMMETRIC_WORKFLOW_ID: TSV_AXISYMMETRIC_EXECUTOR,
+}
 
 
 if BaseModel is not None:
@@ -75,26 +79,41 @@ def _load_snapshot(path: Path) -> dict[str, Any]:
     for field in required_arrays:
         if not isinstance(snapshot.get(field), list):
             raise RuntimeError(f"connected workbench snapshot field {field!r} must be an array")
+    if not all(isinstance(item, dict) for item in snapshot["approvedWorkflows"]):
+        raise RuntimeError("connected workbench workflows must be objects")
     workflows = {item.get("id"): item for item in snapshot["approvedWorkflows"]}
-    if set(_WORKFLOW_EXECUTORS).difference(workflows):
-        raise RuntimeError("connected workbench snapshot is missing an approved workflow")
+    if (
+        len(snapshot["approvedWorkflows"]) != len(_WORKFLOW_EXECUTORS)
+        or set(workflows) != set(_WORKFLOW_EXECUTORS)
+    ):
+        raise RuntimeError(
+            "connected workbench snapshot must expose only the fixed approved workflow"
+        )
     for workflow_id, executor_key in _WORKFLOW_EXECUTORS.items():
         item = workflows[workflow_id]
-        if item.get("executorKey") != executor_key or item.get("releaseValidation") is not False:
-            raise RuntimeError(f"connected workflow {workflow_id!r} has an invalid execution boundary")
+        if (
+            item.get("executorKey") != executor_key
+            or item.get("releaseValidation") is not False
+            or item.get("claimBoundary") != TSV_AXISYMMETRIC_CLAIM_BOUNDARY
+            or item.get("driverPath") != APPROVED_WORKFLOWS[executor_key].driver
+        ):
+            raise RuntimeError(
+                f"connected workflow {workflow_id!r} has an invalid execution boundary"
+            )
     return snapshot
 
 
 def _run_input(run: dict[str, Any], design: dict[str, Any]) -> dict[str, str]:
     output = run.get("output", {})
     source = output.get("source", {})
+    results = output.get("results", {})
     manifest = output.get("manifest", {})
     return {
         "designRevision": str(design.get("label", design["id"])),
         "packageRevision": str(design.get("packageRevision", design["id"])),
         "codeRevision": source.get("revision", "resolved when execution starts"),
-        "solverVersion": "not-applicable: NumPy analytic screening",
-        "runtimeInputSet": "examples/tsv_00_device_screening/device_sites.csv",
+        "solverVersion": results.get("core_revision", "resolved when execution starts"),
+        "runtimeInputSet": "examples/tsv_axisymmetric_field fixed verification case",
         "manifestSha256": manifest.get("sha256", "pending"),
     }
 
@@ -106,7 +125,7 @@ def _public_run(
         "id": run["id"],
         "projectId": project_id,
         "designId": design["id"],
-        "workflowId": TSV_DEVICE_WORKFLOW_ID,
+        "workflowId": TSV_AXISYMMETRIC_WORKFLOW_ID,
         "clientRequestId": run["clientRequestId"],
         "sequence": run["sequence"],
         "status": run["status"],
@@ -117,23 +136,11 @@ def _public_run(
         record["startedAt"] = run["startedAt"]
     if "completedAt" in run:
         record["completedAt"] = run["completedAt"]
-    if run["status"] == "queued":
-        record["progress"] = {
-            "phase": "preparing",
-            "fraction": 0.0,
-            "message": "Waiting for the server-owned TSV screening executor.",
-        }
-    elif run["status"] == "running":
-        record["progress"] = {
-            "phase": "solving",
-            "fraction": 0.5,
-            "message": "Running the released synthetic TSV-to-device workflow.",
-        }
     if run["status"] == "failed":
         record["failureMessage"] = run.get("failureMessage", "Approved workflow failed.")
     if run["status"] == "succeeded":
         result = run["output"]
-        evidence = result["evidence"]
+        results = result["results"]
         result_evidence_id = f"ev-{run['id']}-result"
         provenance_evidence_id = f"ev-{run['id']}-manifest"
         artifact_ids = [f"artifact-{run['id']}-{item['name']}" for item in result["artifacts"]]
@@ -141,35 +148,59 @@ def _public_run(
         record["output"] = {
             "genericMetrics": [
                 {
-                    "key": "baseline_violations",
-                    "label": "Baseline threshold violations",
-                    "value": evidence["baseline_violations"],
-                    "unit": "devices",
-                    "assessment": "demonstration",
+                    "key": "sigma_rr_at_20um_mpa",
+                    "label": "Radial stress at 20 µm",
+                    "value": results["sigma_rr_at_20um_MPa"],
+                    "unit": "MPa",
+                    "assessment": "measured",
                     "evidenceIds": [result_evidence_id],
                 },
                 {
-                    "key": "optimized_violations",
-                    "label": "Post-action threshold violations",
-                    "value": evidence["optimized_violations"],
-                    "unit": "devices",
-                    "assessment": "demonstration",
+                    "key": "lame_reference_sigma_rr_at_20um_mpa",
+                    "label": "Lamé reference stress at 20 µm",
+                    "value": results["lame_sigma_rr_at_20um_MPa"],
+                    "unit": "MPa",
+                    "assessment": "observed",
                     "evidenceIds": [result_evidence_id],
                 },
                 {
-                    "key": "baseline_peak_abs_mobility_proxy",
-                    "label": "Baseline peak |mobility proxy|",
-                    "value": evidence["baseline_peak_abs_mobility_change"],
-                    "unit": "1",
-                    "assessment": "demonstration",
+                    "key": "lame_relative_error_percent",
+                    "label": "Lamé relative error",
+                    "value": 100.0 * results["lame_relative_error"],
+                    "unit": "%",
+                    "assessment": "pass",
                     "evidenceIds": [result_evidence_id],
                 },
                 {
-                    "key": "optimized_peak_abs_mobility_proxy",
-                    "label": "Post-action peak |mobility proxy|",
-                    "value": evidence["optimized_peak_abs_mobility_change"],
-                    "unit": "1",
-                    "assessment": "demonstration",
+                    "key": "degrees_of_freedom",
+                    "label": "Degrees of freedom",
+                    "value": results["degrees_of_freedom"],
+                    "unit": "DOF",
+                    "assessment": "measured",
+                    "evidenceIds": [result_evidence_id],
+                },
+                {
+                    "key": "elements",
+                    "label": "Finite elements",
+                    "value": results["elements"],
+                    "unit": "elements",
+                    "assessment": "measured",
+                    "evidenceIds": [result_evidence_id],
+                },
+                {
+                    "key": "actual_load_steps",
+                    "label": "Actual CoupFE load solves",
+                    "value": results["actual_load_steps"],
+                    "unit": "steps",
+                    "assessment": "measured",
+                    "evidenceIds": [result_evidence_id],
+                },
+                {
+                    "key": "newton_iterations",
+                    "label": "Final-step Newton iterations",
+                    "value": results["newton_iterations"],
+                    "unit": "iterations",
+                    "assessment": "measured",
                     "evidenceIds": [result_evidence_id],
                 },
                 {
@@ -183,17 +214,17 @@ def _public_run(
             ],
             "qualification": {
                 "releaseValidation": False,
-                "claimBoundary": evidence["claim_boundary"],
+                "claimBoundary": results["claim_boundary"],
             },
             "artifactIds": artifact_ids + [f"artifact-{run['id']}-manifest.json"],
             "evidenceIds": [result_evidence_id, provenance_evidence_id],
             "conclusion": (
-                "The released synthetic integration workflow completed and retained its "
-                "identity-preserving output records."
+                "CoupFE solved the 2,400-DOF axisymmetric TSV case and the radial stress "
+                "agreed with the Lamé reference within the 3% acceptance bound."
             ),
             "nextAction": (
-                "Use the output as a demonstration; experimental TSV/device validation "
-                "remains outside this workflow."
+                "Inspect the full field and load-step artifacts; experimental and 3-D "
+                "validation remain outside this numerical verification case."
             ),
         }
     return record
@@ -223,13 +254,12 @@ def _run_evidence_and_artifacts(
         for item in output["artifacts"]:
             artifact_id = f"artifact-{run['id']}-{item['name']}"
             artifact_ids.append(artifact_id)
-            suffix = Path(item["name"]).suffix.lower()
-            if item["name"] == "evidence.json":
+            if item["name"] == "field.json":
+                kind = "field"
+            elif item["name"] == "summary.json":
                 kind = "report"
-            elif suffix == ".svg":
+            elif item["name"] == "contour.svg":
                 kind = "render"
-            elif suffix == ".csv":
-                kind = "data"
             else:
                 kind = "log"
             artifact_records.append(
@@ -251,20 +281,20 @@ def _run_evidence_and_artifacts(
                 "sha256": output["manifest"]["sha256"],
             }
         )
-        evidence_artifact = next(
-            item for item in output["artifacts"] if item["name"] == "evidence.json"
+        summary_artifact = next(
+            item for item in output["artifacts"] if item["name"] == "summary.json"
         )
         evidence_records.extend(
             [
                 {
                     "id": result_evidence_id,
                     "runId": run["id"],
-                    "title": "Synthetic TSV-to-device screening output",
+                    "title": "CoupFE axisymmetric TSV field result",
                     "category": "result",
                     "authority": "computational-output",
                     "status": "generated",
-                    "description": output["evidence"]["claim_boundary"],
-                    "source": evidence_artifact["uri"],
+                    "description": output["results"]["claim_boundary"],
+                    "source": summary_artifact["uri"],
                     "updatedAt": run["completedAt"],
                     "artifactIds": artifact_ids,
                 },

@@ -1,17 +1,31 @@
-import { copyFile, mkdir, readFile } from "node:fs/promises";
+import { copyFile, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = path.resolve(webRoot, "..");
-const site = JSON.parse(await readFile(path.join(webRoot, "site-data.json"), "utf8"));
-const output = path.join(webRoot, "public", "repository-assets", "validation-guide");
-await mkdir(output, { recursive: true });
+const repositoryAssets = path.join(webRoot, "public", "repository-assets");
+await rm(repositoryAssets, { recursive: true, force: true });
 
-for (const figure of site.figures) {
-  const source = path.resolve(repositoryRoot, figure.sourcePath);
-  const target = path.join(output, figure.assetName);
-  await copyFile(source, target);
+const tsvFieldOutput = path.join(
+  repositoryAssets,
+  "tsv_axisymmetric_field",
+);
+const tsvFieldSource = path.join(
+  repositoryRoot,
+  "examples",
+  "tsv_axisymmetric_field",
+  "retained",
+);
+await mkdir(tsvFieldOutput, { recursive: true });
+for (const name of [
+  "field.json",
+  "summary.json",
+  "contour.svg",
+  "load-sweep.webm",
+  "visual-evidence.json",
+]) {
+  await copyFile(path.join(tsvFieldSource, name), path.join(tsvFieldOutput, name));
 }
 
 const legalOutput = path.join(webRoot, "public", "legal");
@@ -26,4 +40,6 @@ for (const [source, target] of [
   await copyFile(path.join(repositoryRoot, source), path.join(legalOutput, target));
 }
 
-console.log(`prepared ${site.figures.length} project-authored figures and five public legal records`);
+console.log(
+  "prepared one solver-field evidence bundle and five public legal records",
+);

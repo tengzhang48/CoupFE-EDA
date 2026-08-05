@@ -15,6 +15,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -24,7 +25,13 @@ from typing import Any, Mapping
 import uuid
 
 
-TSV_DEVICE_EXECUTOR = "tsv.device-screening.v1"
+TSV_AXISYMMETRIC_EXECUTOR = "tsv.axisymmetric-field.v1"
+TSV_AXISYMMETRIC_CLAIM_BOUNDARY = (
+    "Axisymmetric plane-strain thermoelastic component verification against the "
+    "declared Lamé equation. It is not a finite-depth 3-D TSV, near-surface device "
+    "field, experimental validation, keep-out-zone signoff, or transient cooling "
+    "simulation."
+)
 
 
 class WorkbenchExecutionError(RuntimeError):
@@ -43,12 +50,12 @@ class ApprovedWorkflow:
 
 
 APPROVED_WORKFLOWS: Mapping[str, ApprovedWorkflow] = {
-    TSV_DEVICE_EXECUTOR: ApprovedWorkflow(
-        executor_key=TSV_DEVICE_EXECUTOR,
-        label="Synthetic TSV-to-device screening",
-        driver="examples/tsv_00_device_screening/run.py",
-        oracle="examples/tsv_00_device_screening/expected_metrics.json",
-        timeout_seconds=120.0,
+    TSV_AXISYMMETRIC_EXECUTOR: ApprovedWorkflow(
+        executor_key=TSV_AXISYMMETRIC_EXECUTOR,
+        label="CoupFE axisymmetric TSV field verification",
+        driver="examples/tsv_axisymmetric_field/run.py",
+        oracle="examples/tsv_axisymmetric_field/expected_results.json",
+        timeout_seconds=180.0,
     )
 }
 
@@ -96,72 +103,459 @@ def _repository_identity(repository_root: Path) -> dict[str, str]:
     return {"revision": revision, "tree_state": "dirty" if status else "clean"}
 
 
-def _validate_tsv_device_evidence(
-    record: Any,
+_HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
+_EXPECTED_TEMPERATURE_STEPS = [
+    0.0,
+    -50.0,
+    -100.0,
+    -150.0,
+    -200.0,
+    -250.0,
+    -300.0,
+    -350.0,
+    -400.0,
+]
+
+
+def _strict_json(path: Path, *, label: str) -> Any:
+    def reject_constant(value: str) -> Any:
+        raise ValueError(f"non-finite JSON constant {value}")
+
+    try:
+        return json.loads(
+            path.read_text(encoding="utf-8"),
+            parse_constant=reject_constant,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as error:
+        raise WorkbenchExecutionError(f"approved workflow did not write valid {label}") from error
+
+
+def _object(value: Any, *, label: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise WorkbenchExecutionError(f"{label} must be a JSON object")
+    return value
+
+
+def _number(value: Any, *, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise WorkbenchExecutionError(f"{label} must be a finite number")
+    try:
+        number = float(value)
+    except OverflowError as error:
+        raise WorkbenchExecutionError(f"{label} must be a finite number") from error
+    if not math.isfinite(number):
+        raise WorkbenchExecutionError(f"{label} must be a finite number")
+    return number
+
+
+def _integer(value: Any, *, label: str, minimum: int = 0) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+        raise WorkbenchExecutionError(f"{label} must be an integer at least {minimum}")
+    return value
+
+
+def _assert_finite_tree(value: Any, *, label: str) -> None:
+    if isinstance(value, float) and not math.isfinite(value):
+        raise WorkbenchExecutionError(f"{label} contains a non-finite number")
+    if isinstance(value, dict):
+        for key, child in value.items():
+            _assert_finite_tree(child, label=f"{label}.{key}")
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            _assert_finite_tree(child, label=f"{label}[{index}]")
+
+
+def _require_claim_boundary(value: Any) -> str:
+    if not isinstance(value, str):
+        raise WorkbenchExecutionError("TSV field output is missing its claim boundary")
+    claim = " ".join(value.lower().replace("3d", "3-d").split())
+    denies_three_dimensional = bool(
+        re.search(r"(?:not|isn't|does not|cannot).{0,80}(?:3-d|three-dimensional)", claim)
+        or re.search(r"(?:3-d|three-dimensional).{0,80}(?:not|isn't|cannot)", claim)
+    )
+    denies_experimental_validation = bool(
+        re.search(r"(?:not|isn't|does not|cannot).{0,80}experimental", claim)
+        or re.search(r"experimental.{0,80}(?:not|isn't|cannot)", claim)
+    )
+    if (
+        value != TSV_AXISYMMETRIC_CLAIM_BOUNDARY
+        or "axisymmetric" not in claim
+        or not denies_three_dimensional
+        or not denies_experimental_validation
+    ):
+        raise WorkbenchExecutionError(
+            "TSV field claim boundary must identify the axisymmetric scope and disclaim "
+            "3-D and experimental validation"
+        )
+    return value
+
+
+def _validate_solver(value: Any, *, label: str, require_iteration: bool) -> dict[str, Any]:
+    solver = _object(value, label=label)
+    if solver.get("converged") is not True:
+        raise WorkbenchExecutionError(f"{label} must report a converged CoupFE solve")
+    iterations = _integer(
+        solver.get("newton_iterations"),
+        label=f"{label}.newton_iterations",
+        minimum=1 if require_iteration else 0,
+    )
+    relative_tolerance = _number(
+        solver.get("relative_tolerance"), label=f"{label}.relative_tolerance"
+    )
+    absolute_tolerance = _number(
+        solver.get("absolute_residual_tolerance_N_per_m"),
+        label=f"{label}.absolute_residual_tolerance_N_per_m",
+    )
+    if relative_tolerance <= 0 or absolute_tolerance <= 0:
+        raise WorkbenchExecutionError(f"{label} tolerances must be positive")
+    for key in (
+        "initial_free_residual_norm_N_per_m",
+        "final_free_residual_norm_N_per_m",
+        "final_relative_residual",
+        "residual_fraction_of_acceptance_limit",
+    ):
+        if _number(solver.get(key), label=f"{label}.{key}") < 0:
+            raise WorkbenchExecutionError(f"{label}.{key} must be nonnegative")
+    solver["newton_iterations"] = iterations
+    return solver
+
+
+def _validate_comparison(
+    value: Any, *, label: str, allow_zero_load: bool = False
+) -> dict[str, Any]:
+    comparison = _object(value, label=label)
+    if comparison.get("reference") != "published_Lame_equation":
+        raise WorkbenchExecutionError(f"{label} must identify the published Lame equation")
+    if not math.isclose(
+        _number(comparison.get("query_radius_um"), label=f"{label}.query_radius_um"),
+        20.0,
+        rel_tol=0.0,
+        abs_tol=1.0e-12,
+    ):
+        raise WorkbenchExecutionError(f"{label} must compare the field at 20 um")
+    _number(comparison.get("fe_sigma_rr_MPa"), label=f"{label}.fe_sigma_rr_MPa")
+    _number(comparison.get("lame_sigma_rr_MPa"), label=f"{label}.lame_sigma_rr_MPa")
+    absolute_error = _number(
+        comparison.get("absolute_error_MPa"), label=f"{label}.absolute_error_MPa"
+    )
+    threshold = _number(
+        comparison.get("acceptance_threshold"),
+        label=f"{label}.acceptance_threshold",
+    )
+    if absolute_error < 0 or threshold < 0 or threshold > 0.03:
+        raise WorkbenchExecutionError(
+            f"{label} has an invalid Lame comparison acceptance boundary"
+        )
+    relative_error = comparison.get("relative_error")
+    if allow_zero_load and relative_error is None:
+        if comparison.get("passed") is not True:
+            raise WorkbenchExecutionError(
+                f"{label} must report the zero-load comparison as passed"
+            )
+        return comparison
+    error = _number(relative_error, label=f"{label}.relative_error")
+    if error < 0 or error >= 0.03 or error > threshold:
+        raise WorkbenchExecutionError(
+            f"{label} exceeds the 3 percent Lame comparison boundary"
+        )
+    if comparison.get("passed") is not True:
+        raise WorkbenchExecutionError(f"{label} must report the comparison as passed")
+    return comparison
+
+
+def _validate_field_arrays(value: Any, *, label: str) -> dict[str, Any]:
+    field = _object(value, label=label)
+    lengths = {
+        "radial_displacement_nm": 2400,
+        "sigma_rr_MPa": 2399,
+        "sigma_theta_MPa": 2399,
+    }
+    for key, expected_length in lengths.items():
+        values = field.get(key)
+        if not isinstance(values, list) or len(values) != expected_length:
+            raise WorkbenchExecutionError(
+                f"{label}.{key} must contain {expected_length} computed values"
+            )
+        for index, item in enumerate(values):
+            _number(item, label=f"{label}.{key}[{index}]")
+    return field
+
+
+def _validate_tsv_axisymmetric_outputs(
+    summary: Any,
+    field_record: Any,
     *,
     oracle: Mapping[str, Any],
+    eda_identity: Mapping[str, str],
 ) -> dict[str, Any]:
-    if not isinstance(record, dict):
-        raise WorkbenchExecutionError("TSV device evidence must be a JSON object")
-    required = {
-        "example_scope",
-        "model_scope",
-        "release_validation",
-        "device_site_provenance",
-        "n_devices",
-        "baseline_violations",
-        "optimized_violations",
-        "baseline_peak_abs_mobility_change",
-        "optimized_peak_abs_mobility_change",
-        "claim_boundary",
-    }
-    missing = sorted(required.difference(record))
-    if missing:
-        raise WorkbenchExecutionError(
-            f"TSV device evidence is missing required fields: {', '.join(missing)}"
-        )
-    if record["release_validation"] is not False:
-        raise WorkbenchExecutionError(
-            "the approved TSV screening workflow must remain labeled as non-validation evidence"
-        )
-    if not isinstance(record["claim_boundary"], str) or "does not validate" not in record[
-        "claim_boundary"
-    ].lower():
-        raise WorkbenchExecutionError("TSV device evidence is missing its qualification boundary")
-    for field in ("n_devices", "baseline_violations", "optimized_violations"):
-        value = record[field]
-        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-            raise WorkbenchExecutionError(f"TSV device evidence field {field!r} is invalid")
-    for field in (
-        "baseline_peak_abs_mobility_change",
-        "optimized_peak_abs_mobility_change",
-    ):
-        value = record[field]
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
-            raise WorkbenchExecutionError(f"TSV device evidence field {field!r} is invalid")
+    """Validate and normalize one real CoupFE numerical verification run."""
 
-    tolerance = oracle.get("tolerance", {}).get("absolute")
-    if isinstance(tolerance, bool) or not isinstance(tolerance, (int, float)) or tolerance < 0:
-        raise WorkbenchExecutionError("TSV regression oracle has an invalid absolute tolerance")
-    for field in ("n_devices", "baseline_violations", "optimized_violations"):
-        if record[field] != oracle.get(field):
-            raise WorkbenchExecutionError(
-                f"TSV device evidence does not match the retained regression oracle for {field}"
-            )
-    for field in (
-        "baseline_peak_abs_mobility_change",
-        "optimized_peak_abs_mobility_change",
+    summary = _object(summary, label="summary.json")
+    field_record = _object(field_record, label="field.json")
+    _assert_finite_tree(summary, label="summary.json")
+    _assert_finite_tree(field_record, label="field.json")
+    oracle = _object(oracle, label="expected_results.json")
+
+    if (
+        summary.get("schema_version") != 1
+        or field_record.get("schema_version") != 1
+        or oracle.get("schema_version") != 1
     ):
-        expected = oracle.get(field)
+        raise WorkbenchExecutionError("TSV field outputs must use schema_version 1")
+    case_id = oracle.get("case_id")
+    if (
+        not isinstance(case_id, str)
+        or summary.get("case_id") != case_id
+        or field_record.get("case_id") != case_id
+    ):
+        raise WorkbenchExecutionError("TSV field outputs do not match the retained case oracle")
+    claim_boundary = _require_claim_boundary(summary.get("claim_boundary"))
+    if field_record.get("claim_boundary") != claim_boundary:
+        raise WorkbenchExecutionError("field.json and summary.json claim boundaries differ")
+
+    provenance = _object(summary.get("provenance"), label="summary.provenance")
+    for revision_key in ("eda_revision", "core_revision"):
+        revision = provenance.get(revision_key)
+        if not isinstance(revision, str) or _HEX_REVISION.fullmatch(revision) is None:
+            raise WorkbenchExecutionError(
+                f"summary.provenance.{revision_key} must be a 40-hex Git revision"
+            )
+    if provenance["eda_revision"] != eda_identity.get("revision"):
+        raise WorkbenchExecutionError(
+            "summary provenance does not identify this CoupFE-EDA checkout"
+        )
+    expected_provenance = {
+        "application_module": "eda_multiphysics.tsv_stress",
+        "operator": "AxisymThermoelastic",
+        "solver": "coupfe.newton_solve",
+    }
+    for key, expected in expected_provenance.items():
+        if provenance.get(key) != expected:
+            raise WorkbenchExecutionError(f"summary provenance has invalid {key}")
+    if provenance.get("command") != [
+        "python",
+        "examples/tsv_axisymmetric_field/run.py",
+        "--output-dir",
+        "<OUTPUT_DIR>",
+    ]:
+        raise WorkbenchExecutionError("summary provenance does not describe the fixed command")
+
+    oracle_inputs = _object(oracle.get("inputs"), label="oracle.inputs")
+    inputs = _object(summary.get("inputs"), label="summary.inputs")
+    if field_record.get("inputs") != inputs:
+        raise WorkbenchExecutionError("field.json and summary.json inputs differ")
+    approved_inputs = {
+        "diameter_um": 30.0,
+        "delta_temperature_K": -400.0,
+        "outer_radius_um": 300.0,
+        "mesh_points_requested": 2400,
+    }
+    for key, approved in approved_inputs.items():
+        actual = _number(inputs.get(key), label=f"summary.inputs.{key}")
+        retained = _number(oracle_inputs.get(key), label=f"oracle.inputs.{key}")
+        if actual != float(approved) or retained != float(approved):
+            raise WorkbenchExecutionError(f"TSV field input {key} is outside the fixed case")
+    if (
+        inputs.get("liner_nm") != 0.0
+        or inputs.get("formulation") != "axisymmetric_plane_strain"
+        or inputs.get("load") != "uniform_thermal_eigenstrain"
+    ):
+        raise WorkbenchExecutionError("TSV field output does not describe the fixed formulation")
+    if _number(oracle_inputs.get("query_radius_um"), label="oracle.inputs.query_radius_um") != 20.0:
+        raise WorkbenchExecutionError("TSV field oracle must retain the 20 um query radius")
+
+    mesh = _object(summary.get("mesh"), label="summary.mesh")
+    expected_mesh = {
+        "topology": "Line2",
+        "nodes": 2400,
+        "elements": 2399,
+        "degrees_of_freedom": 2400,
+        "dof_per_node": 1,
+    }
+    for key, expected in expected_mesh.items():
+        if mesh.get(key) != expected:
+            raise WorkbenchExecutionError(f"summary.mesh.{key} must equal {expected!r}")
+
+    solver = _validate_solver(summary.get("solver"), label="summary.solver", require_iteration=True)
+    results = _object(summary.get("results"), label="summary.results")
+    result_keys = (
+        "sigma_rr_at_20um_MPa",
+        "sigma_theta_at_20um_MPa",
+        "max_abs_displacement_nm",
+        "silicon_sigma_rr_min_MPa",
+        "silicon_sigma_rr_max_MPa",
+    )
+    for key in result_keys:
+        _number(results.get(key), label=f"summary.results.{key}")
+    comparison = _validate_comparison(summary.get("comparison"), label="summary.comparison")
+    if not math.isclose(
+        float(results["sigma_rr_at_20um_MPa"]),
+        float(comparison["fe_sigma_rr_MPa"]),
+        rel_tol=1.0e-12,
+        abs_tol=1.0e-12,
+    ):
+        raise WorkbenchExecutionError("summary result and Lame comparison FE stress differ")
+
+    oracle_expected = _object(oracle.get("expected"), label="oracle.expected")
+    tolerances = _object(oracle.get("tolerances"), label="oracle.tolerances")
+    numeric_tolerance = _number(
+        tolerances.get("relative_numeric"), label="oracle.tolerances.relative_numeric"
+    )
+    if numeric_tolerance < 0 or numeric_tolerance > 1.0e-4:
+        raise WorkbenchExecutionError("oracle numeric tolerance is outside the approved boundary")
+    oracle_pairs = {
+        "sigma_rr_at_20um_MPa": results["sigma_rr_at_20um_MPa"],
+        "lame_sigma_rr_at_20um_MPa": comparison["lame_sigma_rr_MPa"],
+        "max_abs_displacement_nm": results["max_abs_displacement_nm"],
+        "silicon_sigma_rr_min_MPa": results["silicon_sigma_rr_min_MPa"],
+        "silicon_sigma_rr_max_MPa": results["silicon_sigma_rr_max_MPa"],
+    }
+    for key, actual in oracle_pairs.items():
+        expected = _number(oracle_expected.get(key), label=f"oracle.expected.{key}")
+        if not math.isclose(
+            float(actual),
+            expected,
+            rel_tol=numeric_tolerance,
+            abs_tol=max(1.0e-12, numeric_tolerance * max(1.0, abs(expected))),
+        ):
+            raise WorkbenchExecutionError(f"TSV field output does not match the oracle for {key}")
+    oracle_error_limit = _number(
+        tolerances.get("lame_relative_error_max"),
+        label="oracle.tolerances.lame_relative_error_max",
+    )
+    if oracle_error_limit > 0.03 or float(comparison["relative_error"]) > oracle_error_limit:
+        raise WorkbenchExecutionError("TSV field output exceeds its retained Lame error limit")
+
+    topology = _object(field_record.get("topology"), label="field.topology")
+    if topology != {"type": "Line2", "spatial_dimension": 1, "dof_per_node": 1}:
+        raise WorkbenchExecutionError("field topology is not the approved radial Line2 mesh")
+    field_mesh = _object(field_record.get("mesh"), label="field.mesh")
+    mesh_lengths = {
+        "radius_nodes_um": 2400,
+        "element_centers_um": 2399,
+        "connectivity": 2399,
+        "region_by_element": 2399,
+    }
+    for key, expected_length in mesh_lengths.items():
+        values = field_mesh.get(key)
+        if not isinstance(values, list) or len(values) != expected_length:
+            raise WorkbenchExecutionError(
+                f"field.mesh.{key} must contain {expected_length} entries"
+            )
+    for index, radius in enumerate(field_mesh["radius_nodes_um"]):
+        _number(radius, label=f"field.mesh.radius_nodes_um[{index}]")
+    for index, radius in enumerate(field_mesh["element_centers_um"]):
+        _number(radius, label=f"field.mesh.element_centers_um[{index}]")
+    for index, connection in enumerate(field_mesh["connectivity"]):
+        if connection != [index, index + 1]:
+            raise WorkbenchExecutionError("field.mesh.connectivity is not an ordered Line2 chain")
+    final_field = _validate_field_arrays(
+        field_record.get("final_field"), label="field.final_field"
+    )
+    if final_field.get("delta_temperature_K") != -400.0:
+        raise WorkbenchExecutionError("field.final_field must identify the final -400 K solve")
+    field_solver = _validate_solver(
+        field_record.get("solver"), label="field.solver", require_iteration=True
+    )
+    if field_solver != solver:
+        raise WorkbenchExecutionError("field.json and summary.json solver records differ")
+    field_comparison = _validate_comparison(
+        field_record.get("comparison"), label="field.comparison"
+    )
+    if field_comparison != comparison:
+        raise WorkbenchExecutionError("field.json and summary.json comparisons differ")
+
+    sweep = _object(field_record.get("load_sweep"), label="field.load_sweep")
+    if (
+        sweep.get("sweep_kind") != "independent_static_prescribed_load_cases"
+        or sweep.get("is_transient") is not False
+    ):
+        raise WorkbenchExecutionError(
+            "field load sweep must contain independent static CoupFE solves"
+        )
+    temperatures = sweep.get("delta_temperature_K")
+    steps = sweep.get("steps")
+    if (
+        temperatures != _EXPECTED_TEMPERATURE_STEPS
+        or not isinstance(steps, list)
+        or len(steps) != 9
+    ):
+        raise WorkbenchExecutionError("field load sweep must contain the nine approved load steps")
+    total_newton_iterations = 0
+    for index, step_value in enumerate(steps):
+        step = _object(step_value, label=f"field.load_sweep.steps[{index}]")
         if (
-            isinstance(expected, bool)
-            or not isinstance(expected, (int, float))
-            or not math.isclose(record[field], expected, rel_tol=0.0, abs_tol=tolerance)
+            step.get("step_index") != index
+            or step.get("delta_temperature_K") != _EXPECTED_TEMPERATURE_STEPS[index]
+            or step.get("solve_kind") != "independent_static_coupfe_solve"
+            or step.get("is_transient") is not False
         ):
             raise WorkbenchExecutionError(
-                f"TSV device evidence does not match the retained regression oracle for {field}"
+                f"field load step {index} is not an actual approved solve"
             )
-    return record
+        step_solver = _validate_solver(
+            step.get("solver"),
+            label=f"field.load_sweep.steps[{index}].solver",
+            require_iteration=index != 0,
+        )
+        total_newton_iterations += step_solver["newton_iterations"]
+        step_results = _object(
+            step.get("results"), label=f"field.load_sweep.steps[{index}].results"
+        )
+        for result_key in result_keys:
+            _number(
+                step_results.get(result_key),
+                label=f"field.load_sweep.steps[{index}].results.{result_key}",
+            )
+        _validate_comparison(
+            step.get("comparison"),
+            label=f"field.load_sweep.steps[{index}].comparison",
+            allow_zero_load=index == 0,
+        )
+        _validate_field_arrays(
+            step.get("field"), label=f"field.load_sweep.steps[{index}].field"
+        )
+
+    final_step = steps[-1]
+    if (
+        final_step.get("solver") != solver
+        or final_step.get("results") != results
+        or final_step.get("comparison") != comparison
+    ):
+        raise WorkbenchExecutionError(
+            "the final load step does not match the retained summary result"
+        )
+    final_step_field = _object(
+        final_step.get("field"), label="field.load_sweep.steps[8].field"
+    )
+    for key in ("radial_displacement_nm", "sigma_rr_MPa", "sigma_theta_MPa"):
+        if final_step_field.get(key) != final_field.get(key):
+            raise WorkbenchExecutionError(
+                "the final load-step field does not match field.final_field"
+            )
+
+    summary_sweep = _object(summary.get("load_sweep"), label="summary.load_sweep")
+    if (
+        summary_sweep.get("steps") != 9
+        or summary_sweep.get("kind") != "independent_static_prescribed_load_cases"
+        or summary_sweep.get("is_transient") is not False
+        or summary_sweep.get("delta_temperature_K") != _EXPECTED_TEMPERATURE_STEPS
+    ):
+        raise WorkbenchExecutionError("summary does not bind the nine actual field load steps")
+
+    return {
+        "claim_boundary": claim_boundary,
+        "eda_revision": provenance["eda_revision"],
+        "core_revision": provenance["core_revision"],
+        "sigma_rr_at_20um_MPa": float(results["sigma_rr_at_20um_MPa"]),
+        "lame_sigma_rr_at_20um_MPa": float(comparison["lame_sigma_rr_MPa"]),
+        "lame_relative_error": float(comparison["relative_error"]),
+        "degrees_of_freedom": 2400,
+        "elements": 2399,
+        "actual_load_steps": 9,
+        "newton_iterations": solver["newton_iterations"],
+        "total_load_sweep_newton_iterations": total_newton_iterations,
+    }
 
 
 def execute_approved_workflow(
@@ -180,7 +574,9 @@ def execute_approved_workflow(
     try:
         workflow = APPROVED_WORKFLOWS[executor_key]
     except KeyError as error:
-        raise WorkbenchExecutionError(f"unsupported workbench executor: {executor_key!r}") from error
+        raise WorkbenchExecutionError(
+            f"unsupported workbench executor: {executor_key!r}"
+        ) from error
 
     repository = (
         Path(repository_root).expanduser().resolve()
@@ -193,12 +589,11 @@ def execute_approved_workflow(
             f"approved workflow driver is unavailable: {workflow.driver}"
         )
     oracle_path = repository / workflow.oracle
-    try:
-        oracle = json.loads(oracle_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
+    if not oracle_path.is_file():
         raise WorkbenchExecutionError(
             f"approved workflow oracle is unavailable: {workflow.oracle}"
-        ) from error
+        )
+    oracle = _strict_json(oracle_path, label=workflow.oracle)
     if not isinstance(oracle, dict):
         raise WorkbenchExecutionError("approved workflow oracle must be a JSON object")
     identity = _repository_identity(repository)
@@ -208,7 +603,7 @@ def execute_approved_workflow(
     if not owned_root.is_dir():
         raise WorkbenchExecutionError("workbench run root is not a directory")
     run_dir = Path(
-        tempfile.mkdtemp(prefix="tsv-device-screening-", dir=owned_root)
+        tempfile.mkdtemp(prefix="tsv-axisymmetric-field-", dir=owned_root)
     ).resolve()
     if run_dir.parent != owned_root:
         raise WorkbenchExecutionError("workbench allocated an invalid run directory")
@@ -238,19 +633,29 @@ def execute_approved_workflow(
             f"approved workflow exited with status {completed.returncode}; retained output: {run_dir}"
         )
 
-    evidence_path = run_dir / "evidence.json"
+    summary_path = run_dir / "summary.json"
+    field_path = run_dir / "field.json"
+    results = _validate_tsv_axisymmetric_outputs(
+        _strict_json(summary_path, label="summary.json"),
+        _strict_json(field_path, label="field.json"),
+        oracle=oracle,
+        eda_identity=identity,
+    )
+
+    contour_path = run_dir / "contour.svg"
     try:
-        evidence = _validate_tsv_device_evidence(
-            json.loads(evidence_path.read_text(encoding="utf-8")),
-            oracle=oracle,
-        )
-    except (OSError, json.JSONDecodeError) as error:
-        raise WorkbenchExecutionError("approved workflow did not write valid evidence.json") from error
+        contour = contour_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        raise WorkbenchExecutionError(
+            "approved workflow did not write valid contour.svg"
+        ) from error
+    if "<svg" not in contour or "</svg>" not in contour or contour_path.stat().st_size == 0:
+        raise WorkbenchExecutionError("approved workflow did not write valid contour.svg")
 
     required_artifacts = (
-        "device_screening.csv",
-        "device_screening.svg",
-        "evidence.json",
+        "field.json",
+        "summary.json",
+        "contour.svg",
         "stdout.txt",
         "stderr.txt",
     )
@@ -278,7 +683,7 @@ def execute_approved_workflow(
         "started_at": started.isoformat(),
         "elapsed_seconds": elapsed,
         "source": identity,
-        "evidence": evidence,
+        "results": results,
         "artifacts": artifacts,
     }
     manifest_path = run_dir / "manifest.json"
@@ -333,10 +738,7 @@ class WorkbenchRunStore:
                 "executorKey": item.executor_key,
                 "label": item.label,
                 "driver": item.driver,
-                "claimBoundary": (
-                    "Synthetic identity-preserving integration demonstration; "
-                    "not experimental TSV, device-performance, or signoff validation."
-                ),
+                "claimBoundary": TSV_AXISYMMETRIC_CLAIM_BOUNDARY,
             }
             for item in APPROVED_WORKFLOWS.values()
         ]
@@ -416,7 +818,7 @@ class WorkbenchRunStore:
         public_result = {
             "elapsedSeconds": result["elapsed_seconds"],
             "source": result["source"],
-            "evidence": result["evidence"],
+            "results": result["results"],
             "artifacts": [
                 {
                     **artifact,
@@ -503,7 +905,9 @@ class WorkbenchRunStore:
             if record is None:
                 raise WorkbenchExecutionError(f"unknown workbench run: {run_id!r}")
             if record["status"] != "succeeded" or run_directory is None:
-                raise WorkbenchExecutionError("run artifacts are unavailable until the run succeeds")
+                raise WorkbenchExecutionError(
+                    "run artifacts are unavailable until the run succeeds"
+                )
             output = record.get("output", {})
             names = {artifact["name"] for artifact in output.get("artifacts", [])}
             names.add("manifest.json")

@@ -10,6 +10,7 @@
     "check:data": "node scripts/check-repository-data.mjs",
     "prepare:data": "npm run check:data && node scripts/prepare-repository-assets.mjs",
     "refresh:tsv": "node scripts/refresh-tsv-device-artifacts.mjs",
+    "refresh:media": "node scripts/refresh-simulation-media.mjs",
     "dev": "npm run prepare:data && vite --mode demo",
     "dev:api": "npm run prepare:data && vite --mode api",
     "build": "npm run prepare:data && tsc -b && vite build --mode demo",

@@ -102,7 +102,13 @@ def _write_svg(path, baseline, optimized, scorecard):
     scale = 7.4
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}">',
+        f'viewBox="0 0 {width} {height}" role="img" '
+        'aria-labelledby="figure-title figure-description">',
+        '<title id="figure-title">Synthetic TSV-to-device screening map</title>',
+        '<desc id="figure-description">Computed comparison of 32 project-authored synthetic '
+        'device sites before and after a deterministic channel-orientation screening action. '
+        'The Lamé far-field mobility proxy is an integration demonstration, not experimental '
+        'validation or a signoff keep-out zone.</desc>',
         '<rect width="100%" height="100%" fill="#091628"/>',
         '<style>text{font-family:Arial,sans-serif;fill:#dce7f5}.muted{fill:#92a4bb}'
         '.axis{stroke:#334965;stroke-width:1}.channel{stroke:#eef4fb;stroke-width:1.5}</style>',
