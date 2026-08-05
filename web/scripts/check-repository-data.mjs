@@ -418,6 +418,29 @@ equal(
 );
 equal(workflows.design_linked_solder_screening.command, "python examples/design_linked_solder_screening/run.py --check", "design-linked command");
 equal(workflows.design_linked_solder_screening.tier, "NumPy / SciPy / CoupFE", "design-linked tier");
+equal(site.solderComparison.baselineMediaId, "solder_3d_dissipation", "solder comparison baseline ID");
+equal(site.solderComparison.designLinkedMediaId, "design_linked_solder_screening", "solder comparison design-linked ID");
+close(site.solderComparison.baselineLDOverH, solder3d.expected.configuration.L_D_over_h, "solder comparison baseline L_D/h");
+close(site.solderComparison.designLinkedLDOverH, designLinked.expected.configuration.L_D_over_h, "solder comparison design-linked L_D/h");
+close(site.solderComparison.baselineShearRange, solder3d.expected.results.engineering_shear_range, "solder comparison baseline shear range");
+close(site.solderComparison.designLinkedShearRange, designLinked.expected.results.engineering_shear_range, "solder comparison design-linked shear range");
+close(site.solderComparison.baselinePeakDissipationMPa, solder3d.expected.results.dW_peak_MPa, "solder comparison baseline peak dissipation");
+close(site.solderComparison.designLinkedPeakDissipationMPa, designLinked.expected.results.dW_peak_MPa, "solder comparison design-linked peak dissipation");
+equal(
+  solder3d.expected.configuration.mesh_elements_xyz.join(","),
+  designLinked.expected.configuration.mesh_elements_xyz.join(","),
+  "solder comparison mesh alignment",
+);
+close(
+  solder3d.expected.input_provenance.representative_elastic_modulus_MPa,
+  designLinked.expected.input_provenance.representative_elastic_modulus_MPa,
+  "solder comparison elastic-modulus alignment",
+);
+close(
+  solder3d.expected.input_provenance.representative_poisson_ratio,
+  designLinked.expected.input_provenance.representative_poisson_ratio,
+  "solder comparison Poisson-ratio alignment",
+);
 
 const expectedTsv = await readJson(await requireFile(site.tsvScreening.expectedPath));
 const tsvCase = await readJson(

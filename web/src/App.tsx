@@ -9,6 +9,14 @@ const VIEWBOX_SIZE = 500;
 const FIELD_CENTER = VIEWBOX_SIZE / 2;
 const FIELD_RADIUS = 214;
 const NEAR_FIELD_RADIUS_UM = 60;
+const CHART = {
+  left: 54,
+  width: 500,
+  bottom: 238,
+  height: 190,
+  markerOvershoot: 6,
+  tickLength: 6,
+} as const;
 const POSITIVE_PALETTE = ["#6c8797", "#5c7a8e", "#4b6e84", "#3c617a", "#2e546f", "#25475f", "#1d3a50"];
 const NEGATIVE_PALETTE = ["#7e3f2c", "#8d4b31", "#98583a", "#9d6445", "#98705a", "#8c7868", "#737a7d"];
 const DIVERGING_PALETTE = ["#1f4d6b", "#3f6b82", "#607f8d", "#6f767a", "#8a6b53", "#985438", "#813d2d"];
@@ -24,7 +32,7 @@ const FIELD_OPTIONS: ReadonlyArray<{
 }> = [
   { id: "sigma_rr", label: "Radial stress", symbol: "σrr", unit: "MPa", location: "element center" },
   { id: "sigma_theta", label: "Hoop stress", symbol: "σθθ", unit: "MPa", location: "element center" },
-  { id: "radial_displacement", label: "Radial displacement", symbol: "ur", unit: "nm", location: "node" },
+  { id: "radial_displacement", label: "Radial displacement", symbol: "ur", unit: "nm", location: "element center · nodal average" },
 ];
 
 interface SolverRecord {
@@ -402,7 +410,7 @@ function parseHex(value: string): [number, number, number] {
   return [1, 3, 5].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16)) as [number, number, number];
 }
 
-function fieldColor(value: number, minimum: number, maximum: number): string {
+export function fieldColor(value: number, minimum: number, maximum: number): string {
   const palette = maximum <= 0
     ? NEGATIVE_PALETTE
     : minimum >= 0
@@ -419,7 +427,7 @@ function fieldColor(value: number, minimum: number, maximum: number): string {
   return `rgb(${channel(0)} ${channel(1)} ${channel(2)})`;
 }
 
-function interpolateAt(radius: number, coordinates: number[], values: number[]): number {
+export function interpolateAt(radius: number, coordinates: number[], values: number[]): number {
   if (radius <= coordinates[0]!) return values[0]!;
   if (radius >= coordinates.at(-1)!) return values.at(-1)!;
   let low = 0;
@@ -433,7 +441,7 @@ function interpolateAt(radius: number, coordinates: number[], values: number[]):
   return values[low]! + (values[high]! - values[low]!) * fraction;
 }
 
-function linePath(
+export function linePath(
   coordinates: number[],
   values: number[],
   minimumRadius: number,
@@ -448,12 +456,16 @@ function linePath(
   return samples
     .filter((_, index) => index % stride === 0 || index === samples.length - 1)
     .map(({ radius, value }, index) => {
-      const x = 54 + ((radius - minimumRadius) / (maximumRadius - minimumRadius)) * 500;
+      const x = CHART.left + ((radius - minimumRadius) / (maximumRadius - minimumRadius)) * CHART.width;
       const valueRange = maximumValue - minimumValue;
-      const y = 238 - ((value - minimumValue) / (valueRange || 1)) * 190;
+      const y = CHART.bottom - ((value - minimumValue) / (valueRange || 1)) * CHART.height;
       return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(" ");
+}
+
+function displacementAtElementCenter(field: FieldArrays, elementIndex: number): number {
+  return (field.radial_displacement_nm[elementIndex]! + field.radial_displacement_nm[elementIndex + 1]!) / 2;
 }
 
 function ConnectedRunControl({
@@ -594,17 +606,7 @@ export default function App({
   const siliconCenters = useMemo(() => bundle
     ? siliconElementIndices.map((index) => bundle.mesh.element_centers_um[index]!)
     : [], [bundle, siliconElementIndices]);
-  const siliconNodeIndices = useMemo(() => bundle
-    ? bundle.mesh.radius_nodes_um.flatMap((radius, index) => radius >= bundle.mesh.via_radius_um ? [index] : [])
-    : [], [bundle]);
-  const siliconNodeRadii = useMemo(() => bundle
-    ? siliconNodeIndices.map((index) => bundle.mesh.radius_nodes_um[index]!)
-    : [], [bundle, siliconNodeIndices]);
-  const siliconElementMinimum = siliconCenters[0] ?? siteData.tsvField.diameterUm / 2;
-  const siliconNodeMinimum = siliconNodeRadii[0] ?? siteData.tsvField.diameterUm / 2;
-  const probeMinimum = fieldQuantity === "radial_displacement"
-    ? siliconNodeMinimum
-    : siliconElementMinimum;
+  const probeMinimum = siliconCenters[0] ?? siteData.tsvField.diameterUm / 2;
 
   useEffect(() => {
     setProbeRadius((current) => Math.min(viewRadius, Math.max(probeMinimum, current)));
@@ -619,9 +621,9 @@ export default function App({
       if (fieldQuantity === "sigma_theta") {
         return siliconElementIndices.map((index) => field.sigma_theta_MPa[index]!);
       }
-      return siliconNodeIndices.map((index) => field.radial_displacement_nm[index]!);
+      return siliconElementIndices.map((index) => displacementAtElementCenter(field, index));
     });
-  }, [bundle, fieldQuantity, siliconElementIndices, siliconNodeIndices]);
+  }, [bundle, fieldQuantity, siliconElementIndices]);
 
   const fieldRange = useMemo(() => {
     const minimum = Math.min(0, ...allFieldValues);
@@ -631,10 +633,17 @@ export default function App({
       : { minimum, maximum };
   }, [allFieldValues]);
 
+  const maxAbsDisplacementByStep = useMemo(() => bundle
+    ? bundle.load_sweep.steps.map(({ field }) => field.radial_displacement_nm.reduce(
+      (maximum, value) => Math.max(maximum, Math.abs(value)),
+      0,
+    ))
+    : [], [bundle]);
+
   const fieldValueAtElement = useCallback((field: FieldArrays, index: number) => {
     if (fieldQuantity === "sigma_rr") return field.sigma_rr_MPa[index]!;
     if (fieldQuantity === "sigma_theta") return field.sigma_theta_MPa[index]!;
-    return (field.radial_displacement_nm[index]! + field.radial_displacement_nm[index + 1]!) / 2;
+    return displacementAtElementCenter(field, index);
   }, [fieldQuantity]);
 
   const rings = useMemo(() => {
@@ -682,20 +691,20 @@ export default function App({
   const siliconSigmaTheta = bundle && step
     ? siliconElementIndices.map((index) => step.field.sigma_theta_MPa[index]!)
     : [];
-  const siliconDisplacement = bundle && step
-    ? siliconNodeIndices.map((index) => step.field.radial_displacement_nm[index]!)
+  const siliconDisplacementAtCenters = bundle && step
+    ? siliconElementIndices.map((index) => displacementAtElementCenter(step.field, index))
     : [];
   const probe = bundle && step ? {
     sigmaRr: interpolateAt(probeRadius, siliconCenters, siliconSigmaRr),
     sigmaTheta: interpolateAt(probeRadius, siliconCenters, siliconSigmaTheta),
-    displacement: interpolateAt(probeRadius, siliconNodeRadii, siliconDisplacement),
+    displacement: interpolateAt(probeRadius, siliconCenters, siliconDisplacementAtCenters),
   } : null;
-  const seriesCoordinates = fieldQuantity === "radial_displacement" ? siliconNodeRadii : siliconCenters;
+  const seriesCoordinates = siliconCenters;
   const seriesValues = fieldQuantity === "sigma_rr"
     ? siliconSigmaRr
     : fieldQuantity === "sigma_theta"
       ? siliconSigmaTheta
-      : siliconDisplacement;
+      : siliconDisplacementAtCenters;
   const selectedProbeValue = fieldQuantity === "sigma_rr"
     ? probe?.sigmaRr
     : fieldQuantity === "sigma_theta"
@@ -711,17 +720,20 @@ export default function App({
       fieldRange.maximum,
     )
     : "";
+  const chartRight = CHART.left + CHART.width;
+  const chartTop = CHART.bottom - CHART.height;
+  const chartMarkerTop = chartTop - CHART.markerOvershoot;
   const queryX = bundle
-    ? 54 + ((siteData.tsvField.queryRadiusUm - probeMinimum) / (viewRadius - probeMinimum)) * 500
+    ? CHART.left + ((siteData.tsvField.queryRadiusUm - probeMinimum) / (viewRadius - probeMinimum)) * CHART.width
     : 0;
   const queryFe = step ? step.comparison.fe_sigma_rr_MPa : 0;
   const queryLame = step ? step.comparison.lame_sigma_rr_MPa : 0;
   const chartY = (value: number) =>
-    238 - ((value - fieldRange.minimum) / (fieldRange.maximum - fieldRange.minimum)) * 190;
+    CHART.bottom - ((value - fieldRange.minimum) / (fieldRange.maximum - fieldRange.minimum)) * CHART.height;
   const queryFeY = chartY(queryFe);
   const queryLameY = chartY(queryLame);
-  const probeX = 54 + ((probeRadius - probeMinimum) / (viewRadius - probeMinimum)) * 500;
-  const probeY = selectedProbeValue === undefined ? 238 : chartY(selectedProbeValue);
+  const probeX = CHART.left + ((probeRadius - probeMinimum) / (viewRadius - probeMinimum)) * CHART.width;
+  const probeY = selectedProbeValue === undefined ? CHART.bottom : chartY(selectedProbeValue);
   const visibleSeries = seriesValues.filter((_, index) => seriesCoordinates[index]! <= viewRadius);
   const currentMinimum = visibleSeries.length ? Math.min(...visibleSeries) : 0;
   const currentMaximum = visibleSeries.length ? Math.max(...visibleSeries) : 0;
@@ -790,27 +802,27 @@ export default function App({
               <div className="field-profile-chart">
                 <svg viewBox="0 0 600 310" role="img" aria-label={activeField.label + " profile at delta temperature " + step.delta_temperature_K + " kelvin"}>
                 {[0, .25, .5, .75, 1].map((fraction) => {
-                  const y = 238 - fraction * 190;
+                  const y = CHART.bottom - fraction * CHART.height;
                   const value = fieldRange.minimum + fraction * (fieldRange.maximum - fieldRange.minimum);
-                  return <g key={fraction}><line x1="54" y1={y} x2="554" y2={y} /><text x="44" y={y + 4} textAnchor="end">{value.toFixed(0)}</text></g>;
+                  return <g key={fraction}><line x1={CHART.left} y1={y} x2={chartRight} y2={y} /><text x={CHART.left - 10} y={y + 4} textAnchor="end">{value.toFixed(0)}</text></g>;
                 })}
                 {[0, .25, .5, .75, 1].map((fraction) => {
-                  const x = 54 + fraction * 500;
+                  const x = CHART.left + fraction * CHART.width;
                   const radius = probeMinimum + fraction * (viewRadius - probeMinimum);
-                  return <g key={fraction}><line x1={x} y1="238" x2={x} y2="244" className="field-axis" /><text x={x} y="260" textAnchor="middle">{radius.toFixed(0)}</text></g>;
+                  return <g key={fraction}><line x1={x} y1={CHART.bottom} x2={x} y2={CHART.bottom + CHART.tickLength} className="field-axis" /><text x={x} y={CHART.bottom + 22} textAnchor="middle">{radius.toFixed(0)}</text></g>;
                 })}
-                {fieldRange.minimum < 0 && fieldRange.maximum > 0 && <line x1="54" y1={chartY(0)} x2="554" y2={chartY(0)} className="field-zero-line" />}
-                <line x1="54" y1="238" x2="554" y2="238" className="field-axis" />
-                <line x1="54" y1="42" x2="54" y2="238" className="field-axis" />
+                {fieldRange.minimum < 0 && fieldRange.maximum > 0 && <line x1={CHART.left} y1={chartY(0)} x2={chartRight} y2={chartY(0)} className="field-zero-line" />}
+                <line x1={CHART.left} y1={CHART.bottom} x2={chartRight} y2={CHART.bottom} className="field-axis" />
+                <line x1={CHART.left} y1={chartMarkerTop} x2={CHART.left} y2={CHART.bottom} className="field-axis" />
                 <path d={chartPath} className="field-profile-line" />
-                <line x1={probeX} y1="42" x2={probeX} y2="238" className="field-probe-line" />
+                <line x1={probeX} y1={chartMarkerTop} x2={probeX} y2={CHART.bottom} className="field-probe-line" />
                 <circle cx={probeX} cy={probeY} r="4" className="field-probe-point" />
-                {fieldQuantity === "sigma_rr" && queryX >= 54 && queryX <= 554 && <>
-                  <line x1={queryX} y1="42" x2={queryX} y2="238" className="field-query-line" />
+                {fieldQuantity === "sigma_rr" && queryX >= CHART.left && queryX <= chartRight && <>
+                  <line x1={queryX} y1={chartMarkerTop} x2={queryX} y2={CHART.bottom} className="field-query-line" />
                   <circle cx={queryX} cy={queryFeY} r="5" className="field-fe-point" />
                   <path d={"M" + (queryX - 6) + "," + queryLameY + " h12 M" + queryX + "," + (queryLameY - 6) + " v12"} className="field-lame-point" />
                 </>}
-                <text x="304" y="294" textAnchor="middle">radius r (µm)</text>
+                <text x={CHART.left + CHART.width / 2} y={CHART.bottom + 56} textAnchor="middle">radius r (µm)</text>
                 <text x="14" y="24">{activeField.symbol} ({activeField.unit})</text>
                 </svg>
               </div>
@@ -866,7 +878,7 @@ export default function App({
                 <div><dt>Probe radius</dt><dd>{probeRadius.toFixed(2)} µm</dd></div>
                 <div><dt>σrr</dt><dd>{probe?.sigmaRr.toFixed(3)} MPa</dd></div>
                 <div><dt>σθθ</dt><dd>{probe?.sigmaTheta.toFixed(3)} MPa</dd></div>
-                <div><dt>ur</dt><dd>{probe?.displacement.toFixed(3)} nm</dd></div>
+                <div><dt>ur (center avg.)</dt><dd>{probe?.displacement.toFixed(3)} nm</dd></div>
               </dl>
               <label className="field-probe-slider">
                 <span>Silicon probe radius</span>
@@ -904,7 +916,7 @@ export default function App({
                     <th scope="col">σrr FE @ 20 µm (MPa)</th>
                     <th scope="col">Lamé (MPa)</th>
                     <th scope="col">Difference (%)</th>
-                    <th scope="col">max |ur| (nm)</th>
+                    <th scope="col">max nodal |ur| (nm)</th>
                     <th scope="col">Newton</th>
                     <th scope="col">Final relative residual</th>
                   </tr>
@@ -917,7 +929,7 @@ export default function App({
                       <td>{item.comparison.fe_sigma_rr_MPa.toFixed(4)}</td>
                       <td>{item.comparison.lame_sigma_rr_MPa.toFixed(4)}</td>
                       <td>{item.comparison.relative_error === null ? "—" : (item.comparison.relative_error * 100).toFixed(4)}</td>
-                      <td>{Math.max(...item.field.radial_displacement_nm.map((value) => Math.abs(value))).toFixed(4)}</td>
+                      <td>{maxAbsDisplacementByStep[index]!.toFixed(4)}</td>
                       <td>{item.solver.newton_iterations}</td>
                       <td>{item.solver.final_relative_residual.toExponential(3)}</td>
                     </tr>

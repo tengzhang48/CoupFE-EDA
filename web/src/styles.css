@@ -308,7 +308,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
   gap: 6px;
   color: var(--field-muted);
   font-family: var(--font-geist-mono);
-  font-size: 9px;
+  font-size: 11px;
   text-align: center;
 }
 .field-colorbar i {
@@ -327,7 +327,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
 }
 .field-probe div { min-width: 0; padding: 9px 10px; border-right: 1px solid var(--field-line); }
 .field-probe div:last-child { border-right: 0; }
-.field-probe dt { color: var(--field-muted); font-size: 10px; }
+.field-probe dt { color: var(--field-muted); font-size: 11px; }
 .field-probe dd { margin: 5px 0 0; font-family: var(--font-geist-mono); font-size: 11px; }
 .field-probe-slider {
   display: grid;
@@ -363,7 +363,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
   justify-content: space-between;
   color: var(--field-muted);
   font-family: var(--font-geist-mono);
-  font-size: 9px;
+  font-size: 11px;
 }
 .field-step-labels span:first-child::after,
 .field-step-labels span:last-child::after { content: " K"; }
@@ -389,7 +389,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
 .field-output-table td { padding: 8px 10px; border-right: 1px solid #e1e5e8; border-bottom: 1px solid #dce1e4; text-align: right; white-space: nowrap; }
 .field-output-table th:last-child,
 .field-output-table td:last-child { border-right: 0; }
-.field-output-table thead th { background: #f4f6f7; color: #475661; font-family: var(--font-geist-sans); font-size: 10px; font-weight: 650; }
+.field-output-table thead th { background: #f4f6f7; color: #475661; font-family: var(--font-geist-sans); font-size: 11px; font-weight: 650; }
 .field-output-table thead th:first-child,
 .field-output-table tbody th { text-align: center; }
 .field-output-table tbody tr:last-child th,
@@ -422,7 +422,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
   border-width: 0 1px 1px 0;
   background: var(--field-panel);
 }
-.field-metrics span, .field-metrics small { display: block; color: var(--field-muted); font-size: 10px; }
+.field-metrics span, .field-metrics small { display: block; color: var(--field-muted); font-size: 11px; }
 .field-metrics strong { display: block; margin: 6px 0 4px; font-family: var(--font-geist-mono); font-size: 13px; overflow-wrap: anywhere; }
 
 .field-evidence {
@@ -444,7 +444,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
   background: #ffffff;
   color: var(--field-accent);
   font-family: var(--font-geist-mono);
-  font-size: 10px;
+  font-size: 11px;
   text-decoration: none;
 }
 .field-evidence a:hover { background: var(--field-accent-soft); }

@@ -222,6 +222,16 @@
       "evidencePath": "web/contracts/retained-tsv-artifacts.json"
     }
   ],
+  "solderComparison": {
+    "baselineMediaId": "solder_3d_dissipation",
+    "designLinkedMediaId": "design_linked_solder_screening",
+    "baselineLDOverH": 6.0,
+    "designLinkedLDOverH": 0.848528137424,
+    "baselineShearRange": 0.014256,
+    "designLinkedShearRange": 0.00201610285452,
+    "baselinePeakDissipationMPa": 0.389021354837,
+    "designLinkedPeakDissipationMPa": 0.0111335154369
+  },
   "tsvScreening": {
     "nDevices": 32,
     "threshold": 0.05,

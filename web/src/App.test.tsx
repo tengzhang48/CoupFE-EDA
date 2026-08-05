@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import siteData from "../site-data.json";
-import App, { validateTsvFieldBundle } from "./App";
+import App, { fieldColor, interpolateAt, linePath, validateTsvFieldBundle } from "./App";
 import type { CoupFEBackend } from "./backend/interface";
 import type { ProjectSnapshot, RunRecord } from "./domain/types";
 
@@ -139,6 +139,38 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("field visualization helpers", () => {
+  it("selects and interpolates palettes while clamping range boundaries", () => {
+    expect(fieldColor(-1, 0, 10)).toBe("rgb(108 135 151)");
+    expect(fieldColor(11, 0, 10)).toBe("rgb(29 58 80)");
+    expect(fieldColor(0.5, 0, 6)).toBe("rgb(100 129 147)");
+    expect(fieldColor(0, -10, 0)).toBe("rgb(115 122 125)");
+    expect(fieldColor(0, -10, 10)).toBe("rgb(111 118 122)");
+  });
+
+  it("interpolates interior samples and clamps both coordinate boundaries", () => {
+    const coordinates = [10, 20, 40];
+    const values = [1, 3, 11];
+    expect(interpolateAt(5, coordinates, values)).toBe(1);
+    expect(interpolateAt(10, coordinates, values)).toBe(1);
+    expect(interpolateAt(15, coordinates, values)).toBe(2);
+    expect(interpolateAt(30, coordinates, values)).toBe(7);
+    expect(interpolateAt(40, coordinates, values)).toBe(11);
+    expect(interpolateAt(50, coordinates, values)).toBe(11);
+  });
+
+  it("keeps line-path boundaries and the final point during stride decimation", () => {
+    expect(linePath([0, 1, 2, 3], [0, 1, 2, 3], 1, 2, 0, 3))
+      .toBe("M54.00,174.67 L554.00,111.33");
+
+    const coordinates = Array.from({ length: 441 }, (_, index) => index);
+    const points = linePath(coordinates, coordinates, 0, 440, 0, 440).split(" ");
+    expect(points).toHaveLength(148);
+    expect(points[0]).toBe("M54.00,238.00");
+    expect(points.at(-1)).toBe("L554.00,48.00");
+  });
+});
+
 describe("real CoupFE field explorer", () => {
   it("loads arrays and exposes the retained-run boundary", async () => {
     mockFieldFetch();
@@ -191,6 +223,7 @@ describe("real CoupFE field explorer", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Radial displacement/ }));
     expect(screen.getByRole("heading", { name: "Radial displacement versus radius" })).toBeInTheDocument();
+    expect(screen.getByText(/element center · nodal average values/i)).toBeInTheDocument();
     expect(screen.getByText(/Visible minimum/).closest("div")).toHaveTextContent("nm");
     expect(container.querySelector(".field-colorbar i")).toHaveClass("is-negative");
   });

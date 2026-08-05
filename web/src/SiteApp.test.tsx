@@ -60,6 +60,12 @@ describe("public CoupFE-EDA site", () => {
       expect(within(card!).getByRole("link", { name: "SHA-256 record" })).toHaveAttribute("href", expect.stringContaining(media.evidencePath));
       expect(within(card!).getByText("Claim boundary")).toBeInTheDocument();
     }
+    const designLinkedCard = screen.getByRole("heading", { name: "Design-linked solder response" }).closest("article");
+    const comparisonNote = within(designLinkedCard!).getByRole("note");
+    expect(comparisonNote).toHaveTextContent("Why this field is lower");
+    expect(comparisonNote).toHaveTextContent("L_D/h is 0.8485 versus 6.0");
+    expect(comparisonNote).toHaveTextContent("same 3 × 3 × 2 mesh and SAC305 material model");
+    expect(comparisonNote).toHaveTextContent("about 34.9× lower peak dissipation");
     expect(screen.getByText(/not stock imagery or AI-generated concepts/i)).toBeInTheDocument();
   });
 

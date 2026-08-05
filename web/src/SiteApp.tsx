@@ -74,6 +74,9 @@ function WorkflowCard({ workflow, kind, displayIndex }: { workflow: Workflow; ki
 }
 
 function SimulationMediaCard({ media }: { media: SimulationMedia }) {
+  const comparison = siteData.solderComparison;
+  const isDesignLinkedSolder = media.id === comparison.designLinkedMediaId;
+  const peakRatio = comparison.baselinePeakDissipationMPa / comparison.designLinkedPeakDissipationMPa;
   return (
     <article className="site-media-card">
       <figure>
@@ -87,6 +90,15 @@ function SimulationMediaCard({ media }: { media: SimulationMedia }) {
           <strong>{media.result}</strong>
           <span>{media.detail}</span>
         </div>
+        {isDesignLinkedSolder && (
+          <div className="site-media-comparison" role="note">
+            <strong>Why this field is lower</strong>
+            <span>
+              L_D/h is {comparison.designLinkedLDOverH.toFixed(4)} versus {comparison.baselineLDOverH.toFixed(1)}
+              {` in the other solder view. With the same 3 × 3 × 2 mesh and SAC305 material model, the lower ratio produces lower shear (${comparison.designLinkedShearRange.toFixed(6)} versus ${comparison.baselineShearRange.toFixed(6)}) and about ${peakRatio.toFixed(1)}× lower peak dissipation.`}
+            </span>
+          </div>
+        )}
         <Boundary compact>{media.boundary}</Boundary>
         <nav className="site-inline-links" aria-label={`${media.title} evidence`}>
           <a href={publicAsset(media.asset)}>Open SVG</a>
