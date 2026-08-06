@@ -1,7 +1,6 @@
 import App from "./App";
 import { createBackend } from "./backend/factory";
 import siteData from "../site-data.json";
-import { useEffect, useState } from "react";
 
 type Workflow = (typeof siteData.workflows)[number];
 type WorkflowKind = "integration" | "verification";
@@ -12,23 +11,6 @@ const repositoryFile = (sourcePath: string) =>
 
 const publicAsset = (assetPath: string) =>
   `${import.meta.env.BASE_URL}${assetPath.replace(/^\//, "")}`;
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(() =>
-    typeof window.matchMedia === "function"
-      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      : false,
-  );
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(query.matches);
-    update();
-    query.addEventListener?.("change", update);
-    return () => query.removeEventListener?.("change", update);
-  }, []);
-  return reduced;
-}
 
 function Mark() {
   return <span className="site-mark" aria-hidden="true"><i /><i /><i /></span>;
@@ -105,6 +87,51 @@ function ProcessDiagram() {
       </section>
 
       <figcaption id="process-map-caption">{siteData.process.summary}</figcaption>
+    </figure>
+  );
+}
+
+function HeroResult() {
+  const field = siteData.tsvField;
+  return (
+    <figure
+      className="site-hero-result"
+      aria-labelledby="hero-result-title"
+      aria-describedby="hero-result-caption hero-result-scope"
+    >
+      <header>
+        <div>
+          <span>Actual CoupFE output</span>
+          <strong id="hero-result-title">Solver-derived TSV stress field</strong>
+        </div>
+        <a href={publicAsset(field.contourAsset)}>Open full figure <span aria-hidden="true">↗</span></a>
+      </header>
+      <a
+        className="site-hero-result-visual"
+        href={publicAsset(field.contourAsset)}
+        aria-label="Open the complete solver-derived TSV contour"
+      >
+        <svg
+          viewBox="0 160 580 418"
+          role="img"
+          aria-labelledby="hero-field-title hero-field-description"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <title id="hero-field-title">Axisymmetric TSV radial stress field</title>
+          <desc id="hero-field-description">
+            Cropped view of the retained radial stress reconstruction around the copper and silicon interface. The complete figure also contains the fixed color scale, recovered stress profiles, and Lamé comparison.
+          </desc>
+          <image href={publicAsset(field.contourAsset)} width="1200" height="720" />
+        </svg>
+      </a>
+      <figcaption id="hero-result-caption">
+        <strong>{field.diameterUm} µm TSV · σrr({field.queryRadiusUm} µm) = {field.sigmaRrAtQueryMpa.toFixed(3)} MPa</strong>
+        <span>{field.relativeErrorPercent.toFixed(4)}% from the declared Lamé reference · {field.degreesOfFreedom.toLocaleString()} DOFs · {field.loadSteps} static solves</span>
+      </figcaption>
+      <div className="site-hero-result-scope" id="hero-result-scope" role="note">
+        <span>Scope</span>
+        <p><strong>Measured-device comparison: not performed.</strong> Axisymmetric plane-strain component verification; not a finite-depth 3-D model, transient simulation, or experimental result.</p>
+      </div>
     </figure>
   );
 }
@@ -193,7 +220,6 @@ function ScalingFigure() {
 }
 
 function PublicSite() {
-  const prefersReducedMotion = usePrefersReducedMotion();
   const firstMedian = siteData.scaling.medianSeconds[0]!;
   const lastMedian = siteData.scaling.medianSeconds.at(-1)!;
   const firstRank = siteData.scaling.ranks[0]!;
@@ -252,28 +278,18 @@ function PublicSite() {
         <section className="site-hero">
           <div className="site-hero-copy">
             <p className="site-kicker"><span /> Open research software · built on CoupFE</p>
-            <h1>EDA-aware multiphysics, from design inputs to reviewable evidence.</h1>
+            <h1>EDA-aware multiphysics, with results you can inspect.</h1>
             <p className="site-lede">
-              CoupFE-EDA connects stable design identities and generated analysis representations
-              to documented electrical, thermal, mechanical, and reliability workflows. The public
-              repository provides runnable research examples and retained evidence records; it does
-              not establish real-device accuracy, predictive package life, manufacturing qualification,
-              or EDA signoff.
+              CoupFE-EDA carries stable design identities into documented electrical, thermal,
+              mechanical, and reliability analyses. Runnable examples retain field arrays, solver
+              telemetry, reference checks, and explicit model limits for review.
             </p>
             <div className="site-hero-actions">
-              <a className="site-primary-link" href="#how-it-works">See how it works <span>↓</span></a>
+              <a className="site-primary-link" href={`${import.meta.env.BASE_URL}?surface=workbench`}>Explore retained field <span>→</span></a>
               <a className="site-secondary-link" href={siteData.repository.url}>View source on GitHub <span>↗</span></a>
             </div>
           </div>
-          <aside className="site-hero-panel">
-            <div className="site-hero-panel-head"><span>Current public record</span><b>{siteData.recordDate}</b></div>
-            <dl>
-              <div><dt>Guided workflows</dt><dd>{siteData.workflows.length}<small>runners and retained oracles</small></dd></div>
-              <div><dt>Retained benchmark</dt><dd>{siteData.scaling.ndof.toLocaleString()}<small>degrees of freedom</small></dd></div>
-              <div><dt>Measured-device comparison</dt><dd className="site-record-status">Not performed<small>No experimental qualification claim</small></dd></div>
-            </dl>
-            <Boundary>{siteData.projectBoundary}</Boundary>
-          </aside>
+          <HeroResult />
         </section>
 
         <section className="site-process site-section" id="how-it-works">
@@ -290,22 +306,19 @@ function PublicSite() {
             <figure className="site-feature-player">
               <video
                 src={publicAsset(siteData.tsvField.videoAsset)}
-                poster={publicAsset(siteData.tsvField.contourAsset)}
                 aria-describedby="tsv-load-sweep-caption"
-                autoPlay={!prefersReducedMotion}
                 controls
-                loop={!prefersReducedMotion}
                 muted
                 playsInline
-                preload="metadata"
+                preload="auto"
               />
               <figcaption id="tsv-load-sweep-caption"><strong>{siteData.tsvField.caseId}</strong><span>{siteData.tsvField.videoInterpretation}</span></figcaption>
             </figure>
             <a href={publicAsset(siteData.tsvField.contourAsset)}>Open solver-derived contour <span>↗</span></a>
           </div>
           <div className="site-feature-copy">
-            <p className="site-kicker"><span /> Retained CoupFE field · raw arrays included</p>
-            <div className="site-feature-title"><h2>A stress field generated by the package, not a concept image</h2><span>Actual solver output</span></div>
+            <p className="site-kicker"><span /> Evidence behind the field · raw arrays included</p>
+            <div className="site-feature-title"><h2>Inspect the run behind the field</h2><span>Retained evidence</span></div>
             <p>
               The named reference runner solves a {siteData.tsvField.diameterUm} µm copper TSV under
               {` ${siteData.tsvField.deltaTemperatureK} K`} prescribed cooling with CoupFE Core. The retained
@@ -318,8 +331,8 @@ function PublicSite() {
             <div className="site-feature-metrics">
               <article><span>Radial stress at r = {siteData.tsvField.queryRadiusUm} µm</span><strong>{siteData.tsvField.sigmaRrAtQueryMpa.toFixed(2)} MPa</strong></article>
               <article><span>Difference from declared Lamé reference</span><strong>{siteData.tsvField.relativeErrorPercent.toFixed(4)}%</strong></article>
-              <article><span>Mesh / unknowns</span><strong>{siteData.tsvField.elements.toLocaleString()} / {siteData.tsvField.degreesOfFreedom.toLocaleString()}</strong></article>
-              <article><span>Accepted load states</span><strong>{siteData.tsvField.loadSteps} actual solves</strong></article>
+              <article><span>Mesh / DOFs</span><strong>{siteData.tsvField.elements.toLocaleString()} / {siteData.tsvField.degreesOfFreedom.toLocaleString()}</strong></article>
+              <article><span>Accepted load states</span><strong>{siteData.tsvField.loadSteps} independent solves</strong></article>
             </div>
             <Boundary>{siteData.tsvField.claimBoundary}</Boundary>
             <nav className="site-inline-links" aria-label="Axisymmetric TSV field evidence">
