@@ -12,6 +12,11 @@ const repositoryFile = (sourcePath: string) =>
 const publicAsset = (assetPath: string) =>
   `${import.meta.env.BASE_URL}${assetPath.replace(/^\//, "")}`;
 
+export function formatSignedPercent(value: number, fractionDigits: number) {
+  const sign = value < 0 ? "−" : "+";
+  return `${sign}${Math.abs(value).toFixed(fractionDigits)}%`;
+}
+
 function Mark() {
   return <span className="site-mark" aria-hidden="true"><i /><i /><i /></span>;
 }
@@ -162,41 +167,161 @@ function WorkflowCard({ workflow, kind, displayIndex }: { workflow: Workflow; ki
   );
 }
 
-function SimulationMediaCard({ media }: { media: SimulationMedia }) {
-  const comparison = siteData.solderComparison;
-  const isDesignLinkedSolder = media.id === comparison.designLinkedMediaId;
-  const peakRatio = comparison.baselinePeakDissipationMPa / comparison.designLinkedPeakDissipationMPa;
+function SimulationEvidenceLinks({
+  media,
+  assetLabel = "Generated SVG",
+  downloadAsset = false,
+}: {
+  media: SimulationMedia;
+  assetLabel?: string;
+  downloadAsset?: boolean;
+}) {
   return (
-    <article className="site-media-card">
-      <figure>
-        <img src={publicAsset(media.asset)} alt={media.alt} loading="lazy" />
-        <figcaption>{media.eyebrow}</figcaption>
-      </figure>
-      <div className="site-media-card-copy">
-        <header><span>{media.eyebrow}</span><h3>{media.title}</h3></header>
-        <p>{media.summary}</p>
-        <div className="site-result-strip">
-          <strong>{media.result}</strong>
-          <span>{media.detail}</span>
-        </div>
-        {isDesignLinkedSolder && (
-          <div className="site-media-comparison" role="note">
-            <strong>Why this field is lower</strong>
-            <span>
-              L_D/h is {comparison.designLinkedLDOverH.toFixed(4)} versus {comparison.baselineLDOverH.toFixed(1)}
-              {` in the other solder view. With the same 3 × 3 × 2 mesh and SAC305 material model, the lower ratio produces lower shear (${comparison.designLinkedShearRange.toFixed(6)} versus ${comparison.baselineShearRange.toFixed(6)}) and about ${peakRatio.toFixed(1)}× lower peak dissipation.`}
-            </span>
+    <nav className="site-inline-links" aria-label={`${media.title} evidence`}>
+      <a href={publicAsset(media.asset)} download={downloadAsset || undefined}>{assetLabel}</a>
+      <SourceLink path={media.runnerPath}>Runner</SourceLink>
+      <SourceLink path={media.resultPath}>Oracle</SourceLink>
+      <SourceLink path={media.evidencePath}>SHA-256 record</SourceLink>
+    </nav>
+  );
+}
+
+function EtvComparisonResult() {
+  const comparison = siteData.etvComparison;
+  const media = siteData.simulationMedia.find((candidate) => candidate.id === comparison.mediaId);
+  if (!media) throw new Error(`Missing ETV simulation media ${comparison.mediaId}`);
+  const energyScaleMaximumMPa = 0.8;
+  const cases = [
+    {
+      id: "slow",
+      label: "Slow cycle",
+      period: `${comparison.slow.periodSeconds.toLocaleString()} s period`,
+      quasisteady: comparison.slow.quasisteadyEnergyMPa,
+      transient: comparison.slow.lumpedTransientEnergyMPa,
+      difference: comparison.slow.relativeDifferencePercent,
+    },
+    {
+      id: "fast",
+      label: "Fast cycle",
+      period: `${comparison.fast.periodSeconds.toLocaleString()} s period`,
+      quasisteady: comparison.fast.quasisteadyEnergyMPa,
+      transient: comparison.fast.lumpedTransientEnergyMPa,
+      difference: comparison.fast.relativeDifferencePercent,
+    },
+  ];
+  const widthFor = (value: number) => `${(value / energyScaleMaximumMPa) * 100}%`;
+  const temperatureLabel = (value: number) => value < 0 ? `−${Math.abs(value)}` : `${value}`;
+  const temperatureScaleMaximumC = 160;
+
+  return (
+    <article className="site-etv-result" aria-labelledby="etv-result-title">
+      <div className="site-etv-plot">
+        <header>
+          <div><span>Checked solver output · {comparison.caseId}</span><strong id="etv-result-title">Partitioned SAC305 ETV comparison</strong></div>
+          <p>{comparison.mesh} · {comparison.cycles} cycles · {comparison.incrementsPerCycle} increments/cycle</p>
+        </header>
+        <figure aria-labelledby="etv-plot-title" aria-describedby="etv-plot-caption">
+          <figcaption>
+            <strong id="etv-plot-title">{comparison.energyQuantity}</strong>
+            <span id="etv-plot-caption">Increment-summed, equal-volume top-layer Gauss-point mean · 1 {comparison.energyUnit} = 1 MJ/m³</span>
+          </figcaption>
+          <div className="site-etv-legend" aria-hidden="true"><span><i /> Quasisteady</span><span><i /> Lumped transient</span></div>
+          <div className="site-etv-axis" aria-hidden="true"><span>0</span><span>0.2</span><span>0.4</span><span>0.6</span><span>0.8 MPa</span></div>
+          <div className="site-etv-cases">
+            {cases.map((entry) => (
+              <section className={`site-etv-case site-etv-case-${entry.id}`} key={entry.id}>
+                <header><div><strong>{entry.label}</strong><span>{entry.period}</span></div><b>{formatSignedPercent(entry.difference, entry.id === "slow" ? 4 : 2)}</b></header>
+                <div
+                  className="site-etv-measures"
+                  role="img"
+                  aria-label={`${entry.label}, ${entry.period}: quasisteady ${entry.quasisteady.toFixed(6)} MPa; lumped transient ${entry.transient.toFixed(6)} MPa; relative difference ${entry.difference.toFixed(4)} percent`}
+                >
+                  <div><span>Quasisteady</span><i aria-hidden="true"><b style={{ width: widthFor(entry.quasisteady) }} /></i><strong>{entry.quasisteady.toFixed(6)}</strong></div>
+                  <div><span>Lumped transient</span><i aria-hidden="true"><b style={{ width: widthFor(entry.transient) }} /></i><strong>{entry.transient.toFixed(6)}</strong></div>
+                </div>
+              </section>
+            ))}
           </div>
-        )}
-        <Boundary compact>{media.boundary}</Boundary>
-        <nav className="site-inline-links" aria-label={`${media.title} evidence`}>
-          <a href={publicAsset(media.asset)}>Open SVG</a>
-          <SourceLink path={media.runnerPath}>Runner</SourceLink>
-          <SourceLink path={media.resultPath}>Oracle</SourceLink>
-          <SourceLink path={media.evidencePath}>SHA-256 record</SourceLink>
-        </nav>
+          <section className="site-etv-temperature" aria-labelledby="etv-temperature-title">
+            <header><div><strong id="etv-temperature-title">Fast-cycle peak temperature</strong><span>{comparison.fast.periodSeconds.toLocaleString()} s period</span></div><b>0–{temperatureScaleMaximumC} °C scale</b></header>
+            <div
+              className="site-etv-measures"
+              role="img"
+              aria-label={`Fast-cycle peak temperature: quasisteady ${comparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} degrees Celsius; lumped transient ${comparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} degrees Celsius`}
+            >
+              <div><span>Quasisteady</span><i aria-hidden="true"><b style={{ width: `${(comparison.fast.quasisteadyPeakTemperatureC / temperatureScaleMaximumC) * 100}%` }} /></i><strong>{comparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} °C</strong></div>
+              <div><span>Lumped transient</span><i aria-hidden="true"><b style={{ width: `${(comparison.fast.lumpedTransientPeakTemperatureC / temperatureScaleMaximumC) * 100}%` }} /></i><strong>{comparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} °C</strong></div>
+            </div>
+          </section>
+          <div className="site-etv-method">
+            <span>Input cycle <strong>{temperatureLabel(comparison.temperatureCycleC.low)} → {temperatureLabel(comparison.temperatureCycleC.high)} → {temperatureLabel(comparison.temperatureCycleC.low)} °C</strong></span>
+            <span>Relative difference <strong>{comparison.relativeDifferenceDefinition}</strong></span>
+          </div>
+        </figure>
+      </div>
+      <div className="site-etv-reading">
+        <p className="site-kicker"><span /> What the run shows</p>
+        <h3><span>Fast-cycle energy-density difference</span>{formatSignedPercent(comparison.fast.relativeDifferencePercent, 2)}</h3>
+        <p>
+          At {comparison.slow.periodSeconds.toLocaleString()} s, the two declared temperature assumptions nearly agree.
+          At {comparison.fast.periodSeconds.toLocaleString()} s, the lumped-transient run has a lower recorded peak temperature and the same spatial mechanics path accumulates substantially less inelastic energy density.
+        </p>
+        <dl>
+          <div><dt>Fast-cycle peak temperature</dt><dd>{comparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} °C <span>lumped</span></dd></div>
+          <div><dt>Quasisteady comparison</dt><dd>{comparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} °C</dd></div>
+        </dl>
+        <div className="site-etv-check" role="note" aria-label="ETV regression status">
+          <span>Regression oracle <strong>{comparison.oraclePassed ? "passed" : "not passed"}</strong></span>
+          <code>{comparison.command}</code>
+        </div>
+        <Boundary compact>{comparison.boundary}</Boundary>
+        <SimulationEvidenceLinks media={media} assetLabel="Download retained comparison SVG" downloadAsset />
       </div>
     </article>
+  );
+}
+
+function SupportingSimulationOutputs() {
+  const mediaFor = (id: string) => {
+    const media = siteData.simulationMedia.find((candidate) => candidate.id === id);
+    if (!media) throw new Error(`Missing supporting simulation media ${id}`);
+    return media;
+  };
+  const solder = mediaFor("solder_3d_dissipation");
+  const device = mediaFor("tsv_device_screening");
+  const comparison = siteData.solderComparison;
+
+  return (
+    <section className="site-output-register" aria-labelledby="supporting-output-title">
+      <header>
+        <span>Supporting output register</span>
+        <div><h3 id="supporting-output-title">Two additional checks, kept in proportion</h3><p>The representative solder map is shown once; its second same-block loading variant is not repeated here. The device result is explicitly analytic, not FE.</p></div>
+      </header>
+      <ol>
+        <li>
+          <span className="site-output-index">01</span>
+          <a className="site-output-thumbnail" href={publicAsset(solder.asset)} aria-label="Open the complete 18-element solder output"><img src={publicAsset(solder.asset)} alt={solder.alt} loading="lazy" /></a>
+          <div className="site-output-identity"><small>Stateful 3-D FE mechanics</small><strong>Idealized SAC305 block</strong><span>3 × 3 × 2 Hex8 · one thermal cycle</span></div>
+          <div className="site-output-value"><strong>{comparison.baselinePeakDissipationMPa.toFixed(6)} MPa</strong><span>peak accumulated inelastic energy density</span></div>
+          <div className="site-output-scope">
+            <p>All {comparison.elements} cycle-accumulated element values are retained; all {comparison.acceptedIncrements} increments were accepted. Mean {comparison.baselineMeanDissipationMPa.toFixed(6)} MPa, peak/mean {comparison.baselinePeakToMean.toFixed(5)}.</p>
+            <Boundary compact>{solder.boundary}</Boundary>
+            <SimulationEvidenceLinks media={solder} assetLabel="Open 18-element output" />
+          </div>
+        </li>
+        <li>
+          <span className="site-output-index">02</span>
+          <a className="site-output-thumbnail" href={publicAsset(device.asset)} aria-label="Open the complete synthetic TSV-to-device identity map"><img src={publicAsset(device.asset)} alt={device.alt} loading="lazy" /></a>
+          <div className="site-output-identity"><small>Analytic EDA handoff · not FE</small><strong>TSV-to-device screening</strong><span>{siteData.tsvScreening.nDevices} project-authored synthetic devices · {(siteData.tsvScreening.threshold * 100).toFixed(0)}% threshold</span></div>
+          <div className="site-output-value"><strong>{siteData.tsvScreening.baselineViolations} → {siteData.tsvScreening.optimizedViolations}</strong><span>proxy-threshold exceedances</span></div>
+          <div className="site-output-scope">
+            <p>Peak absolute mobility proxy {siteData.tsvScreening.baselinePeakAbsMobilityProxy.toFixed(4)} → {siteData.tsvScreening.optimizedPeakAbsMobilityProxy.toFixed(4)} after the deterministic orientation action.</p>
+            <Boundary compact>{device.boundary}</Boundary>
+            <SimulationEvidenceLinks media={device} assetLabel="Open identity map" />
+          </div>
+        </li>
+      </ol>
+    </section>
   );
 }
 
@@ -345,17 +470,16 @@ function PublicSite() {
           </div>
         </section>
 
-        <section className="site-section site-simulation-gallery" id="simulations">
+        <section className="site-section site-simulation-evidence" id="simulations">
           <div className="site-section-heading">
-            <div><p className="site-kicker"><span /> Simulation media</p><h2>More views generated from checked CoupFE-EDA runs</h2></div>
-            <p>These are data-driven exports, not stock imagery or AI-generated concepts. Each figure names its runner, retained oracle, checksum record, and evidence boundary.</p>
+            <div><p className="site-kicker"><span /> Separate checked setup · partitioned ETV</p><h2>At one second, the thermal assumption changes the mechanical result</h2></div>
+            <p>The same spatial SAC305 mechanics calculation is driven by two declared temperature treatments. The comparison below reports the retained second-cycle values, not an illustrative concept.</p>
           </div>
-          <div className="site-media-grid">
-            {siteData.simulationMedia.map((media) => <SimulationMediaCard media={media} key={media.id} />)}
-          </div>
-          <div className="site-media-provenance" role="note">
-            <strong>How these figures are built</strong>
-            <span>The solder, design-linked solder, and ETV images rerun the named CoupFE mechanics examples and refuse output unless their numerical oracles pass. The device map is regenerated from its EDA screening runner. Artifact and source hashes are retained in the linked contracts.</span>
+          <EtvComparisonResult />
+          <SupportingSimulationOutputs />
+          <div className="site-simulation-provenance" role="note">
+            <strong>Evidence construction</strong>
+            <span>The ETV and solder media are regenerated from their named runners and are refused when the retained numerical oracles fail. The analytic device artifacts are regenerated separately. Every linked artifact remains bound to a SHA-256 contract.</span>
           </div>
         </section>
 

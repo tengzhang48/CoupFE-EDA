@@ -68,9 +68,9 @@
       "title": "Partitioned ETV cycle",
       "summary": "Quasisteady and lumped-transient temperature assumptions drive the same spatial SAC305 mechanics calculation.",
       "command": "python examples/etv_partitioned_cycle/run.py --check",
-      "result": "−66.85% fast-cycle energy sensitivity",
+      "result": "−66.85% fast-cycle energy-density sensitivity",
       "detail": "98.60 °C transient peak · 144.94 °C quasisteady peak",
-      "boundary": "Uniform lagged thermal feedback; not a monolithic phi-T-u formulation, measured-device result, or predictive-life calculation.",
+      "boundary": "Uniform one-increment-lagged thermal feedback with unit Taylor–Quinney fraction; not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation.",
       "tier": "NumPy / SciPy / CoupFE",
       "readmePath": "examples/etv_partitioned_cycle/README.md",
       "runnerPath": "examples/etv_partitioned_cycle/run.py",
@@ -198,11 +198,11 @@
       "eyebrow": "CoupFE partitioned mechanics",
       "title": "ETV assumption comparison",
       "asset": "generated/simulation-media/etv-partitioned-comparison.svg",
-      "alt": "Paired bars comparing quasisteady and lumped-transient inelastic energy and peak temperature for checked slow and fast ETV cycles",
-      "summary": "The same spatial SAC305 mechanics path is evaluated with quasisteady and backward-Euler lumped-temperature assumptions, separated into energy and temperature panels.",
-      "result": "−66.85% fast-cycle energy difference",
+      "alt": "Paired bars comparing quasisteady and lumped-transient inelastic energy density and peak temperature for checked slow and fast ETV cycles",
+      "summary": "The same spatial SAC305 mechanics path is evaluated with quasisteady and backward-Euler lumped-temperature assumptions, separated into energy-density and temperature panels.",
+      "result": "−66.85% fast-cycle energy-density difference",
       "detail": "1 s and 1,600 s periods · second-cycle values",
-      "boundary": "Uniform lagged thermal feedback; not a monolithic phi-T-u formulation, measured-device result, or predictive-life calculation.",
+      "boundary": "Uniform one-increment-lagged thermal feedback with unit Taylor–Quinney fraction; not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation.",
       "runnerPath": "examples/etv_partitioned_cycle/run.py",
       "resultPath": "examples/etv_partitioned_cycle/expected_results.json",
       "evidencePath": "web/contracts/simulation-media.json"
@@ -222,6 +222,37 @@
       "evidencePath": "web/contracts/retained-tsv-artifacts.json"
     }
   ],
+  "etvComparison": {
+    "caseId": "etv_partitioned_cycle",
+    "mediaId": "etv_partitioned_comparison",
+    "mesh": "2 × 2 Quad4 plane strain",
+    "cycles": 2,
+    "incrementsPerCycle": 8,
+    "oraclePassed": true,
+    "command": "python examples/etv_partitioned_cycle/run.py --check",
+    "temperatureCycleC": {
+      "low": -40.0,
+      "high": 125.0
+    },
+    "relativeDifferenceDefinition": "100 × (lumped transient − quasisteady) / quasisteady",
+    "energyQuantity": "last-cycle accumulated inelastic energy density",
+    "energyUnit": "MPa",
+    "slow": {
+      "periodSeconds": 1600.0,
+      "quasisteadyEnergyMPa": 0.4786465994175291,
+      "lumpedTransientEnergyMPa": 0.4783433137879026,
+      "relativeDifferencePercent": -0.06336316397014427
+    },
+    "fast": {
+      "periodSeconds": 1.0,
+      "quasisteadyEnergyMPa": 0.7608183740948495,
+      "lumpedTransientEnergyMPa": 0.25222928532970823,
+      "relativeDifferencePercent": -66.8476348734628,
+      "quasisteadyPeakTemperatureC": 144.93974955858192,
+      "lumpedTransientPeakTemperatureC": 98.60146223882845
+    },
+    "boundary": "Uniform one-increment-lagged thermal feedback with unit Taylor–Quinney fraction; not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation."
+  },
   "solderComparison": {
     "baselineMediaId": "solder_3d_dissipation",
     "designLinkedMediaId": "design_linked_solder_screening",
@@ -230,6 +261,10 @@
     "baselineShearRange": 0.014256,
     "designLinkedShearRange": 0.00201610285452,
     "baselinePeakDissipationMPa": 0.389021354837,
+    "baselineMeanDissipationMPa": 0.34336417811,
+    "baselinePeakToMean": 1.13297012221,
+    "elements": 18,
+    "acceptedIncrements": 8,
     "designLinkedPeakDissipationMPa": 0.0111335154369
   },
   "tsvScreening": {

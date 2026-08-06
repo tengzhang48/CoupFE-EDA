@@ -5,9 +5,11 @@ This directory builds two browser surfaces from one React/Vite source tree:
 - The default route is the public project website. Its featured result is a
   retained CoupFE axisymmetric TSV field with raw arrays, a solver-derived
   contour, a nine-state load-sweep video, numerical comparison, and provenance
-  links. A separate simulation gallery adds solver-derived 3-D solder,
-  design-linked solder, and ETV comparison figures plus the explicitly
-  synthetic TSV-to-device screening map. The rest of the site presents checked
+  links. A separate evidence section features a checked partitioned ETV
+  comparison, then keeps one representative stateful 3-D solder result and one
+  explicitly analytic TSV-to-device screen in a compact proof register. The
+  design-linked variant of the same solder block remains retained but is not
+  repeated in that register. The rest of the site presents checked
   examples, the retained 526,338-DOF scaling record, and explicit evidence limits.
 - `?surface=workbench` opens the TSV field explorer. On GitHub Pages it reads
   and validates the retained `field.json`; it can switch near/full-domain
@@ -37,15 +39,18 @@ The authoritative claim boundary is:
   workbench dependencies only when generating the field or running the local
   connected service
 
-## Refresh the simulation gallery
+## Refresh the simulation evidence
 
-The public gallery does not use stock, generated-concept, or CoupFE-Cardiac
-simulation media. Its three solver figures execute CoupFE-EDA's
+The public evidence section does not use stock, generated-concept, or
+CoupFE-Cardiac simulation media. The renderer executes CoupFE-EDA's
 `solder_3d_cycle`, `design_linked_solder_screening`, and
-`etv_partitioned_cycle` runners and refuse to publish when
-their numerical oracles fail. The TSV device map comes from the separate
-CoupFE-EDA analytic screening runner and remains labeled as synthetic
-integration evidence.
+`etv_partitioned_cycle` runners and refuses to publish when
+their numerical oracles fail. The website promotes the ETV comparison as its
+featured result and shows the baseline solder field as the representative 3-D
+FE result. It does not repeat the design-linked result in the proof register
+because that run uses the same 3 × 3 × 2 block. The TSV device map comes from
+the separate CoupFE-EDA analytic screening runner and remains labeled as
+synthetic integration evidence, not FE output.
 
 The renderer accepts either the exact clean CoupFE checkout selected by
 `setup.sh` or a PEP 610 VCS installation of that same revision whose installed
@@ -59,14 +64,14 @@ PYTHON=/path/to/CoupFE-Cardiac/.venv/bin/python npm run refresh:media
 PYTHON=/path/to/CoupFE-Cardiac/.venv/bin/python npm run refresh:tsv
 ```
 
-`refresh:media` writes accessible SVGs under
+`refresh:media` writes three accessible SVGs under
 `public/generated/simulation-media/` and a source/oracle/artifact hash contract
 at `contracts/simulation-media.json`. The first solder heatmap exposes all 18
-Hex8 element values as two exact 3×3 layers. The design-linked figure shows the
-stable synthetic joint identity and distance-to-neutral-point handed to another
-18-element solder result. The ETV figure keeps energy and temperature in
-separate panels and distinguishes quasisteady from lumped-transient assumptions
-by both color and pattern.
+Hex8 element values as two exact 3 × 3 layers. The design-linked figure remains
+available as retained evidence and records the stable synthetic joint identity
+and distance-to-neutral-point handed to another 18-element solder result. The
+ETV figure keeps energy and temperature in separate panels and distinguishes
+quasisteady from lumped-transient assumptions by both color and pattern.
 
 ## Check and preview the public site
 
