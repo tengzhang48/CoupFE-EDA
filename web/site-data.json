@@ -12,7 +12,7 @@
   },
   "projectBoundary": "The public evidence applies only to the documented models, inputs, checks, and measured benchmark configuration. Real-device validation and manufacturing signoff are not claimed.",
   "process": {
-    "summary": "The repository supports this documented workflow pattern. Individual examples exercise different subsets; no bundled case is a live production EDA-to-signoff flow.",
+    "summary": "Upper rail: identity and provenance remain attached across the forward handoffs. Dashed path: only declared screening quantities return.",
     "boundary": "This is the shared architecture across the checked examples and public contracts. No single bundled case executes every stage on a production design.",
     "steps": [
       {
@@ -23,27 +23,27 @@
       {
         "id": "identity_provenance",
         "title": "Identity and provenance",
-        "detail": "Declared units and transforms with retained source-object, TSV, device, or joint IDs"
+        "detail": "Source-object, TSV, device, or joint IDs remain attached with declared units, transforms, and provenance"
       },
       {
         "id": "analysis_representation",
         "title": "Analysis representation",
-        "detail": "Supported generated reference meshes or analytic and reduced representations"
+        "detail": "Generated reference meshes, analytic proxies, or reduced models, each labeled by fidelity"
       },
       {
         "id": "selected_analysis",
         "title": "Selected analysis",
-        "detail": "The documented electrical, thermal, mechanical, or stateful solder path"
+        "detail": "A documented electrical, thermal, mechanical, or stateful solder path"
       },
       {
         "id": "retained_evidence",
         "title": "Reviewable evidence",
-        "detail": "Named oracles, invariants, retained outputs, provenance, and claim boundaries"
+        "detail": "Named oracles, invariants, solver telemetry, retained arrays, and claim boundaries"
       },
       {
         "id": "bounded_feedback",
         "title": "Bounded feedback",
-        "detail": "Stable-ID screening quantities and back-annotation contracts, not live database edits"
+        "detail": "Stable-ID screening quantities return through an explicit back-annotation contract"
       }
     ]
   },
