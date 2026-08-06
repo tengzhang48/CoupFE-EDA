@@ -47,6 +47,68 @@ function Boundary({ children, compact = false }: { children: string; compact?: b
   );
 }
 
+function ProcessDiagram() {
+  const stepFor = (id: string) => {
+    const step = siteData.process.steps.find((candidate) => candidate.id === id);
+    if (!step) throw new Error(`Missing process step ${id}`);
+    return step;
+  };
+  const identity = stepFor("identity_provenance");
+  const feedback = stepFor("bounded_feedback");
+  const stages = [
+    { step: stepFor("design_inputs"), role: "Source", signals: ["placement", "power", "PDN", "joints"] },
+    { step: stepFor("analysis_representation"), role: "Model", signals: ["mesh", "analytic proxy", "reduced form"] },
+    { step: stepFor("selected_analysis"), role: "Analyze", signals: ["electrical", "thermal", "mechanics", "solder"] },
+    { step: stepFor("retained_evidence"), role: "Record", signals: ["oracles", "residuals", "arrays", "boundaries"] },
+  ];
+
+  return (
+    <figure
+      className="site-process-map"
+      aria-labelledby="process-map-title"
+      aria-describedby="process-map-caption"
+    >
+      <section className="site-process-trace" aria-label="Information retained across every handoff">
+        <header><span>Persistent trace</span><strong>{identity.title}</strong></header>
+        <p>{identity.detail}</p>
+        <div className="site-process-trace-track" aria-hidden="true">
+          {stages.map(({ step }) => <i key={step.id} />)}
+        </div>
+      </section>
+
+      <ol className="site-process-stages" aria-label="Analysis handoffs">
+        {stages.map(({ step, role, signals }, index) => (
+          <li className={step.id === "retained_evidence" ? "is-evidence" : ""} key={step.id}>
+            <header><span>{String(index + 1).padStart(2, "0")}</span><small>{role}</small></header>
+            <strong>{step.title}</strong>
+            <p>{step.detail}</p>
+            <ul className="site-process-signals" aria-label={`${role} record contents`}>
+              {signals.map((signal) => <li key={signal}>{signal}</li>)}
+            </ul>
+          </li>
+        ))}
+      </ol>
+
+      <aside className="site-process-return" aria-label="Bounded return path to source identity">
+        <header><span>Return to source ID</span><strong>{feedback.title}</strong></header>
+        <p>{feedback.detail}</p>
+        <b><i aria-hidden="true">×</i> No live database edits</b>
+      </aside>
+
+      <section className="site-process-rules" aria-labelledby="process-rules-title">
+        <strong id="process-rules-title">Record rules</strong>
+        <ul>
+          <li><i>01</i> Stable identity</li>
+          <li><i>02</i> Declared model level</li>
+          <li><i>03</i> Checked outputs only</li>
+        </ul>
+      </section>
+
+      <figcaption id="process-map-caption">{siteData.process.summary}</figcaption>
+    </figure>
+  );
+}
+
 function WorkflowCard({ workflow, kind, displayIndex }: { workflow: Workflow; kind: WorkflowKind; displayIndex: number }) {
   return (
     <article className={`site-workflow-card site-workflow-card-${kind}`}>
@@ -216,24 +278,11 @@ function PublicSite() {
 
         <section className="site-process site-section" id="how-it-works">
           <div className="site-section-heading">
-            <div><p className="site-kicker"><span /> How CoupFE-EDA works</p><h2>A traceable path from design inputs to engineering evidence</h2></div>
-            <p>{siteData.process.summary}</p>
+            <div><p className="site-kicker"><span /> How CoupFE-EDA works</p><h2 id="process-map-title">From design record to checked result.</h2></div>
+            <p>Across the checked examples, representations change at each handoff. Identity, units, model choices, and evidence limits stay attached.</p>
           </div>
-          <ol className="site-process-flow">
-            {siteData.process.steps.map((step, index) => (
-              <li key={step.id}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{step.title}</strong>
-                <p>{step.detail}</p>
-              </li>
-            ))}
-          </ol>
+          <ProcessDiagram />
           <Boundary>{siteData.process.boundary}</Boundary>
-          <div className="site-process-principles" aria-label="Project principles">
-            <article><span>01</span><div><strong>Trace the design object</strong><p>Stable IDs and provenance survive handoffs into analysis records.</p></div></article>
-            <article><span>02</span><div><strong>Keep model levels explicit</strong><p>Components, examples, timings, and experimental comparisons retain separate evidence labels.</p></div></article>
-            <article><span>03</span><div><strong>Fail closed</strong><p>Stateful examples emit results only after every accepted increment satisfies the solver rule.</p></div></article>
-          </div>
         </section>
 
         <section className="site-feature" id="solver-field">

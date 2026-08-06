@@ -17,7 +17,17 @@ describe("public CoupFE-EDA site", () => {
     expect(screen.getByText("Measured-device comparison")).toBeInTheDocument();
     expect(screen.getByText("Not performed")).toBeInTheDocument();
     expect(screen.getByText("No experimental qualification claim")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /A traceable path from design inputs to engineering evidence/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /From design record to checked result\./i })).toBeInTheDocument();
+    const processFigure = screen.getByRole("figure", { name: /From design record to checked result\./i });
+    const handoffList = within(processFigure).getByRole("list", { name: "Analysis handoffs" });
+    expect(handoffList.querySelectorAll(":scope > li")).toHaveLength(4);
+    expect(processFigure).toHaveTextContent("Upper rail: identity and provenance remain attached across the forward handoffs.");
+    expect(processFigure).toHaveTextContent("Dashed path: only declared screening quantities return.");
+    expect(screen.getByRole("region", { name: "Information retained across every handoff" })).toHaveTextContent("Identity and provenance");
+    const returnPath = screen.getByRole("complementary", { name: "Bounded return path to source identity" });
+    expect(returnPath).toHaveTextContent("Return to source ID");
+    expect(returnPath).toHaveTextContent("No live database edits");
+    expect(screen.getByRole("region", { name: "Record rules" })).toBeInTheDocument();
     for (const step of [
       "Design and case inputs",
       "Identity and provenance",
