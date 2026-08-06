@@ -145,7 +145,17 @@ def test_fixed_default_matches_retained_oracle_and_published_lame(fixed_result):
         assert float(value) == pytest.approx(expected[key], rel=tolerance, abs=1e-10)
     relative_error = abs(rr20 - lame20) / abs(lame20)
     assert relative_error < oracle["tolerances"]["lame_relative_error_max"]
-    assert relative_error == pytest.approx(0.0006333590699884058, rel=1e-8)
+    expected_relative_error = abs(
+        expected["sigma_rr_at_20um_MPa"] - expected["lame_sigma_rr_at_20um_MPa"]
+    ) / abs(expected["lame_sigma_rr_at_20um_MPa"])
+    # The ratio subtracts two approximately 354 MPa values, so tiny solver-level
+    # differences are amplified. Propagate the declared stress tolerance instead
+    # of pinning one platform's last few floating-point digits.
+    assert relative_error == pytest.approx(
+        expected_relative_error,
+        rel=0.0,
+        abs=3.0 * tolerance,
+    )
 
 
 def test_runner_retains_nine_actual_static_fields_and_honest_artifacts(
