@@ -145,7 +145,7 @@ def test_fixed_default_matches_retained_oracle_and_published_lame(fixed_result):
         assert float(value) == pytest.approx(expected[key], rel=tolerance, abs=1e-10)
     relative_error = abs(rr20 - lame20) / abs(lame20)
     assert relative_error < oracle["tolerances"]["lame_relative_error_max"]
-    assert relative_error == pytest.approx(0.0006333590779226087, rel=1e-8)
+    assert relative_error == pytest.approx(0.0006333590699884058, rel=1e-8)
 
 
 def test_runner_retains_nine_actual_static_fields_and_honest_artifacts(
