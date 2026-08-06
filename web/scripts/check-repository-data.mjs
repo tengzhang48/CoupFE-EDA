@@ -353,7 +353,7 @@ close(
 );
 equal(
   workflows.etv_partitioned_cycle.result,
-  `−${Math.abs(metricValue(etv, "results.fast_cycle.relative_energy_difference_percent")).toFixed(2)}% fast-cycle energy sensitivity`,
+  `−${Math.abs(metricValue(etv, "results.fast_cycle.relative_energy_difference_percent")).toFixed(2)}% fast-cycle energy-density sensitivity`,
   "ETV displayed result",
 );
 equal(
@@ -363,6 +363,83 @@ equal(
 );
 equal(workflows.etv_partitioned_cycle.command, "python examples/etv_partitioned_cycle/run.py --check", "ETV command");
 equal(workflows.etv_partitioned_cycle.tier, "NumPy / SciPy / CoupFE", "ETV tier");
+equal(site.etvComparison.caseId, "etv_partitioned_cycle", "featured ETV case ID");
+equal(site.etvComparison.mediaId, "etv_partitioned_comparison", "featured ETV media ID");
+equal(
+  etv.configuration,
+  "2x2 Quad4, two -40 to 125 to -40 C cycles, eight increments per cycle; 1600 s and 1 s periods",
+  "ETV retained configuration",
+);
+equal(site.etvComparison.mesh, "2 × 2 Quad4 plane strain", "featured ETV mesh");
+equal(site.etvComparison.cycles, 2, "featured ETV cycle count");
+equal(site.etvComparison.incrementsPerCycle, 8, "featured ETV increments per cycle");
+equal(site.etvComparison.command, workflows.etv_partitioned_cycle.command, "featured ETV command");
+equal(site.etvComparison.boundary, workflows.etv_partitioned_cycle.boundary, "featured ETV boundary");
+equal(site.etvComparison.oraclePassed, true, "featured ETV oracle status");
+close(site.etvComparison.temperatureCycleC.low, -40.0, "featured ETV low temperature");
+close(site.etvComparison.temperatureCycleC.high, 125.0, "featured ETV high temperature");
+equal(
+  site.etvComparison.relativeDifferenceDefinition,
+  "100 × (lumped transient − quasisteady) / quasisteady",
+  "featured ETV relative-difference definition",
+);
+equal(
+  site.etvComparison.energyQuantity,
+  "last-cycle accumulated inelastic energy density",
+  "featured ETV quantity",
+);
+equal(site.etvComparison.energyUnit, "MPa", "featured ETV energy-density unit");
+equal(site.etvComparison.slow.periodSeconds, 1600.0, "featured ETV slow period");
+equal(site.etvComparison.fast.periodSeconds, 1.0, "featured ETV fast period");
+for (const [displayPath, oraclePath] of [
+  ["slow.quasisteadyEnergyMPa", "results.slow_cycle.quasisteady.dW_last_MPa"],
+  ["slow.lumpedTransientEnergyMPa", "results.slow_cycle.lumped_transient.dW_last_MPa"],
+  ["slow.relativeDifferencePercent", "results.slow_cycle.relative_energy_difference_percent"],
+  ["fast.quasisteadyEnergyMPa", "results.fast_cycle.quasisteady.dW_last_MPa"],
+  ["fast.lumpedTransientEnergyMPa", "results.fast_cycle.lumped_transient.dW_last_MPa"],
+  ["fast.relativeDifferencePercent", "results.fast_cycle.relative_energy_difference_percent"],
+  ["fast.quasisteadyPeakTemperatureC", "results.fast_cycle.quasisteady.temperature_C_max"],
+  ["fast.lumpedTransientPeakTemperatureC", "results.fast_cycle.lumped_transient.temperature_C_max"],
+]) {
+  const displayed = displayPath.split(".").reduce((record, key) => record[key], site.etvComparison);
+  close(displayed, metricValue(etv, oraclePath), `featured ETV ${displayPath}`);
+}
+const etvMedia = site.simulationMedia.find(
+  (media) => media.id === site.etvComparison.mediaId,
+);
+if (!etvMedia) fail("featured ETV media record is missing");
+const etvSvg = await readFile(
+  await requireFile(`web/public/${etvMedia.asset}`),
+  "utf8",
+);
+const etvSvgValueMatches = [
+  ...etvSvg.matchAll(/<text x="([^"]+)"[^>]*class="value">([^<]+)<\/text>/g),
+];
+equal(etvSvgValueMatches.length, 8, "featured ETV SVG value-label count");
+const etvSvgValuesByX = new Map(
+  etvSvgValueMatches.map((match) => [match[1], match[2]]),
+);
+equal(etvSvgValuesByX.size, 8, "featured ETV SVG value-label position count");
+for (const [x, label, value] of [
+  ["125.0", "slow quasisteady energy", site.etvComparison.slow.quasisteadyEnergyMPa],
+  ["189.0", "slow lumped-transient energy", site.etvComparison.slow.lumpedTransientEnergyMPa],
+  ["330.0", "fast quasisteady energy", site.etvComparison.fast.quasisteadyEnergyMPa],
+  ["394.0", "fast lumped-transient energy", site.etvComparison.fast.lumpedTransientEnergyMPa],
+  ["798.0", "fast quasisteady peak temperature", site.etvComparison.fast.quasisteadyPeakTemperatureC],
+  ["862.0", "fast lumped-transient peak temperature", site.etvComparison.fast.lumpedTransientPeakTemperatureC],
+]) {
+  equal(
+    etvSvgValuesByX.get(x),
+    value.toFixed(3),
+    `featured ETV SVG ${label} label`,
+  );
+}
+const etvSvgDifferenceSummary =
+  `Fast-cycle energy difference: ${site.etvComparison.fast.relativeDifferencePercent.toFixed(2)}%` +
+  ` · slow-cycle difference: ${site.etvComparison.slow.relativeDifferencePercent.toFixed(3)}%`;
+if (!etvSvg.includes(etvSvgDifferenceSummary)) {
+  fail(`featured ETV SVG difference summary drifted: expected ${etvSvgDifferenceSummary}`);
+}
 close(
   metricValue(etv, "results.fast_cycle.lumped_transient.temperature_C_max"),
   98.60146223882845,
@@ -380,6 +457,11 @@ const solder3d = await readJson(
 close(solder3d.expected.results.dW_peak_MPa, 0.389021354837, "3-D peak dissipation");
 close(solder3d.expected.results.dW_mean_MPa, 0.34336417811, "3-D mean dissipation");
 equal(solder3d.expected.configuration.n_elements, 18, "3-D element count");
+equal(solder3d.expected.solver_evidence.all_increments_accepted, true, "3-D accepted increments");
+close(site.solderComparison.baselineMeanDissipationMPa, solder3d.expected.results.dW_mean_MPa, "solder comparison mean dissipation");
+close(site.solderComparison.baselinePeakToMean, solder3d.expected.results.peak_to_mean, "solder comparison peak/mean");
+equal(site.solderComparison.elements, solder3d.expected.configuration.n_elements, "solder comparison element count");
+equal(site.solderComparison.acceptedIncrements, solder3d.expected.configuration.increments_per_cycle, "solder comparison accepted increments");
 equal(
   workflows.solder_3d_cycle.result,
   `${solder3d.expected.results.dW_peak_MPa.toFixed(6)} MPa peak dissipation`,
@@ -534,11 +616,11 @@ if (!publicSvg.includes("Synthetic TSV-to-device") || !publicSvg.includes("demon
   fail("public TSV SVG is not visibly labeled as a synthetic demonstration");
 }
 
-equal(site.simulationMedia.length, 4, "simulation-media card count");
+equal(site.simulationMedia.length, 4, "simulation-media figure count");
 equal(
   site.simulationMedia.map((media) => media.id).join(","),
   "solder_3d_dissipation,design_linked_solder_screening,etv_partitioned_comparison,tsv_device_screening",
-  "simulation-media card order",
+  "simulation-media figure order",
 );
 for (const media of site.simulationMedia) {
   if (!media.alt || media.alt.length < 60) {
@@ -552,6 +634,11 @@ for (const media of site.simulationMedia) {
   await requireFile(media.resultPath);
   await requireFile(media.evidencePath);
 }
+equal(
+  site.simulationMedia.find((media) => media.id === site.etvComparison.mediaId)?.boundary,
+  site.etvComparison.boundary,
+  "featured ETV/media boundary",
+);
 equal(
   site.simulationMedia.find((media) => media.id === "tsv_device_screening")?.asset,
   site.tsvScreening.figureAsset,
@@ -590,6 +677,11 @@ for (const source of simulationMediaContract.sources) {
   equal(await sha256(runnerPath), source.runnerSha256, `simulation-media runner hash ${source.caseId}`);
   equal(await sha256(oraclePath), source.oracleSha256, `simulation-media oracle hash ${source.caseId}`);
 }
+equal(
+  simulationMediaContract.sources.find((source) => source.caseId === site.etvComparison.caseId)?.oraclePassed,
+  site.etvComparison.oraclePassed,
+  "featured ETV/contract oracle status",
+);
 equal(simulationMediaContract.artifacts?.length, 3, "simulation-media artifact count");
 equal(
   simulationMediaContract.artifacts.map((artifact) => artifact.name).join(","),

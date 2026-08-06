@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import siteData from "../site-data.json";
-import SiteApp from "./SiteApp";
+import SiteApp, { formatSignedPercent } from "./SiteApp";
 
 afterEach(() => {
   window.history.replaceState({}, "", "/");
@@ -10,6 +10,11 @@ afterEach(() => {
 });
 
 describe("public CoupFE-EDA site", () => {
+  it("formats comparison percentages from their actual sign", () => {
+    expect(formatSignedPercent(-66.8476348734628, 2)).toBe("−66.85%");
+    expect(formatSignedPercent(12.345, 2)).toBe("+12.35%");
+  });
+
   it("keeps the evidence-first narrative and leads with one real solver field", () => {
     const { container } = render(<SiteApp />);
     expect(screen.getByRole("heading", { level: 1, name: /EDA-aware multiphysics, with results you can inspect/i })).toBeInTheDocument();
@@ -65,25 +70,51 @@ describe("public CoupFE-EDA site", () => {
     expect(screen.getByRole("heading", { name: "3-D TSV reference case" })).toBeInTheDocument();
   }, 15_000);
 
-  it("shows only provenance-linked CoupFE-EDA simulation media", () => {
+  it("features a separate checked ETV result and keeps supporting outputs in proportion", () => {
     render(<SiteApp />);
-    expect(screen.getByRole("heading", { name: /More views generated from checked CoupFE-EDA runs/i })).toBeInTheDocument();
-    for (const media of siteData.simulationMedia) {
-      const card = screen.getByRole("heading", { name: media.title }).closest("article");
-      expect(card).not.toBeNull();
-      expect(within(card!).getByRole("img", { name: media.alt })).toHaveAttribute("src", expect.stringContaining(media.asset));
-      expect(within(card!).getByRole("link", { name: "Runner" })).toHaveAttribute("href", expect.stringContaining(media.runnerPath));
-      expect(within(card!).getByRole("link", { name: "Oracle" })).toHaveAttribute("href", expect.stringContaining(media.resultPath));
-      expect(within(card!).getByRole("link", { name: "SHA-256 record" })).toHaveAttribute("href", expect.stringContaining(media.evidencePath));
-      expect(within(card!).getByText("Claim boundary")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /At one second, the thermal assumption changes the mechanical result/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /More views generated from checked CoupFE-EDA runs/i })).not.toBeInTheDocument();
+
+    const etvResult = screen.getByRole("article", { name: "Partitioned SAC305 ETV comparison" });
+    expect(etvResult).toHaveTextContent(siteData.etvComparison.caseId);
+    expect(etvResult).toHaveTextContent("2 × 2 Quad4 plane strain · 2 cycles · 8 increments/cycle");
+    expect(etvResult).toHaveTextContent("last-cycle accumulated inelastic energy density");
+    expect(within(etvResult).getByRole("img", { name: /Slow cycle, 1,600 s period: quasisteady 0.478647 MPa; lumped transient 0.478343 MPa/i })).toBeInTheDocument();
+    expect(within(etvResult).getByRole("img", { name: /Fast cycle, 1 s period: quasisteady 0.760818 MPa; lumped transient 0.252229 MPa/i })).toBeInTheDocument();
+    expect(etvResult).toHaveTextContent("−0.0634%");
+    expect(etvResult).toHaveTextContent("−66.85%");
+    expect(etvResult).toHaveTextContent("98.60 °C");
+    expect(etvResult).toHaveTextContent("144.94 °C");
+    expect(within(etvResult).getByRole("img", { name: /Fast-cycle peak temperature: quasisteady 144.94 degrees Celsius; lumped transient 98.60 degrees Celsius/i })).toBeInTheDocument();
+    expect(etvResult).toHaveTextContent("−40 → 125 → −40 °C");
+    expect(etvResult).toHaveTextContent("100 × (lumped transient − quasisteady) / quasisteady");
+    expect(within(etvResult).getByRole("note", { name: "ETV regression status" })).toHaveTextContent("Regression oracle passed");
+    expect(within(etvResult).getByRole("note", { name: "ETV regression status" })).toHaveTextContent("python examples/etv_partitioned_cycle/run.py --check");
+    expect(within(etvResult).getByText("Claim boundary")).toBeInTheDocument();
+    const etvMedia = siteData.simulationMedia.find((media) => media.id === siteData.etvComparison.mediaId)!;
+    const retainedSvgLink = within(etvResult).getByRole("link", { name: "Download retained comparison SVG" });
+    expect(retainedSvgLink).toHaveAttribute("href", expect.stringContaining(etvMedia.asset));
+    expect(retainedSvgLink).toHaveAttribute("download");
+    expect(within(etvResult).getByRole("link", { name: "Runner" })).toHaveAttribute("href", expect.stringContaining(etvMedia.runnerPath));
+    expect(within(etvResult).getByRole("link", { name: "Oracle" })).toHaveAttribute("href", expect.stringContaining(etvMedia.resultPath));
+    expect(within(etvResult).getByRole("link", { name: "SHA-256 record" })).toHaveAttribute("href", expect.stringContaining(etvMedia.evidencePath));
+
+    const register = screen.getByRole("region", { name: "Two additional checks, kept in proportion" });
+    expect(within(register).getAllByRole("listitem")).toHaveLength(2);
+    expect(register).toHaveTextContent("same-block loading variant is not repeated here");
+    expect(register).toHaveTextContent("Analytic EDA handoff · not FE");
+    expect(register).toHaveTextContent("12 → 0");
+    expect(within(register).getAllByText("Claim boundary")).toHaveLength(2);
+    for (const mediaId of ["solder_3d_dissipation", "tsv_device_screening"]) {
+      const media = siteData.simulationMedia.find((candidate) => candidate.id === mediaId)!;
+      const output = within(register).getByRole("img", { name: media.alt }).closest("li");
+      expect(output).not.toBeNull();
+      expect(within(output!).getByRole("link", { name: "Runner" })).toHaveAttribute("href", expect.stringContaining(media.runnerPath));
+      expect(within(output!).getByRole("link", { name: "Oracle" })).toHaveAttribute("href", expect.stringContaining(media.resultPath));
+      expect(within(output!).getByRole("link", { name: "SHA-256 record" })).toHaveAttribute("href", expect.stringContaining(media.evidencePath));
     }
-    const designLinkedCard = screen.getByRole("heading", { name: "Design-linked solder response" }).closest("article");
-    const comparisonNote = within(designLinkedCard!).getByRole("note");
-    expect(comparisonNote).toHaveTextContent("Why this field is lower");
-    expect(comparisonNote).toHaveTextContent("L_D/h is 0.8485 versus 6.0");
-    expect(comparisonNote).toHaveTextContent("same 3 × 3 × 2 mesh and SAC305 material model");
-    expect(comparisonNote).toHaveTextContent("about 34.9× lower peak dissipation");
-    expect(screen.getByText(/not stock imagery or AI-generated concepts/i)).toBeInTheDocument();
+    const omittedVariant = siteData.simulationMedia.find((media) => media.id === "design_linked_solder_screening")!;
+    expect(within(register).queryByRole("img", { name: omittedVariant.alt })).not.toBeInTheDocument();
   });
 
   it("groups integration demonstrations separately from real and focused verification", () => {
