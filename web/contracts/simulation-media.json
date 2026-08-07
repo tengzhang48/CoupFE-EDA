@@ -15,19 +15,19 @@
     {
       "mediaType": "image/svg+xml",
       "name": "etv-partitioned-comparison.svg",
-      "sha256": "868701b3f31a093e1608f4ba5177e7c89c16b8f16d22602601e5493b5c1bfa23",
+      "sha256": "8462075e9557f8c042ede051b5b6871e7158206295fd4a51d386cd78e273a182",
       "uri": "generated/simulation-media/etv-partitioned-comparison.svg"
     },
     {
       "mediaType": "image/svg+xml",
       "name": "etv-partitioned-comparison-mobile.svg",
-      "sha256": "b3cf71c8d08420134da5c8cc7b2c2e295e113fa1951981c80fcc07c1ee77e27d",
+      "sha256": "8fbb1b19ae2cfa8ad3a6c581abcf63b4b8984e0b24eeb6ba948aa88dbc8921ff",
       "uri": "generated/simulation-media/etv-partitioned-comparison-mobile.svg"
     },
     {
       "mediaType": "application/json",
       "name": "etv-partitioned-record.json",
-      "sha256": "ee4a3469455fff482a295f2fc3cb69ee23a7fcea145836b02c17fd7b1fcfbb33",
+      "sha256": "24350a998a96c0750316440d85209a559ae32d62f8c5f143963eb53669df42a9",
       "uri": "generated/simulation-media/etv-partitioned-record.json"
     }
   ],
@@ -36,9 +36,9 @@
     "sourceKind": "clean-git-checkout",
     "url": "https://github.com/tengzhang48/CoupFE.git"
   },
-  "edaBaseRevision": "16d9d5587d98d8e6d119be12351ca6d27105027e",
+  "edaBaseRevision": "c68ee131122b5543e7bb629d2bc1a7e1180dfdac",
   "generatedBy": "web/scripts/render-simulation-media.py",
-  "generatorSha256": "eb1b9c5a41d6c46ec8e6d970a6d40802f2b4d5584cd04e033977282a8eede68a",
+  "generatorSha256": "fa4ab8f1e5b544213b6630cd35d9a9cf05297b7eb8a43749359706dc1019761f",
   "schemaVersion": 3,
   "sources": [
     {
@@ -105,11 +105,11 @@
           "sha256": "7d821ff0f30a1fa2a98c472c4061eeb6e710c64b29752c4042470acf8e7f4a5b"
         }
       ],
-      "oracle": "examples/etv_partitioned_cycle/expected_results.json",
+      "oracle": "examples/etv_partitioned_cycle/expected_results_20x20.json",
       "oraclePassed": true,
-      "oracleSha256": "24855846da20b608fd0afc266a3443db595ebbf8412d5aefed062017f52d67e6",
+      "oracleSha256": "b2a260463db973744ddb06ed5c4b76aa7193888fac360a4c28962004b5c19287",
       "runner": "examples/etv_partitioned_cycle/run.py",
-      "runnerSha256": "4843bae579dc7d2c464b82c1020b639a3cbc79ec8dc20e80fe27c250ff533760"
+      "runnerSha256": "86d33dd5ab206b398ed4ee96fc5211bf14675e8495a418a1da779552f9057a9b"
     }
   ]
 }

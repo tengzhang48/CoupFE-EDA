@@ -66,15 +66,15 @@
       "id": "etv_partitioned_cycle",
       "index": "02",
       "title": "Partitioned ETV cycle",
-      "summary": "Quasisteady and lumped-transient temperature assumptions drive the same spatial SAC305 mechanics calculation.",
-      "command": "python examples/etv_partitioned_cycle/run.py --check",
-      "result": "−66.85% energy-density change (lumped vs quasisteady)",
-      "detail": "98.60 °C transient peak · 144.94 °C quasisteady peak",
-      "boundary": "An idealized square block with uniform one-increment-lagged thermal feedback and unit Taylor–Quinney fraction. L_D/h = 6 is a loading parameter, not modeled package geometry. Not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation.",
+      "summary": "A one-second chamber cycle drives the same selected 20 × 20 SAC305 mechanics mesh through quasisteady and lumped-transient uniform-temperature treatments.",
+      "command": "python examples/etv_partitioned_cycle/run.py --mesh-size 20 --check",
+      "result": "−62.16% energy-density change (lumped vs quasisteady)",
+      "detail": "98.58 °C transient peak · 144.94 °C quasisteady peak",
+      "boundary": "Selected single 20 × 20 mesh with a 20-element, 5 µm-deep top-row aggregation and uniform one-increment-lagged thermal feedback. L_D/h = 6 is a loading parameter, not modeled package geometry. Not mesh/load-step convergence, a spatial thermal field, a monolithic φ–T–u element, measured-device validation, crack/life prediction, or manufacturing signoff.",
       "tier": "NumPy / SciPy / CoupFE",
       "readmePath": "examples/etv_partitioned_cycle/README.md",
       "runnerPath": "examples/etv_partitioned_cycle/run.py",
-      "resultPath": "examples/etv_partitioned_cycle/expected_results.json"
+      "resultPath": "examples/etv_partitioned_cycle/expected_results_20x20.json"
     },
     {
       "id": "solder_3d_cycle",
@@ -196,15 +196,15 @@
     {
       "id": "etv_partitioned_comparison",
       "eyebrow": "CoupFE partitioned mechanics",
-      "title": "One-second solder-cycle response",
+      "title": "One-second solder block: setup and result",
       "asset": "generated/simulation-media/etv-partitioned-comparison.svg",
-      "alt": "Retained one-second temperature paths and two magnified deformed-mesh snapshots comparing quasisteady and lumped-transient treatments for the checked SAC305 block",
-      "summary": "Nine retained second-cycle states expose the computed temperature paths and peak-state deformed meshes before the checked inelastic-energy comparison.",
-      "result": "−66.85% energy-density change, lumped relative to quasisteady",
-      "detail": "1 s and 1,600 s periods · second-cycle values",
-      "boundary": "An idealized square block with uniform one-increment-lagged thermal feedback and unit Taylor–Quinney fraction. L_D/h = 6 is a loading parameter, not modeled package geometry. Not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation.",
+      "alt": "A fixed-bottom, top-shear 20 by 20 SAC305 model setup, its retained one-second uniform-temperature histories, and two unsmoothed end-cycle inelastic-energy fields on a common scale with deformation magnified 10 times",
+      "summary": "The stated boundary-value problem precedes nine retained second-cycle states, two uniform-temperature histories, and the actual 400-element accumulated-dW fields used by the checked comparison.",
+      "result": "−62.16% energy-density change, lumped relative to quasisteady",
+      "detail": "20 × 20 Quad4 · 1 s and 1,600 s periods · second-cycle values",
+      "boundary": "Selected single 20 × 20 mesh with a 20-element, 5 µm-deep top-row aggregation and uniform one-increment-lagged thermal feedback. L_D/h = 6 is a loading parameter, not modeled package geometry. Not mesh/load-step convergence, a spatial thermal field, a monolithic φ–T–u element, measured-device validation, crack/life prediction, or manufacturing signoff.",
       "runnerPath": "examples/etv_partitioned_cycle/run.py",
-      "resultPath": "examples/etv_partitioned_cycle/expected_results.json",
+      "resultPath": "examples/etv_partitioned_cycle/expected_results_20x20.json",
       "evidencePath": "web/contracts/simulation-media.json"
     },
     {
@@ -225,19 +225,23 @@
   "etvComparison": {
     "caseId": "etv_partitioned_cycle",
     "mediaId": "etv_partitioned_comparison",
-    "mesh": "2 × 2 Quad4 plane strain",
+    "mesh": "20 × 20 Quad4 plane strain",
     "cycles": 2,
     "incrementsPerCycle": 8,
     "oraclePassed": true,
-    "command": "python examples/etv_partitioned_cycle/run.py --check",
+    "command": "python examples/etv_partitioned_cycle/run.py --mesh-size 20 --check",
     "mobileAsset": "generated/simulation-media/etv-partitioned-comparison-mobile.svg",
     "recordAsset": "generated/simulation-media/etv-partitioned-record.json",
     "setup": {
       "widthMm": 0.1,
       "heightMm": 0.1,
-      "nodes": 9,
-      "elements": 4,
-      "displacementDofs": 18,
+      "meshNx": 20,
+      "meshNy": 20,
+      "nodes": 441,
+      "elements": 400,
+      "displacementDofs": 882,
+      "topAggregationElements": 20,
+      "topRowDepthMicrometers": 5.0,
       "material": "SAC305 · non-aged Anand fit",
       "elasticModulusMPa": 43000.0,
       "poissonRatio": 0.4,
@@ -258,21 +262,21 @@
     "energyUnit": "MPa",
     "slow": {
       "periodSeconds": 1600.0,
-      "quasisteadyEnergyMPa": 0.4786465994175291,
-      "lumpedTransientEnergyMPa": 0.4783433137879026,
-      "relativeDifferencePercent": -0.06336316397014427
+      "quasisteadyEnergyMPa": 0.19712248717734293,
+      "lumpedTransientEnergyMPa": 0.19700317420208485,
+      "relativeDifferencePercent": -0.0605273284476865
     },
     "fast": {
       "periodSeconds": 1.0,
-      "quasisteadyEnergyMPa": 0.7608183740948495,
-      "lumpedTransientEnergyMPa": 0.25222928532970823,
-      "relativeDifferencePercent": -66.8476348734628,
+      "quasisteadyEnergyMPa": 0.2862182696275743,
+      "lumpedTransientEnergyMPa": 0.10829074240423134,
+      "relativeDifferencePercent": -62.16497900530994,
       "quasisteadyPeakTemperatureC": 144.93974955858192,
-      "lumpedTransientPeakTemperatureC": 98.60146223882845,
+      "lumpedTransientPeakTemperatureC": 98.57631847986272,
       "quasisteadyPeakTopDisplacementUm": 1.229276994702983,
-      "lumpedTransientPeakTopDisplacementUm": 0.6732175468659415
+      "lumpedTransientPeakTopDisplacementUm": 0.6729158217583527
     },
-    "boundary": "An idealized square block with uniform one-increment-lagged thermal feedback and unit Taylor–Quinney fraction. L_D/h = 6 is a loading parameter, not modeled package geometry. Not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation."
+    "boundary": "Selected single 20 × 20 mesh with a 20-element, 5 µm-deep top-row aggregation and uniform one-increment-lagged thermal feedback. L_D/h = 6 is a loading parameter, not modeled package geometry. Not mesh/load-step convergence, a spatial thermal field, a monolithic φ–T–u element, measured-device validation, crack/life prediction, or manufacturing signoff."
   },
   "solderComparison": {
     "baselineMediaId": "solder_3d_dissipation",

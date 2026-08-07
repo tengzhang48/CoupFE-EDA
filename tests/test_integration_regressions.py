@@ -54,6 +54,8 @@ def test_guided_stateful_example_matches_retained_oracle(example):
             record["results"]["dW_mean_MPa"], rel=1.0e-10, abs=1.0e-12
         )
     if example == "etv_partitioned_cycle":
+        # The default remains the deliberately small CI smoke mesh. The public
+        # website evidence is generated separately with --mesh-size 20.
         mesh = record["inputs"]["mesh"]
         assert mesh["nodes"] == 9
         assert mesh["elements"] == 4
@@ -97,6 +99,49 @@ def test_guided_stateful_example_matches_retained_oracle(example):
         if path.is_file()
     }
     assert after == before
+
+
+def test_etv_meshes_select_distinct_retained_oracles():
+    """The fast smoke case cannot accidentally verify against the public case."""
+    from examples.etv_partitioned_cycle import run as etv_runner
+
+    assert etv_runner._oracle_path_for_mesh(2).name == "expected_results.json"
+    assert (
+        etv_runner._oracle_path_for_mesh(20).name
+        == "expected_results_20x20.json"
+    )
+    with pytest.raises(ValueError, match="no retained oracle"):
+        etv_runner._oracle_path_for_mesh(10)
+
+
+def test_retained_etv_20x20_public_record_matches_independent_oracle():
+    """Fast CI checks the full public record without rerunning the long solve."""
+    from examples.etv_partitioned_cycle import run as etv_runner
+
+    repository = Path(__file__).resolve().parents[1]
+    record = json.loads(
+        (
+            repository
+            / "web/public/generated/simulation-media/etv-partitioned-record.json"
+        ).read_text()
+    )
+    check = etv_runner._check(record)
+    assert check["passed"] is True, check["failures"]
+    assert check["oracle"] == "expected_results_20x20.json"
+    assert record["inputs"]["mesh"]["elements"] == 400
+
+    # Recomputing the record's self-digests must not make altered public fields
+    # pass: independent expected digests live in the 20x20 oracle.
+    record["results"]["fast_cycle"]["quasisteady"]["last_cycle"][
+        "dW_element_MPa"
+    ][0] += 1.0e-5
+    record["integrity"] = etv_runner._integrity_record(record)
+    tampered = etv_runner._check(record)
+    assert tampered["passed"] is False
+    assert any(
+        "integrity.fast_quasisteady_dW_field_sha256" in failure
+        for failure in tampered["failures"]
+    )
 
 
 def test_scaling_harness_retains_bound_run_and_rejects_bad_machine_record(

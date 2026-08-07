@@ -5,6 +5,13 @@ import siteData from "../site-data.json";
 type Workflow = (typeof siteData.workflows)[number];
 type WorkflowKind = "integration" | "verification";
 type SimulationMedia = (typeof siteData.simulationMedia)[number];
+type EtvMeshMetadata = {
+  meshNx?: number;
+  meshNy?: number;
+  topAggregationElements?: number;
+  topRowDepthMicrometers?: number;
+};
+type EtvSetup = (typeof siteData.etvComparison.setup) & EtvMeshMetadata;
 
 const repositoryFile = (sourcePath: string) =>
   `${siteData.repository.url}/blob/${siteData.repository.branch}/${sourcePath}`;
@@ -189,28 +196,87 @@ function SimulationEvidenceLinks({
   );
 }
 
-function EtvSetupDiagram() {
+function EtvStructuredMesh({
+  x,
+  y,
+  size,
+  columns,
+  rows,
+}: {
+  x: number;
+  y: number;
+  size: number;
+  columns: number;
+  rows: number;
+}) {
+  const verticalLines = Array.from({ length: columns - 1 }, (_, index) => {
+    const lineX = x + ((index + 1) * size) / columns;
+    return `M${lineX} ${y}V${y + size}`;
+  });
+  const horizontalLines = Array.from({ length: rows - 1 }, (_, index) => {
+    const lineY = y + ((index + 1) * size) / rows;
+    return `M${x} ${lineY}H${x + size}`;
+  });
+  const topRowHeight = size / rows;
+
+  return (
+    <g
+      data-etv-mesh-grid={`${columns}x${rows}`}
+      data-etv-top-row-elements={columns}
+      aria-hidden="true"
+    >
+      <rect className="site-etv-schematic-domain" x={x} y={y} width={size} height={size} />
+      <rect
+        className="site-etv-schematic-sample"
+        x={x + 1}
+        y={y + 1}
+        width={size - 2}
+        height={Math.max(topRowHeight - 1, 1)}
+      />
+      <path
+        className="site-etv-schematic-grid"
+        d={[...verticalLines, ...horizontalLines].join(" ")}
+        shapeRendering="crispEdges"
+        vectorEffect="non-scaling-stroke"
+      />
+    </g>
+  );
+}
+
+function EtvSetupDiagram({
+  meshNx,
+  meshNy,
+  topAggregationElements,
+  topRowDepthMicrometers,
+}: {
+  meshNx: number;
+  meshNy: number;
+  topAggregationElements: number;
+  topRowDepthMicrometers: number;
+}) {
   const comparison = siteData.etvComparison;
+  const meshLabel = `${meshNx} by ${meshNy}`;
   return (
     <figure className="site-etv-setup-figure" aria-labelledby="etv-setup-title" aria-describedby="etv-setup-caption">
       <header><span>01 · Declared model</span><h4 id="etv-setup-title">What is being solved</h4></header>
-      <svg className="site-etv-setup-desktop" viewBox="0 0 440 300" role="img" aria-labelledby="etv-schematic-title etv-schematic-description">
-        <title id="etv-schematic-title">Plane-strain solder-block model setup</title>
-        <desc id="etv-schematic-description">A two-by-two quadrilateral mesh representing a 0.1 millimetre square SAC305 block. The bottom edge is fixed, horizontal thermal-mismatch displacement is prescribed at the top, lateral sides are traction free, and the top element row supplies the reported energy-density mean.</desc>
+      <svg className="site-etv-setup-desktop" viewBox="0 0 460 305" role="img" aria-labelledby="etv-schematic-title etv-schematic-description">
+        <title id="etv-schematic-title">Plane-strain solder-block model setup on a selected {meshLabel} mesh</title>
+        <desc id="etv-schematic-description">A {meshLabel} quadrilateral mesh representing a 0.1 millimetre square SAC305 block. The bottom edge is fixed, horizontal thermal-mismatch displacement is prescribed at the top, lateral sides are traction free, and the {topAggregationElements}-element top row is the {topRowDepthMicrometers} micrometre-deep aggregation region.</desc>
         <defs>
           <marker id="etv-arrow-desktop" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" /></marker>
         </defs>
-        <rect className="site-etv-schematic-domain" x="80" y="45" width="190" height="190" />
-        <rect className="site-etv-schematic-sample" x="81" y="46" width="188" height="93" />
-        <path className="site-etv-schematic-grid" d="M175 45V235M80 140H270" />
+        <EtvStructuredMesh x={80} y={45} size={190} columns={meshNx} rows={meshNy} />
         <line className="site-etv-schematic-load" x1="94" y1="24" x2="202" y2="24" markerEnd="url(#etv-arrow-desktop)" />
         <text x="80" y="15">prescribed top displacement</text>
         <path className="site-etv-schematic-callout" d="M270 47H293V69" />
         <text x="302" y="62">top: uₓ = γH</text>
         <text x="302" y="79">uᵧ = 0</text>
-        <path className="site-etv-schematic-callout" d="M270 140H293" />
-        <text x="302" y="136">sides:</text>
-        <text x="302" y="153">traction free</text>
+        <path className="site-etv-schematic-callout site-etv-schematic-aggregation-callout" d="M270 54H284V112H295" />
+        <text className="site-etv-schematic-sample-label" x="302" y="105">aggregation: top row</text>
+        <text className="site-etv-schematic-sample-label" x="302" y="122">{topAggregationElements} elements · {topRowDepthMicrometers} µm</text>
+        <path className="site-etv-schematic-callout" d="M270 155H293" />
+        <text x="302" y="151">sides:</text>
+        <text x="302" y="168">traction free</text>
         <path className="site-etv-schematic-callout" d="M270 235H293V218" />
         <text x="302" y="213">bottom:</text>
         <text x="302" y="230">uₓ = uᵧ = 0</text>
@@ -219,53 +285,64 @@ function EtvSetupDiagram() {
         <text x="175" y="286" textAnchor="middle">{comparison.setup.widthMm.toFixed(1)} mm</text>
         <path className="site-etv-schematic-dimension" d="M50 45H62M56 45V235M50 235H62" />
         <text x="35" y="140" textAnchor="middle" transform="rotate(-90 35 140)">{comparison.setup.heightMm.toFixed(1)} mm</text>
-        <text className="site-etv-schematic-sample-label" x="175" y="99" textAnchor="middle">top-layer Gauss-point</text>
-        <text className="site-etv-schematic-sample-label" x="175" y="116" textAnchor="middle">mean (2 elements)</text>
       </svg>
-      <svg className="site-etv-setup-mobile" viewBox="0 0 300 390" role="img" aria-labelledby="etv-schematic-mobile-title etv-schematic-mobile-description">
-        <title id="etv-schematic-mobile-title">Plane-strain solder-block model setup, mobile layout</title>
-        <desc id="etv-schematic-mobile-description">A mobile schematic of the same two-by-two quadrilateral mesh and declared displacement boundary conditions.</desc>
+      <svg className="site-etv-setup-mobile" viewBox="0 0 300 425" role="img" aria-labelledby="etv-schematic-mobile-title etv-schematic-mobile-description">
+        <title id="etv-schematic-mobile-title">Plane-strain solder-block model setup on a selected {meshLabel} mesh, mobile layout</title>
+        <desc id="etv-schematic-mobile-description">A mobile schematic of the same {meshLabel} quadrilateral mesh, its {topAggregationElements}-element top aggregation row, and the declared displacement boundary conditions.</desc>
         <defs>
           <marker id="etv-arrow-mobile" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" /></marker>
         </defs>
         <text x="22" y="18">prescribed top displacement</text>
         <line className="site-etv-schematic-load" x1="55" y1="34" x2="170" y2="34" markerEnd="url(#etv-arrow-mobile)" />
-        <rect className="site-etv-schematic-domain" x="55" y="54" width="190" height="190" />
-        <rect className="site-etv-schematic-sample" x="56" y="55" width="188" height="93" />
-        <path className="site-etv-schematic-grid" d="M150 54V244M55 149H245" />
-        <text className="site-etv-schematic-sample-label" x="150" y="97" textAnchor="middle">top-layer Gauss-point</text>
-        <text className="site-etv-schematic-sample-label" x="150" y="116" textAnchor="middle">mean (2 elements)</text>
+        <EtvStructuredMesh x={55} y={54} size={190} columns={meshNx} rows={meshNy} />
         {[70, 102, 134, 166, 198, 230].map((x) => <path className="site-etv-schematic-fix" d={`M${x} 244l-8 13h16z`} key={x} />)}
         <path className="site-etv-schematic-dimension" d="M55 283V271M55 277H245M245 283V271" />
         <text x="150" y="302" textAnchor="middle">{comparison.setup.widthMm.toFixed(1)} mm × {comparison.setup.heightMm.toFixed(1)} mm</text>
-        <text x="22" y="329">Top: uₓ = γH; uᵧ = 0 (prescribed)</text>
-        <text x="22" y="352">Sides: traction free</text>
-        <text x="22" y="375">Bottom: uₓ = uᵧ = 0</text>
+        <text className="site-etv-schematic-sample-label" x="22" y="329">Aggregation: top row · {topAggregationElements} elements · {topRowDepthMicrometers} µm</text>
+        <text x="22" y="352">Top: uₓ = γH; uᵧ = 0 (prescribed)</text>
+        <text x="22" y="375">Sides: traction free</text>
+        <text x="22" y="398">Bottom: uₓ = uᵧ = 0</text>
       </svg>
-      <figcaption id="etv-setup-caption">Model schematic—not a solved field. Plane strain; out-of-plane package geometry is not modeled.</figcaption>
+      <figcaption id="etv-setup-caption">Model schematic—not a solved field. Selected single mesh; no mesh-convergence study. Plane strain; out-of-plane package geometry is not modeled.</figcaption>
     </figure>
   );
 }
 
 function EtvComparisonResult() {
   const comparison = siteData.etvComparison;
+  const comparisonMesh = comparison as typeof comparison & EtvMeshMetadata;
+  const setup = comparison.setup as EtvSetup;
+  const meshNx = comparisonMesh.meshNx ?? setup.meshNx ?? 20;
+  const meshNy = comparisonMesh.meshNy ?? setup.meshNy ?? 20;
+  const topAggregationElements = comparisonMesh.topAggregationElements ?? setup.topAggregationElements ?? meshNx;
+  const topRowDepthMicrometers = comparisonMesh.topRowDepthMicrometers ?? setup.topRowDepthMicrometers ?? (setup.heightMm * 1000) / meshNy;
+  const elementCount = meshNx * meshNy;
+  const nodeCount = (meshNx + 1) * (meshNy + 1);
+  const displacementDofs = nodeCount * 2;
   const media = siteData.simulationMedia.find((candidate) => candidate.id === comparison.mediaId);
   if (!media) throw new Error(`Missing ETV simulation media ${comparison.mediaId}`);
   const temperatureLabel = (value: number) => value < 0 ? `−${Math.abs(value)}` : `${value}`;
+  const outputAlt = `Retained second-cycle temperature paths and accumulated inelastic-energy-density fields, dW, for quasisteady and lumped-transient treatments on the selected ${meshNx} by ${meshNy} SAC305 mesh; every element is shown without smoothing and the end-cycle deformation is magnified 10 times`;
 
   return (
     <article className="site-etv-result" aria-labelledby="etv-result-title">
       <header className="site-etv-case-header">
         <div><span>Checked partitioned example · {comparison.caseId}</span><h3 id="etv-result-title">Thermal-mismatch shear in SAC305</h3></div>
-        <p>A uniform local temperature drives a spatial mechanics solve. The comparison asks how much the retained response changes between two declared uniform-temperature treatments.</p>
+        <p>A uniform local temperature drives a spatial mechanics solve on one selected {meshNx} × {meshNy} mesh. The comparison asks how much the retained response changes between two declared uniform-temperature treatments; it is not a mesh-convergence result.</p>
       </header>
 
       <section className="site-etv-setup" aria-label="Declared ETV model setup">
-        <EtvSetupDiagram />
+        <EtvSetupDiagram
+          meshNx={meshNx}
+          meshNy={meshNy}
+          topAggregationElements={topAggregationElements}
+          topRowDepthMicrometers={topRowDepthMicrometers}
+        />
         <div className="site-etv-setup-ledger">
           <p className="site-kicker"><span /> Selected retained inputs</p>
           <dl>
-            <div><dt>Domain / mesh</dt><dd>{comparison.setup.widthMm.toFixed(1)} × {comparison.setup.heightMm.toFixed(1)} mm<br /><span>{comparison.mesh} · {comparison.setup.nodes} nodes · {comparison.setup.displacementDofs} DOFs</span></dd></div>
+            <div><dt>Domain / mesh</dt><dd>{comparison.setup.widthMm.toFixed(1)} × {comparison.setup.heightMm.toFixed(1)} mm<br /><span>{meshNx} × {meshNy} Quad4 plane strain · {nodeCount} nodes · {displacementDofs} DOFs</span></dd></div>
+            <div><dt>Reported aggregation</dt><dd>Top-row element mean<br /><span>{topAggregationElements} elements · {topRowDepthMicrometers} µm row depth</span></dd></div>
             <div><dt>Constitutive inputs</dt><dd>{comparison.setup.material}<br /><span>Project elastic inputs: E = {(comparison.setup.elasticModulusMPa / 1000).toFixed(0)} GPa · ν = {comparison.setup.poissonRatio.toFixed(2)}</span></dd></div>
             <div><dt>Chamber cycle</dt><dd>{temperatureLabel(comparison.temperatureCycleC.low)} → {comparison.temperatureCycleC.high} → {temperatureLabel(comparison.temperatureCycleC.low)} °C<br /><span>{comparison.cycles} cycles · {comparison.incrementsPerCycle} increments/cycle</span></dd></div>
             <div><dt>Mismatch loading</dt><dd>γ = Δα(T<sub>local</sub> − T<sub>ref</sub>)(L<sub>D</sub>/h)<br /><span>Δα = {(comparison.setup.cteMismatchPerK * 1e6).toFixed(0)} × 10⁻⁶ K⁻¹ · L<sub>D</sub>/h = {comparison.setup.distanceToNeutralPointOverHeight.toFixed(0)} · T<sub>ref</sub> = {comparison.setup.temperatureReferenceC.toFixed(1)} °C</span></dd></div>
@@ -287,40 +364,51 @@ function EtvComparisonResult() {
             <span className="site-etv-path-or" aria-hidden="true">OR</span>
             <article><small>Alternative B</small><strong>Lumped transient</strong><p>Uniform temperature advanced by backward Euler with finite heat capacity and one-increment-lagged inelastic heating.</p></article>
           </div>
-          <div className="site-etv-path-solve"><small>Shared spatial solve</small><strong>{comparison.setup.elements} Quad4 elements</strong><span>stateful plane-strain SAC305 mechanics</span></div>
+          <div className="site-etv-path-solve"><small>Shared spatial solve</small><strong>{elementCount} Quad4 elements</strong><span>stateful plane-strain SAC305 mechanics</span></div>
         </div>
         <p>Partitioned uniform-temperature feedback—not a monolithic φ–T–u element or a spatial thermal-field solution.</p>
       </section>
 
       <section className="site-etv-output" aria-labelledby="etv-output-title">
         <figure className="site-etv-output-visual">
-          <header><div><span>03 · Oracle-gated solver output</span><h4 id="etv-output-title">Second-cycle temperature path and peak states</h4></div><a href={publicAsset(media.asset)}>Open full figure <span aria-hidden="true">↗</span></a></header>
-          <a href={publicAsset(media.asset)} aria-describedby="etv-output-caption">
+          <header>
+            <div><span>03 · Actual checked simulation output</span><h4 id="etv-output-title">Temperature histories and end-cycle inelastic-energy fields</h4></div>
+            <nav aria-label="ETV figure layouts">
+              <a href={publicAsset(media.asset)}>Desktop SVG <span aria-hidden="true">↗</span></a>
+              <a href={publicAsset(comparison.mobileAsset)}>Portrait SVG <span aria-hidden="true">↗</span></a>
+            </nav>
+          </header>
+          <div className="site-etv-output-context" role="note" aria-label="Simulation setup carried into the output">
+            <strong>Problem carried into these snapshots</strong>
+            <span>0.1 × 0.1 mm SAC305 · {meshNx} × {meshNy} Quad4 · bottom fixed · top thermal-mismatch shear · sides free · {temperatureLabel(comparison.temperatureCycleC.low)} → {comparison.temperatureCycleC.high} → {temperatureLabel(comparison.temperatureCycleC.low)} °C in {comparison.fast.periodSeconds.toLocaleString()} s</span>
+          </div>
+          <div className="site-etv-output-frame" aria-describedby="etv-output-caption">
             <picture>
-              <source media="(max-width: 620px)" srcSet={publicAsset(comparison.mobileAsset)} />
-              <img src={publicAsset(media.asset)} alt={media.alt} loading="lazy" />
+              <source media="(max-width: 900px)" srcSet={publicAsset(comparison.mobileAsset)} />
+              <img src={publicAsset(media.asset)} alt={outputAlt} loading="lazy" />
             </picture>
-          </a>
-          <figcaption id="etv-output-caption">Nine retained states per model. Mesh deformation is magnified 10×; temperature is uniform by construction and is not presented as a spatial contour.</figcaption>
+          </div>
+          <figcaption id="etv-output-caption">These are two actual end-cycle solver snapshots. Each colored cell is its element’s accumulated inelastic energy density, dW, during the second cycle. Both fields use one common scale with no interpolation or smoothing; deformation is magnified 10×. Temperature is uniform by construction and is therefore shown as a history, not a spatial contour.</figcaption>
         </figure>
         <div className="site-etv-reading">
           <p className="site-kicker"><span /> What this case establishes</p>
           <div className="site-etv-metric"><span>Energy-density change</span><strong>{formatSignedPercent(comparison.fast.relativeDifferencePercent, 2)}</strong><small>Lumped relative to quasisteady<br />{comparison.relativeDifferenceDefinition}</small></div>
           <p>
             At {comparison.slow.periodSeconds.toLocaleString()} s, the two treatments nearly agree. At {comparison.fast.periodSeconds.toLocaleString()} s, they produce different retained temperature paths and second-cycle inelastic-energy results. This comparison does not establish which treatment is more accurate.
+            {` `}It uses one selected {meshNx} × {meshNy} mesh and does not establish mesh convergence.
           </p>
           <dl>
-            <div><dt>Quasisteady peak state</dt><dd>{comparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} °C <span>prescribed top uₓ {comparison.fast.quasisteadyPeakTopDisplacementUm.toFixed(3)} µm</span></dd></div>
-            <div><dt>Lumped peak state</dt><dd>{comparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} °C <span>prescribed top uₓ {comparison.fast.lumpedTransientPeakTopDisplacementUm.toFixed(3)} µm</span></dd></div>
-            <div><dt>Second-cycle dW</dt><dd>{comparison.fast.quasisteadyEnergyMPa.toFixed(6)} → {comparison.fast.lumpedTransientEnergyMPa.toFixed(6)} MPa<span>top-layer Gauss-point mean</span></dd></div>
-            <div><dt>1,600 s control</dt><dd>{comparison.slow.quasisteadyEnergyMPa.toFixed(6)} → {comparison.slow.lumpedTransientEnergyMPa.toFixed(6)} MPa<span>{formatSignedPercent(comparison.slow.relativeDifferencePercent, 4)}</span></dd></div>
+            <div><dt>Quasisteady local T peak</dt><dd>{comparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} °C <span>uniform-temperature path</span></dd></div>
+            <div><dt>Lumped local T peak</dt><dd>{comparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} °C <span>uniform-temperature path</span></dd></div>
+            <div><dt>Second-cycle accumulated dW</dt><dd>{comparison.fast.quasisteadyEnergyMPa.toFixed(6)} → {comparison.fast.lumpedTransientEnergyMPa.toFixed(6)} MPa<span>{topAggregationElements}-element, {topRowDepthMicrometers} µm top-row mean</span></dd></div>
+            <div><dt>1,600 s top-row control</dt><dd>{comparison.slow.quasisteadyEnergyMPa.toFixed(6)} → {comparison.slow.lumpedTransientEnergyMPa.toFixed(6)} MPa<span>{formatSignedPercent(comparison.slow.relativeDifferencePercent, 4)}</span></dd></div>
           </dl>
           <div className="site-etv-check" role="note" aria-label="ETV regression status">
             <span>Regression oracle <strong>{comparison.oraclePassed ? "passed" : "not passed"}</strong></span>
             <code>{comparison.command}</code>
           </div>
           <Boundary compact>{comparison.boundary}</Boundary>
-          <SimulationEvidenceLinks media={media} assetLabel="Retained solver-state SVG" recordAsset={comparison.recordAsset} />
+          <SimulationEvidenceLinks media={media} assetLabel="Retained dW-field SVG" recordAsset={comparison.recordAsset} />
         </div>
       </section>
     </article>
@@ -519,7 +607,7 @@ function PublicSite() {
         <section className="site-section site-simulation-evidence" id="simulations">
           <div className="site-section-heading">
             <div><p className="site-kicker"><span /> Separate checked setup · partitioned ETV</p><h2>How does a 0.1 mm solder block respond to a one-second thermal cycle?</h2></div>
-            <p>A fixed-bottom, shear-driven SAC305 block is solved with two uniform-temperature treatments. The case sheet below establishes the geometry and loading before showing the retained solver states and second-cycle comparison.</p>
+            <p>A fixed-bottom, shear-driven SAC305 block is solved with two uniform-temperature treatments. The case sheet below establishes the selected mesh and loading before showing the retained second-cycle temperature paths and accumulated element-mean dW fields.</p>
           </div>
           <EtvComparisonResult />
           <SupportingSimulationOutputs />

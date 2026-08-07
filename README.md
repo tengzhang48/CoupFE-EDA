@@ -129,7 +129,7 @@ states what still requires broader numerical or experimental validation.
 | Generated profiled solder, six-region package, Hex8, and Tet4 paths | Topology, Jacobian/volume, interface, boundary-condition, multimaterial, patch, and generated-mesh checks | No imported production CAD, qualified package deck, or broad mesh-convergence claim |
 | Local and periodic TSV-to-device path | Generated Cu/oxide/anisotropic-Si Tet4 mechanics, field recovery and Raman sampling, periodic relation construction, and stable-ID device mapping | Generated/synthetic checks only; source-equivalent boundaries, mesh/domain convergence, distributed periodic consumption, and experimental comparison remain open |
 | Plane-strain SnPbAg `solder_joint_cycle` | [Guided six-Quad4 cycle](examples/solder_plane_cycle/) with a retained result; numerical tangent, residual acceptance, and one state commit per increment | Idealized block and loading; reported energy is an example result, not package-life validation |
-| Partitioned SAC305 thermo-viscoplastic cycle in `etv_fe` | [Guided quasisteady/transient comparison](examples/etv_partitioned_cycle/) with retained results; spatial Anand increments meet Core's residual rule | Unit Taylor–Quinney conversion of top-layer work to uniform heat; not a monolithic phi-T-u element or device validation |
+| Partitioned SAC305 thermo-viscoplastic cycle in `etv_fe` | [Guided quasisteady/transient comparison](examples/etv_partitioned_cycle/) with a fast 2 × 2 smoke oracle and separately retained 20 × 20 public result; spatial Anand increments meet Core's residual rule | The public value is a 20-element, 5 µm-deep top-row mean on one selected mesh; not mesh/load-step convergence, a monolithic phi-T-u element, device validation, crack prediction, or life prediction |
 | Multi-element `solder_joint_bvp_3d` and design-linked screening | [Guided 18-Hex8 cycle](examples/solder_3d_cycle/) and [design-linked screening](examples/design_linked_solder_screening/) with dissipation fields and retained object provenance | Idealized regular block; no crack-location, mesh/load-step-converged field, or predictive-life claim |
 | `etv_distributed_fs` serial-versus-rank path | Output agreement at size 24 with two and four ranks; [reviewed 526,338-DOF local sweep](benchmarks/solver_scaling/current_526338dof_20260801/) at 1/2/4/8 ranks with three repeats (26.0718 s to 3.93986 s median, 6.62×) | The timing describes one nonexclusive KVM guest, revision, problem, solver region, and rank set; it is not a general scalability guarantee |
 
@@ -169,6 +169,9 @@ python examples/design_linked_solder_screening/run.py --check
 
 Each directory explains its inputs, output fields, references, and current
 limitations. See [EXAMPLES.md](EXAMPLES.md) for the complete catalog.
+The website's selected 20 × 20 ETV evidence is the separate, slower
+`python examples/etv_partitioned_cycle/run.py --mesh-size 20 --check` case; the
+default 2 × 2 command above remains the fast regression smoke check.
 
 ### Optional container
 
