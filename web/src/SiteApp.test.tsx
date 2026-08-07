@@ -72,31 +72,43 @@ describe("public CoupFE-EDA site", () => {
 
   it("features a separate checked ETV result and keeps supporting outputs in proportion", () => {
     render(<SiteApp />);
-    expect(screen.getByRole("heading", { name: /At one second, the thermal assumption changes the mechanical result/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /How does a 0.1 mm solder block respond to a one-second thermal cycle/i })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /More views generated from checked CoupFE-EDA runs/i })).not.toBeInTheDocument();
 
-    const etvResult = screen.getByRole("article", { name: "Partitioned SAC305 ETV comparison" });
+    const etvResult = screen.getByRole("article", { name: "Thermal-mismatch shear in SAC305" });
+    expect(within(etvResult).getByRole("heading", { level: 3, name: "Thermal-mismatch shear in SAC305" })).toBeInTheDocument();
+    expect(within(etvResult).getByRole("heading", { level: 4, name: "What is being solved" })).toBeInTheDocument();
+    expect(within(etvResult).getByRole("heading", { level: 4, name: /two alternative uniform-temperature treatments/i })).toBeInTheDocument();
+    expect(within(etvResult).getByRole("heading", { level: 4, name: /Second-cycle temperature path and peak states/i })).toBeInTheDocument();
     expect(etvResult).toHaveTextContent(siteData.etvComparison.caseId);
-    expect(etvResult).toHaveTextContent("2 × 2 Quad4 plane strain · 2 cycles · 8 increments/cycle");
-    expect(etvResult).toHaveTextContent("last-cycle accumulated inelastic energy density");
-    expect(within(etvResult).getByRole("img", { name: /Slow cycle, 1,600 s period: quasisteady 0.478647 MPa; lumped transient 0.478343 MPa/i })).toBeInTheDocument();
-    expect(within(etvResult).getByRole("img", { name: /Fast cycle, 1 s period: quasisteady 0.760818 MPa; lumped transient 0.252229 MPa/i })).toBeInTheDocument();
+    expect(etvResult).toHaveTextContent("0.1 × 0.1 mm");
+    expect(etvResult).toHaveTextContent("2 × 2 Quad4 plane strain · 9 nodes · 18 DOFs");
+    expect(etvResult).toHaveTextContent("2 cycles · 8 increments/cycle");
+    expect(etvResult).toHaveTextContent("bottom:");
+    expect(etvResult).toHaveTextContent("uₓ = uᵧ = 0");
+    expect(within(etvResult).getAllByRole("img", { name: /Plane-strain solder-block model setup/i })).toHaveLength(2);
+    const solverStateFigure = within(etvResult).getByRole("img", { name: siteData.simulationMedia.find((media) => media.id === siteData.etvComparison.mediaId)!.alt });
+    expect(solverStateFigure).toBeInTheDocument();
+    expect(solverStateFigure.closest("picture")?.querySelector("source")).toHaveAttribute("srcset", expect.stringContaining(siteData.etvComparison.mobileAsset));
     expect(etvResult).toHaveTextContent("−0.0634%");
     expect(etvResult).toHaveTextContent("−66.85%");
     expect(etvResult).toHaveTextContent("98.60 °C");
     expect(etvResult).toHaveTextContent("144.94 °C");
-    expect(within(etvResult).getByRole("img", { name: /Fast-cycle peak temperature: quasisteady 144.94 degrees Celsius; lumped transient 98.60 degrees Celsius/i })).toBeInTheDocument();
-    expect(etvResult).toHaveTextContent("−40 → 125 → −40 °C");
+    expect(etvResult).toHaveTextContent("prescribed top uₓ 1.229 µm");
+    expect(etvResult).toHaveTextContent("prescribed top uₓ 0.673 µm");
     expect(etvResult).toHaveTextContent("100 × (lumped transient − quasisteady) / quasisteady");
+    expect(etvResult).toHaveTextContent("0.760818 → 0.252229 MPa");
+    expect(etvResult).toHaveTextContent("−40 → 125 → −40 °C");
+    expect(etvResult).toHaveTextContent("This comparison does not establish which treatment is more accurate");
     expect(within(etvResult).getByRole("note", { name: "ETV regression status" })).toHaveTextContent("Regression oracle passed");
     expect(within(etvResult).getByRole("note", { name: "ETV regression status" })).toHaveTextContent("python examples/etv_partitioned_cycle/run.py --check");
     expect(within(etvResult).getByText("Claim boundary")).toBeInTheDocument();
     const etvMedia = siteData.simulationMedia.find((media) => media.id === siteData.etvComparison.mediaId)!;
-    const retainedSvgLink = within(etvResult).getByRole("link", { name: "Download retained comparison SVG" });
+    const retainedSvgLink = within(etvResult).getByRole("link", { name: "Retained solver-state SVG" });
     expect(retainedSvgLink).toHaveAttribute("href", expect.stringContaining(etvMedia.asset));
-    expect(retainedSvgLink).toHaveAttribute("download");
+    expect(within(etvResult).getByRole("link", { name: "Retained state JSON" })).toHaveAttribute("href", expect.stringContaining(siteData.etvComparison.recordAsset));
     expect(within(etvResult).getByRole("link", { name: "Runner" })).toHaveAttribute("href", expect.stringContaining(etvMedia.runnerPath));
-    expect(within(etvResult).getByRole("link", { name: "Oracle" })).toHaveAttribute("href", expect.stringContaining(etvMedia.resultPath));
+    expect(within(etvResult).getByRole("link", { name: "Regression oracle" })).toHaveAttribute("href", expect.stringContaining(etvMedia.resultPath));
     expect(within(etvResult).getByRole("link", { name: "SHA-256 record" })).toHaveAttribute("href", expect.stringContaining(etvMedia.evidencePath));
 
     const register = screen.getByRole("region", { name: "Two additional checks, kept in proportion" });
@@ -110,7 +122,7 @@ describe("public CoupFE-EDA site", () => {
       const output = within(register).getByRole("img", { name: media.alt }).closest("li");
       expect(output).not.toBeNull();
       expect(within(output!).getByRole("link", { name: "Runner" })).toHaveAttribute("href", expect.stringContaining(media.runnerPath));
-      expect(within(output!).getByRole("link", { name: "Oracle" })).toHaveAttribute("href", expect.stringContaining(media.resultPath));
+      expect(within(output!).getByRole("link", { name: "Regression oracle" })).toHaveAttribute("href", expect.stringContaining(media.resultPath));
       expect(within(output!).getByRole("link", { name: "SHA-256 record" })).toHaveAttribute("href", expect.stringContaining(media.evidencePath));
     }
     const omittedVariant = siteData.simulationMedia.find((media) => media.id === "design_linked_solder_screening")!;

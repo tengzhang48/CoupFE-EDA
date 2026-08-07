@@ -200,6 +200,9 @@ def thermoviscoplastic_cycle(
     reduced feedback sets the Taylor–Quinney fraction to one: all of that
     top-layer inelastic work becomes a uniform lagged heat source.  Returned
     energy is a demonstration output, not a calibrated lifetime prediction.
+    The returned ``last_cycle`` record retains the nine solved states used for
+    reviewable temperature-path and deformed-mesh figures; displacements remain
+    in metres and the element energy arrays remain in MPa.
     """
     from ._stateful_solve import solve_stateful_increment
     from .etv_solder import RHOC_SOLDER
@@ -236,8 +239,10 @@ def thermoviscoplastic_cycle(
     inelastic_power = 0.0
     U = np.zeros(op.ndof)
     cycle_energy = []
+    cycle_element_energy = []
     temperature_history = []
     convergence = []
+    last_cycle_states = []
 
     def boundary_conditions(gamma):
         bc = {}
@@ -260,8 +265,22 @@ def thermoviscoplastic_cycle(
     convergence.append(info)
     temperature_history.append(local_temperature - 273.15)
 
-    for _cyc in range(ncyc):
+    for cycle_index in range(ncyc):
         accumulated = 0.0
+        accumulated_by_element = np.zeros(len(mesh.elems), dtype=float)
+        cycle_states = [
+            {
+                "step": 0,
+                "phase_fraction": 0.0,
+                "chamber_temperature_C": float(Tlo_C),
+                "local_temperature_C": float(local_temperature - 273.15),
+                "displacement_m": np.asarray(U, dtype=float).tolist(),
+                "increment_dW_element_MPa": np.zeros(
+                    len(mesh.elems), dtype=float
+                ).tolist(),
+                "accumulated_dW_element_MPa": accumulated_by_element.tolist(),
+            }
+        ]
         for step in range(1, steps_per_cyc + 1):
             fraction = step / steps_per_cyc
             triangle = 1.0 - abs(2.0 * fraction - 1.0)
@@ -285,10 +304,36 @@ def thermoviscoplastic_cycle(
                 op, U, boundary_conditions(gamma), dt=dt, maxit=maxit
             )
             convergence.append(info)
-            dW_step = float(op.dW[top_elements].mean())
+            dW_step_by_element = np.asarray(op.dW, dtype=float).mean(axis=1)
+            dW_step = float(dW_step_by_element[top_elements].mean())
             accumulated += dW_step
+            accumulated_by_element += dW_step_by_element
             inelastic_power = dW_step * 1.0e6 / dt
+            cycle_states.append(
+                {
+                    "step": step,
+                    "phase_fraction": float(fraction),
+                    "chamber_temperature_C": float(
+                        chamber_temperature - 273.15
+                    ),
+                    "local_temperature_C": float(local_temperature - 273.15),
+                    "displacement_m": np.asarray(U, dtype=float).tolist(),
+                    "increment_dW_element_MPa": dW_step_by_element.tolist(),
+                    "accumulated_dW_element_MPa": accumulated_by_element.tolist(),
+                }
+            )
         cycle_energy.append(accumulated)
+        cycle_element_energy.append(accumulated_by_element.tolist())
+        if cycle_index == ncyc - 1:
+            last_cycle_states = cycle_states
+
+    peak_state_index = max(
+        range(len(last_cycle_states)),
+        key=lambda index: last_cycle_states[index]["local_temperature_C"],
+    )
+    peak_displacement = np.asarray(
+        last_cycle_states[peak_state_index]["displacement_m"], dtype=float
+    )
 
     return {
         "temperature_model": temperature_model,
@@ -299,6 +344,45 @@ def thermoviscoplastic_cycle(
         "temperature_C_min": min(temperature_history),
         "temperature_C_max": max(temperature_history),
         "n_elem": int(len(mesh.elems)),
+        "mesh": {
+            "coordinates_m": np.asarray(mesh.coords, dtype=float).tolist(),
+            "connectivity": np.asarray(mesh.elems, dtype=int).tolist(),
+            "top_element_indices": [int(index) for index in top_elements],
+        },
+        "last_cycle": {
+            "step": [int(state["step"]) for state in last_cycle_states],
+            "phase_fraction": [
+                float(state["phase_fraction"]) for state in last_cycle_states
+            ],
+            "chamber_temperature_C": [
+                float(state["chamber_temperature_C"])
+                for state in last_cycle_states
+            ],
+            "local_temperature_C": [
+                float(state["local_temperature_C"])
+                for state in last_cycle_states
+            ],
+            "displacement_m": [
+                state["displacement_m"] for state in last_cycle_states
+            ],
+            "increment_dW_element_MPa": [
+                state["increment_dW_element_MPa"]
+                for state in last_cycle_states
+            ],
+            "accumulated_dW_element_MPa": [
+                state["accumulated_dW_element_MPa"]
+                for state in last_cycle_states
+            ],
+            "peak_temperature_state_index": int(peak_state_index),
+            "peak_local_temperature_C": float(
+                last_cycle_states[peak_state_index]["local_temperature_C"]
+            ),
+            "peak_displacement_m": peak_displacement.tolist(),
+            "peak_top_edge_displacement_x_m": float(
+                peak_displacement[2 * top].mean()
+            ),
+            "dW_element_MPa": cycle_element_energy[-1],
+        },
         "max_iterations": max(i["iterations"] for i in convergence),
         "max_relative_residual": max(i["relative_residual"] for i in convergence),
         "max_residual_fraction_of_limit": max(

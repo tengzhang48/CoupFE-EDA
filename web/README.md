@@ -5,8 +5,10 @@ This directory builds two browser surfaces from one React/Vite source tree:
 - The default route is the public project website. Its featured result is a
   retained CoupFE axisymmetric TSV field with raw arrays, a solver-derived
   contour, a nine-state load-sweep video, numerical comparison, and provenance
-  links. A separate evidence section features a checked partitioned ETV
-  comparison, then keeps one representative stateful 3-D solder result and one
+  links. A separate evidence section establishes the geometry, loading, and two
+  thermal paths for a checked partitioned ETV case before showing its retained
+  second-cycle temperature states and magnified deformed-mesh snapshots. It
+  then keeps one representative stateful 3-D solder result and one
   explicitly analytic TSV-to-device screen in a compact proof register. The
   design-linked variant of the same solder block remains retained but is not
   repeated in that register. The rest of the site presents checked
@@ -64,14 +66,16 @@ PYTHON=/path/to/CoupFE-Cardiac/.venv/bin/python npm run refresh:media
 PYTHON=/path/to/CoupFE-Cardiac/.venv/bin/python npm run refresh:tsv
 ```
 
-`refresh:media` writes three accessible SVGs under
-`public/generated/simulation-media/` and a source/oracle/artifact hash contract
-at `contracts/simulation-media.json`. The first solder heatmap exposes all 18
+`refresh:media` writes three accessible figures, a portrait ETV variant, and the
+retained ETV solver-state JSON under `public/generated/simulation-media/`, plus
+a runner, oracle, solver-dependency, generator, and artifact hash contract at
+`contracts/simulation-media.json`. The first solder heatmap exposes all 18
 Hex8 element values as two exact 3 × 3 layers. The design-linked figure remains
 available as retained evidence and records the stable synthetic joint identity
 and distance-to-neutral-point handed to another 18-element solder result. The
-ETV figure keeps energy and temperature in separate panels and distinguishes
-quasisteady from lumped-transient assumptions by both color and pattern.
+ETV figure shows all nine second-cycle temperature states, two peak-temperature
+deformed-mesh snapshots, and the exact energy comparison. The figure states
+that deformation is magnified and temperature is uniform by construction.
 
 ## Check and preview the public site
 
@@ -232,7 +236,7 @@ appropriate only for one trusted local checkout—not network or multi-user use.
 | `npm run build` | Checked static/retained production build |
 | `npm run build:api` | Checked connected production build |
 | `npm run check` | Type-check, test, prepare data, and build the public site |
-| `npm run refresh:media` | Rerun the solder, design-linked solder, and ETV examples; verify their oracles; and refresh accessible simulation SVGs plus their hash contract |
+| `npm run refresh:media` | Rerun the solder, design-linked solder, and ETV examples; verify their oracles; and refresh accessible simulation SVGs, retained ETV state JSON, and their hash contract |
 | `npm run refresh:tsv` | Refresh the separate synthetic TSV-to-device screening artifacts; it does not regenerate the axisymmetric field bundle |
 
 ## Source organization
@@ -246,7 +250,7 @@ scripts/check-repository-data.mjs
 scripts/prepare-repository-assets.mjs
                                  retained evidence and legal asset copy
 scripts/render-simulation-media.py
-                                 checked EDA-runner SVG renderer and hash contract
+                                 checked EDA-runner SVG/state renderer and hash contract
 src/SiteApp.tsx                 public website and explicit explorer route
 src/App.tsx                     strict field loader and interactive explorer
 src/backend/factory.ts          explicit retained/connected mode boundary

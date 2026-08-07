@@ -1,7 +1,8 @@
 """Render website figures from checked CoupFE-EDA simulation runners.
 
 The script executes the named EDA examples, verifies their retained numerical
-oracles, and writes three accessible SVG figures plus a checksum/source contract.
+oracles, and writes three accessible SVG figures, a portrait ETV variant, the
+ETV state record used by those figures, and a checksum/source contract.
 It deliberately does not consume CoupFE-Cardiac results; that project's
 environment can be used to provide the shared pinned CoupFE Core dependency.
 
@@ -23,6 +24,8 @@ import sys
 import tempfile
 from typing import Any
 from xml.sax.saxutils import escape
+
+import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -120,6 +123,7 @@ def _verify_simulations() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any
         raise MediaBuildError(
             "etv_partitioned_cycle failed its oracle: " + "; ".join(verification["failures"])
         )
+    etv["verification"] = verification
     return solder, design_solder, etv
 
 
@@ -129,11 +133,18 @@ def _mix(left: tuple[int, int, int], right: tuple[int, int, int], amount: float)
     return "#" + "".join(f"{channel:02x}" for channel in channels)
 
 
-def _svg_document(title: str, description: str, body: str, *, height: int = 560) -> str:
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="960" height="{height}" viewBox="0 0 960 {height}" role="img" aria-labelledby="figure-title figure-description">
+def _svg_document(
+    title: str,
+    description: str,
+    body: str,
+    *,
+    width: int = 960,
+    height: int = 560,
+) -> str:
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-labelledby="figure-title figure-description">
   <title id="figure-title">{escape(title)}</title>
   <desc id="figure-description">{escape(description)}</desc>
-  <rect width="960" height="{height}" fill="#08111f"/>
+  <rect width="{width}" height="{height}" fill="#08111f"/>
   <style>
     text {{ font-family: Inter, ui-sans-serif, system-ui, sans-serif; fill: #edf4ff; }}
     .muted {{ fill: #9eb0c8; }} .label {{ fill: #cbd8ea; font-size: 13px; }}
@@ -275,64 +286,314 @@ def _design_linked_solder_svg(record: dict[str, Any]) -> str:
     )
 
 
-def _bar(x: float, baseline: float, width: float, value: float, maximum: float, height: float, fill: str, pattern: bool) -> str:
-    bar_height = value / maximum * height
-    y = baseline - bar_height
-    overlay = f'<rect x="{x}" y="{y}" width="{width}" height="{bar_height}" fill="url(#transient-hatch)" opacity=".45"/>' if pattern else ""
-    return (
-        f'<rect x="{x}" y="{y}" width="{width}" height="{bar_height}" rx="5" fill="{fill}"/>{overlay}'
-        f'<text x="{x + width / 2}" y="{y - 9}" text-anchor="middle" class="value">{value:.3f}</text>'
+def _line_points(
+    values: list[float],
+    phases: list[float],
+    *,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    minimum: float,
+    maximum: float,
+) -> str:
+    if len(values) != len(phases) or not values:
+        raise MediaBuildError("ETV line series is empty or misaligned")
+    if not all(math.isfinite(float(value)) for value in (*values, *phases)):
+        raise MediaBuildError("ETV line series contains a non-finite value")
+    points = []
+    for phase, value in zip(phases, values):
+        x = left + float(phase) * width
+        y = top + (maximum - float(value)) / (maximum - minimum) * height
+        points.append(f"{x:.2f},{y:.2f}")
+    return " ".join(points)
+
+
+def _etv_snapshot(
+    mesh: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    left: float,
+    top: float,
+    label: str,
+    color: str,
+    size: float = 116.0,
+) -> list[str]:
+    coordinates = np.asarray(mesh["coordinates_m"], dtype=float)
+    connectivity = np.asarray(mesh["connectivity"], dtype=int)
+    retained = result["last_cycle"]
+    displacement = np.asarray(retained["peak_displacement_m"], dtype=float).reshape(-1, 2)
+    if coordinates.shape != (9, 2) or displacement.shape != coordinates.shape or connectivity.shape != (4, 4):
+        raise MediaBuildError("ETV snapshot is not the reviewed nine-node, four-element state")
+    if not np.all(np.isfinite(displacement)):
+        raise MediaBuildError("ETV snapshot displacement contains a non-finite value")
+
+    deformation_scale = 10.0
+    width = float(np.ptp(coordinates[:, 0]))
+    height = float(np.ptp(coordinates[:, 1]))
+    deformed = coordinates + deformation_scale * displacement
+
+    def point(node: int) -> tuple[float, float]:
+        x = left + deformed[node, 0] / width * size
+        y = top + size - deformed[node, 1] / height * size
+        return x, y
+
+    temperature = float(retained["peak_local_temperature_C"])
+    # A neutral, uniform fill keeps the deformed mesh from reading as a
+    # spatial temperature contour; temperature is scalar in this model.
+    fill = "#26384c"
+    parts = [
+        f'<text x="{left}" y="{top - 18}" class="label" font-weight="650">{escape(label)}</text>',
+        f'<rect x="{left}" y="{top}" width="{size}" height="{size}" fill="none" stroke="#647890" stroke-dasharray="4 4"/>',
+    ]
+    top_elements = {int(index) for index in mesh["top_element_indices"]}
+    for element_index, nodes in enumerate(connectivity):
+        polygon = " ".join(
+            f"{x:.2f},{y:.2f}" for x, y in (point(int(node)) for node in nodes)
+        )
+        stroke = "#f4d27c" if element_index in top_elements else "#d8e5f4"
+        stroke_width = "2" if element_index in top_elements else "1.2"
+        parts.append(
+            f'<polygon points="{polygon}" fill="{fill}" fill-opacity=".72" stroke="{stroke}" stroke-width="{stroke_width}"/>'
+        )
+    for node in range(len(coordinates)):
+        x, y = point(node)
+        parts.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="2.1" fill="{color}"/>')
+    top_displacement_um = float(retained["peak_top_edge_displacement_x_m"]) * 1.0e6
+    parts.extend(
+        [
+            f'<text x="{left}" y="{top + size + 22}" class="value">{temperature:.2f} °C</text>',
+            f'<text x="{left}" y="{top + size + 42}" class="small muted">prescribed uₓ = {top_displacement_um:.3f} µm</text>',
+        ]
     )
+    return parts
 
 
 def _etv_svg(record: dict[str, Any]) -> str:
+    mesh = record["inputs"]["mesh"]
     slow = record["results"]["slow_cycle"]
     fast = record["results"]["fast_cycle"]
-    cases = (("Slow · 1,600 s", slow), ("Fast · 1 s", fast))
+    quasi = fast["quasisteady"]
+    transient = fast["lumped_transient"]
+    phases = [float(value) for value in quasi["last_cycle"]["phase_fraction"]]
+    chamber = [float(value) for value in quasi["last_cycle"]["chamber_temperature_C"]]
+    quasi_temperature = [float(value) for value in quasi["last_cycle"]["local_temperature_C"]]
+    transient_temperature = [float(value) for value in transient["last_cycle"]["local_temperature_C"]]
+    plot_left, plot_top, plot_width, plot_height = 64.0, 148.0, 500.0, 226.0
+    minimum_temperature, maximum_temperature = -40.0, 160.0
+
     parts = [
-        '<defs><pattern id="transient-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#ffffff" stroke-width="2"/></pattern></defs>',
-        '<text x="42" y="46" font-size="24" font-weight="700">Partitioned ETV model comparison</text>',
-        '<text x="42" y="72" class="muted" font-size="13">Checked CoupFE mechanics · quasisteady versus backward-Euler lumped temperature · second-cycle values</text>',
+        '<text x="42" y="46" font-size="24" font-weight="700">One-second solder-cycle response</text>',
+        '<text x="42" y="72" class="muted" font-size="13">Retained second-cycle states · 0.1 mm SAC305 plane-strain block · 2 × 2 Quad4</text>',
+        '<line x1="42" y1="94" x2="918" y2="94" stroke="#33475f"/>',
+        '<text x="42" y="119" font-size="16" font-weight="650">Computed local-temperature path</text>',
+        '<text x="564" y="119" text-anchor="end" class="small muted">cycle phase</text>',
+        '<text x="64" y="139" class="small muted">°C</text>',
     ]
-    panel_specs = ((42, "Last-cycle inelastic energy", "MPa = MJ/m³", 0.8, 250), (510, "Peak temperature", "°C", 160.0, 250))
-    for panel_index, (left, title, unit, maximum, chart_height) in enumerate(panel_specs):
-        top, baseline = 132, 132 + chart_height
-        parts.extend(
-            [
-                f'<text x="{left}" y="112" font-size="16" font-weight="650">{title}</text>',
-                f'<text x="{left + 402}" y="112" text-anchor="end" class="small muted">{unit}</text>',
-                f'<line x1="{left}" y1="{baseline}" x2="{left + 408}" y2="{baseline}" class="axis"/>',
-            ]
+    for tick in (-40, 0, 40, 80, 120, 160):
+        y = plot_top + (maximum_temperature - tick) / (maximum_temperature - minimum_temperature) * plot_height
+        parts.append(f'<line x1="{plot_left}" y1="{y:.2f}" x2="{plot_left + plot_width}" y2="{y:.2f}" stroke="#263852"/>')
+        parts.append(f'<text x="{plot_left - 10}" y="{y + 4:.2f}" text-anchor="end" class="small muted">{tick}</text>')
+    for tick in (0.0, 0.25, 0.5, 0.75, 1.0):
+        x = plot_left + tick * plot_width
+        parts.append(f'<line x1="{x:.2f}" y1="{plot_top}" x2="{x:.2f}" y2="{plot_top + plot_height}" stroke="#1c2e44"/>')
+        parts.append(f'<text x="{x:.2f}" y="{plot_top + plot_height + 22}" text-anchor="middle" class="small muted">{tick:g}</text>')
+    series = (
+        (chamber, "#7d8fa6", "5 5", "Chamber input", None),
+        (quasi_temperature, "#48a6da", "", "Quasisteady", "circle"),
+        (transient_temperature, "#edc76a", "9 3 2 3", "Lumped transient", "square"),
+    )
+    for values, color, dash, _label, marker in series:
+        points = _line_points(
+            values,
+            phases,
+            left=plot_left,
+            top=plot_top,
+            width=plot_width,
+            height=plot_height,
+            minimum=minimum_temperature,
+            maximum=maximum_temperature,
         )
-        for tick in range(5):
-            fraction = tick / 4
-            y = baseline - fraction * chart_height
-            label = fraction * maximum
-            parts.append(f'<line x1="{left}" y1="{y}" x2="{left + 408}" y2="{y}" stroke="#263852" stroke-width="1"/>')
-            parts.append(f'<text x="{left - 8}" y="{y + 4}" text-anchor="end" class="small muted">{label:.1f}</text>')
-        for case_index, (label, case) in enumerate(cases):
-            center = left + 115 + case_index * 205
-            if panel_index == 0:
-                quasi = float(case["quasisteady"]["dW_last_MPa"])
-                transient = float(case["lumped_transient"]["dW_last_MPa"])
-            else:
-                quasi = float(case["quasisteady"]["temperature_C_max"])
-                transient = float(case["lumped_transient"]["temperature_C_max"])
-            parts.append(_bar(center - 56, baseline, 48, quasi, maximum, chart_height, "#3b82b8", False))
-            parts.append(_bar(center + 8, baseline, 48, transient, maximum, chart_height, "#d7a83e", True))
-            parts.append(f'<text x="{center}" y="{baseline + 25}" text-anchor="middle" class="label">{label}</text>')
+        dash_attribute = f' stroke-dasharray="{dash}"' if dash else ""
+        parts.append(f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="2.5"{dash_attribute}/>' )
+        if marker:
+            for point in points.split():
+                x, y = point.split(",")
+                if marker == "circle":
+                    parts.append(f'<circle cx="{x}" cy="{y}" r="3" fill="#08111f" stroke="{color}" stroke-width="2"/>')
+                else:
+                    parts.append(f'<rect x="{float(x) - 3:.2f}" y="{float(y) - 3:.2f}" width="6" height="6" fill="#08111f" stroke="{color}" stroke-width="2"/>')
+    legend_x = 66
+    for _values, color, dash, label, marker in series:
+        dash_attribute = f' stroke-dasharray="{dash}"' if dash else ""
+        parts.append(f'<line x1="{legend_x}" y1="422" x2="{legend_x + 22}" y2="422" stroke="{color}" stroke-width="3"{dash_attribute}/>')
+        if marker == "circle":
+            parts.append(f'<circle cx="{legend_x + 11}" cy="422" r="3" fill="#08111f" stroke="{color}" stroke-width="2"/>')
+        elif marker == "square":
+            parts.append(f'<rect x="{legend_x + 8}" y="419" width="6" height="6" fill="#08111f" stroke="{color}" stroke-width="2"/>')
+        parts.append(f'<text x="{legend_x + 30}" y="426" class="small muted">{label}</text>')
+        legend_x += 145
+
     parts.extend(
         [
-            '<rect x="42" y="458" width="18" height="12" rx="2" fill="#3b82b8"/><text x="70" y="469" class="label">Quasisteady</text>',
-            '<rect x="190" y="458" width="18" height="12" rx="2" fill="#d7a83e"/><rect x="190" y="458" width="18" height="12" fill="url(#transient-hatch)"/><text x="218" y="469" class="label">Lumped transient</text>',
-            f'<text x="42" y="514" class="label">Fast-cycle energy difference: {fast["relative_energy_difference_percent"]:.2f}% · slow-cycle difference: {slow["relative_energy_difference_percent"]:.3f}%</text>',
-            '<text x="42" y="538" class="small muted">Uniform lagged thermal feedback; this is not a monolithic φ–T–u formulation or measured-device validation.</text>',
+            '<text x="620" y="119" font-size="16" font-weight="650">Peak-temperature mechanics states</text>',
+            '<text x="620" y="140" class="small muted">Free DOFs solved · top displacement prescribed</text>',
+        ]
+    )
+    parts.extend(_etv_snapshot(mesh, quasi, left=620.0, top=181.0, label="Quasisteady", color="#48a6da"))
+    parts.extend(_etv_snapshot(mesh, transient, left=790.0, top=181.0, label="Lumped transient", color="#edc76a"))
+    parts.append('<text x="620" y="366" class="small muted">Dashed: undeformed · deformation ×10</text>')
+    parts.append('<text x="620" y="388" class="small muted">Gold outline: sampled top-element row</text>')
+
+    parts.extend(
+        [
+            '<rect x="42" y="458" width="876" height="190" rx="4" fill="#0e1c2d" stroke="#344961"/>',
+            '<text x="62" y="486" font-size="15" font-weight="650">Second-cycle accumulated inelastic energy density</text>',
+            '<text x="898" y="486" text-anchor="end" class="small muted">top-layer Gauss-point mean · MPa = MJ/m³</text>',
+        ]
+    )
+    sensitivity = float(fast["relative_energy_difference_percent"])
+    sensitivity_label = f"-{abs(sensitivity):.2f}%" if sensitivity < 0.0 else f"+{sensitivity:.2f}%"
+    slow_sensitivity = float(slow["relative_energy_difference_percent"])
+    slow_sensitivity_label = f"-{abs(slow_sensitivity):.4f}%" if slow_sensitivity < 0.0 else f"+{slow_sensitivity:.4f}%"
+    cards = (
+        (62, "Quasisteady · 1 s", f'{float(quasi["dW_last_MPa"]):.6f}', "MPa", "#48a6da"),
+        (342, "Lumped transient · 1 s", f'{float(transient["dW_last_MPa"]):.6f}', "MPa", "#edc76a"),
+        (622, "Energy-density change", sensitivity_label, "lumped relative to quasisteady", "#f0b35b"),
+    )
+    for left, label, value, unit, color in cards:
+        parts.extend(
+            [
+                f'<rect x="{left}" y="506" width="256" height="82" rx="3" fill="#0a1524" stroke="#2e425a"/>',
+                f'<text x="{left + 15}" y="530" class="small muted">{escape(label)}</text>',
+                f'<text x="{left + 15}" y="560" font-size="23" font-weight="700" fill="{color}">{escape(value)}</text>',
+                f'<text x="{left + 15}" y="579" class="small muted">{escape(unit)}</text>',
+            ]
+        )
+    parts.extend(
+        [
+            f'<text x="62" y="618" class="small muted">Slow-cycle control · 1,600 s: {float(slow["quasisteady"]["dW_last_MPa"]):.6f} vs {float(slow["lumped_transient"]["dW_last_MPa"]):.6f} MPa ({slow_sensitivity_label})</text>',
+            '<text x="42" y="681" class="small muted">Partitioned uniform-temperature sensitivity; not a spatial thermal field, monolithic φ–T–u solve, accuracy ranking, or measured-device result.</text>',
         ]
     )
     return _svg_document(
-        "Partitioned ETV model comparison",
-        "Two grouped-bar panels compare quasisteady and backward-Euler lumped-temperature assumptions for the checked slow and fast CoupFE-EDA mechanics cases. The fast case shows a large energy difference and a lower lumped-transient peak temperature; the slow case nearly agrees.",
+        "One-second partitioned solder-cycle response",
+        "A retained second-cycle temperature path and two deformed-mesh solver snapshots compare quasisteady and backward-Euler lumped-temperature treatments for the same checked plane-strain SAC305 mechanics model. The temperature is uniform by construction, and deformation is magnified ten times.",
         "\n".join(f"  {part}" for part in parts),
+        height=710,
+    )
+
+
+def _etv_mobile_svg(record: dict[str, Any]) -> str:
+    mesh = record["inputs"]["mesh"]
+    slow = record["results"]["slow_cycle"]
+    fast = record["results"]["fast_cycle"]
+    quasi = fast["quasisteady"]
+    transient = fast["lumped_transient"]
+    phases = [float(value) for value in quasi["last_cycle"]["phase_fraction"]]
+    chamber = [float(value) for value in quasi["last_cycle"]["chamber_temperature_C"]]
+    quasi_temperature = [float(value) for value in quasi["last_cycle"]["local_temperature_C"]]
+    transient_temperature = [float(value) for value in transient["last_cycle"]["local_temperature_C"]]
+    plot_left, plot_top, plot_width, plot_height = 48.0, 142.0, 328.0, 210.0
+    minimum_temperature, maximum_temperature = -40.0, 160.0
+    parts = [
+        '<style>.small { font-size: 14px; } .label { font-size: 15px; } .value { font-size: 15px; } .mobile-note { font-size: 13px; }</style>',
+        '<text x="22" y="40" font-size="21" font-weight="700">One-second solder-cycle output</text>',
+        '<text x="22" y="66" class="muted" font-size="14">Second-cycle states · 0.1 mm SAC305 · 2 × 2 Quad4</text>',
+        '<line x1="22" y1="88" x2="378" y2="88" stroke="#33475f"/>',
+        '<text x="22" y="118" font-size="18" font-weight="650">Computed local-temperature path</text>',
+        '<text x="48" y="136" class="small muted">°C</text>',
+        '<text x="376" y="136" text-anchor="end" class="small muted">cycle phase</text>',
+    ]
+    for tick in (-40, 0, 40, 80, 120, 160):
+        y = plot_top + (maximum_temperature - tick) / (maximum_temperature - minimum_temperature) * plot_height
+        parts.append(f'<line x1="{plot_left}" y1="{y:.2f}" x2="{plot_left + plot_width}" y2="{y:.2f}" stroke="#263852"/>')
+        parts.append(f'<text x="{plot_left - 8}" y="{y + 5:.2f}" text-anchor="end" class="small muted">{tick}</text>')
+    for tick in (0.0, 0.25, 0.5, 0.75, 1.0):
+        x = plot_left + tick * plot_width
+        parts.append(f'<line x1="{x:.2f}" y1="{plot_top}" x2="{x:.2f}" y2="{plot_top + plot_height}" stroke="#1c2e44"/>')
+        parts.append(f'<text x="{x:.2f}" y="{plot_top + plot_height + 22}" text-anchor="middle" class="small muted">{tick:g}</text>')
+    series = (
+        (chamber, "#7d8fa6", "5 5", "Chamber input", None),
+        (quasi_temperature, "#48a6da", "", "Quasisteady", "circle"),
+        (transient_temperature, "#edc76a", "9 3 2 3", "Lumped transient", "square"),
+    )
+    for values, color, dash, _label, marker in series:
+        points = _line_points(
+            values,
+            phases,
+            left=plot_left,
+            top=plot_top,
+            width=plot_width,
+            height=plot_height,
+            minimum=minimum_temperature,
+            maximum=maximum_temperature,
+        )
+        dash_attribute = f' stroke-dasharray="{dash}"' if dash else ""
+        parts.append(f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="2.5"{dash_attribute}/>')
+        if marker:
+            for point in points.split():
+                x, y = point.split(",")
+                if marker == "circle":
+                    parts.append(f'<circle cx="{x}" cy="{y}" r="3" fill="#08111f" stroke="{color}" stroke-width="2"/>')
+                else:
+                    parts.append(f'<rect x="{float(x) - 3:.2f}" y="{float(y) - 3:.2f}" width="6" height="6" fill="#08111f" stroke="{color}" stroke-width="2"/>')
+    legend_positions = ((48, 400), (210, 400), (48, 428))
+    for (_values, color, dash, label, marker), (legend_x, legend_y) in zip(series, legend_positions):
+        dash_attribute = f' stroke-dasharray="{dash}"' if dash else ""
+        parts.append(f'<line x1="{legend_x}" y1="{legend_y}" x2="{legend_x + 22}" y2="{legend_y}" stroke="{color}" stroke-width="3"{dash_attribute}/>')
+        if marker == "circle":
+            parts.append(f'<circle cx="{legend_x + 11}" cy="{legend_y}" r="3" fill="#08111f" stroke="{color}" stroke-width="2"/>')
+        elif marker == "square":
+            parts.append(f'<rect x="{legend_x + 8}" y="{legend_y - 3}" width="6" height="6" fill="#08111f" stroke="{color}" stroke-width="2"/>')
+        parts.append(f'<text x="{legend_x + 30}" y="{legend_y + 5}" class="small muted">{label}</text>')
+
+    parts.extend(
+        [
+            '<line x1="22" y1="454" x2="378" y2="454" stroke="#33475f"/>',
+            '<text x="22" y="486" font-size="18" font-weight="650">Peak-temperature mechanics states</text>',
+            '<text x="22" y="510" class="small muted">Free DOFs solved · top displacement prescribed</text>',
+        ]
+    )
+    parts.extend(_etv_snapshot(mesh, quasi, left=85.0, top=558.0, label="Quasisteady", color="#48a6da", size=230.0))
+    parts.append('<line x1="22" y1="850" x2="378" y2="850" stroke="#263852"/>')
+    parts.extend(_etv_snapshot(mesh, transient, left=85.0, top=884.0, label="Lumped transient", color="#edc76a", size=230.0))
+    parts.extend(
+        [
+            '<text x="22" y="1172" class="small muted">Dashed: undeformed · deformation ×10</text>',
+            '<text x="22" y="1194" class="small muted">Gold outline: top-layer aggregation region</text>',
+            '<rect x="22" y="1222" width="356" height="200" rx="4" fill="#0e1c2d" stroke="#344961"/>',
+            '<text x="40" y="1253" font-size="17" font-weight="650">Second-cycle inelastic energy density</text>',
+        ]
+    )
+    sensitivity = float(fast["relative_energy_difference_percent"])
+    sensitivity_label = f"-{abs(sensitivity):.2f}%" if sensitivity < 0.0 else f"+{sensitivity:.2f}%"
+    slow_sensitivity = float(slow["relative_energy_difference_percent"])
+    slow_sensitivity_label = f"-{abs(slow_sensitivity):.4f}%" if slow_sensitivity < 0.0 else f"+{slow_sensitivity:.4f}%"
+    parts.extend(
+        [
+            '<text x="40" y="1288" class="small muted">Quasisteady · 1 s</text>',
+            f'<text x="360" y="1288" text-anchor="end" class="value">{float(quasi["dW_last_MPa"]):.6f} MPa</text>',
+            '<text x="40" y="1320" class="small muted">Lumped transient · 1 s</text>',
+            f'<text x="360" y="1320" text-anchor="end" class="value">{float(transient["dW_last_MPa"]):.6f} MPa</text>',
+            '<line x1="40" y1="1340" x2="360" y2="1340" stroke="#2e425a"/>',
+            '<text x="40" y="1368" class="label">Energy-density change</text>',
+            f'<text x="360" y="1368" text-anchor="end" font-size="22" font-weight="700" fill="#f0b35b">{sensitivity_label}</text>',
+            '<text x="40" y="1392" class="mobile-note muted">lumped relative to quasisteady</text>',
+            '<text x="22" y="1452" class="small muted">1,600 s control</text>',
+            f'<text x="22" y="1476" class="small muted">{float(slow["quasisteady"]["dW_last_MPa"]):.6f} → {float(slow["lumped_transient"]["dW_last_MPa"]):.6f} MPa ({slow_sensitivity_label})</text>',
+            '<line x1="22" y1="1504" x2="378" y2="1504" stroke="#33475f"/>',
+            '<text x="22" y="1532" class="mobile-note muted">Uniform-temperature sensitivity—not a spatial thermal field,</text>',
+            '<text x="22" y="1554" class="mobile-note muted">accuracy ranking, or monolithic φ–T–u solve.</text>',
+            '<text x="22" y="1576" class="mobile-note muted">Not a measured-device result.</text>',
+        ]
+    )
+    return _svg_document(
+        "One-second partitioned solder-cycle response, portrait layout",
+        "A portrait technical figure shows the retained second-cycle temperature path, two magnified deformed-mesh peak states, and the inelastic-energy comparison for the checked plane-strain SAC305 model.",
+        "\n".join(f"  {part}" for part in parts),
+        width=400,
+        height=1604,
     )
 
 
@@ -344,19 +605,48 @@ def build(output_dir: Path, contract_path: Path) -> dict[str, Any]:
         "solder-3d-dissipation.svg": _solder_svg(solder),
         "design-linked-solder-screening.svg": _design_linked_solder_svg(design_solder),
         "etv-partitioned-comparison.svg": _etv_svg(etv),
+        "etv-partitioned-comparison-mobile.svg": _etv_mobile_svg(etv),
+        "etv-partitioned-record.json": json.dumps(
+            etv, indent=2, sort_keys=True, allow_nan=False
+        )
+        + "\n",
     }
     for name, content in expected.items():
         _atomic_write(output_dir / name, content)
 
     sources = []
-    for case_id, runner, oracle in (
-        ("solder_3d_cycle", "examples/solder_3d_cycle/run.py", "examples/solder_3d_cycle/expected_results.json"),
+    for case_id, runner, oracle, dependencies in (
+        (
+            "solder_3d_cycle",
+            "examples/solder_3d_cycle/run.py",
+            "examples/solder_3d_cycle/expected_results.json",
+            (
+                "eda_multiphysics/anand_3d.py",
+                "eda_multiphysics/_stateful_solve.py",
+            ),
+        ),
         (
             "design_linked_solder_screening",
             "examples/design_linked_solder_screening/run.py",
             "examples/design_linked_solder_screening/expected_results.json",
+            (
+                "eda_multiphysics/reliability_3d.py",
+                "eda_multiphysics/anand_3d.py",
+                "eda_multiphysics/_stateful_solve.py",
+                "eda_multiphysics/cases/synthetic_pdn/joints.csv",
+            ),
         ),
-        ("etv_partitioned_cycle", "examples/etv_partitioned_cycle/run.py", "examples/etv_partitioned_cycle/expected_results.json"),
+        (
+            "etv_partitioned_cycle",
+            "examples/etv_partitioned_cycle/run.py",
+            "examples/etv_partitioned_cycle/expected_results.json",
+            (
+                "eda_multiphysics/etv_fe.py",
+                "eda_multiphysics/etv_solder.py",
+                "eda_multiphysics/solder_joint.py",
+                "eda_multiphysics/_stateful_solve.py",
+            ),
+        ),
     ):
         sources.append(
             {
@@ -366,11 +656,18 @@ def build(output_dir: Path, contract_path: Path) -> dict[str, Any]:
                 "oracle": oracle,
                 "oracleSha256": _sha256(ROOT / oracle),
                 "oraclePassed": True,
+                "dependencies": [
+                    {"path": path, "sha256": _sha256(ROOT / path)}
+                    for path in dependencies
+                ],
             }
         )
     contract = {
-        "schemaVersion": 1,
+        "schemaVersion": 3,
         "generatedBy": "web/scripts/render-simulation-media.py",
+        "generatorSha256": _sha256(
+            ROOT / "web/scripts/render-simulation-media.py"
+        ),
         "edaBaseRevision": _git_revision(ROOT),
         "core": core,
         "sources": sources,
@@ -378,6 +675,9 @@ def build(output_dir: Path, contract_path: Path) -> dict[str, Any]:
             {
                 "name": name,
                 "uri": f"generated/simulation-media/{name}",
+                "mediaType": (
+                    "image/svg+xml" if name.endswith(".svg") else "application/json"
+                ),
                 "sha256": _sha256(output_dir / name),
             }
             for name in expected
