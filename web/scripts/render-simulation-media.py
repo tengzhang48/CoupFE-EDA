@@ -503,6 +503,7 @@ def _etv_mobile_svg(record: dict[str, Any]) -> str:
         '<line x1="22" y1="88" x2="378" y2="88" stroke="#33475f"/>',
         '<text x="22" y="118" font-size="18" font-weight="650">Computed local-temperature path</text>',
         '<text x="48" y="136" class="small muted">°C</text>',
+        '<text x="376" y="136" text-anchor="end" class="small muted">cycle phase</text>',
     ]
     for tick in (-40, 0, 40, 80, 120, 160):
         y = plot_top + (maximum_temperature - tick) / (maximum_temperature - minimum_temperature) * plot_height

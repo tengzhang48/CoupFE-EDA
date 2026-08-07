@@ -464,6 +464,7 @@ const etvMobileSvg = await readFile(
 for (const requiredText of [
   "One-second solder-cycle response",
   "Computed local-temperature path",
+  "cycle phase",
   "Peak-temperature mechanics states",
   `${site.etvComparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} °C`,
   `${site.etvComparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} °C`,
@@ -483,6 +484,7 @@ for (const requiredText of [
 for (const requiredText of [
   "One-second partitioned solder-cycle response, portrait layout",
   "Computed local-temperature path",
+  "cycle phase",
   "Peak-temperature mechanics states",
   site.etvComparison.fast.quasisteadyEnergyMPa.toFixed(6),
   site.etvComparison.fast.lumpedTransientEnergyMPa.toFixed(6),

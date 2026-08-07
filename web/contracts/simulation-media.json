@@ -21,7 +21,7 @@
     {
       "mediaType": "image/svg+xml",
       "name": "etv-partitioned-comparison-mobile.svg",
-      "sha256": "40fb7d94e26a7cea5538b4a99966fbeac5febc781cff9a17a553020a2f20c5d9",
+      "sha256": "b3cf71c8d08420134da5c8cc7b2c2e295e113fa1951981c80fcc07c1ee77e27d",
       "uri": "generated/simulation-media/etv-partitioned-comparison-mobile.svg"
     },
     {
@@ -36,9 +36,9 @@
     "sourceKind": "clean-git-checkout",
     "url": "https://github.com/tengzhang48/CoupFE.git"
   },
-  "edaBaseRevision": "5c4ecc3eb8a0aeace8ff659a0f6a7ef9669dd904",
+  "edaBaseRevision": "16d9d5587d98d8e6d119be12351ca6d27105027e",
   "generatedBy": "web/scripts/render-simulation-media.py",
-  "generatorSha256": "575e442c6456f068198b6f342d74eefc76891d2299c0c0906055ca803d606388",
+  "generatorSha256": "eb1b9c5a41d6c46ec8e6d970a6d40802f2b4d5584cd04e033977282a8eede68a",
   "schemaVersion": 3,
   "sources": [
     {

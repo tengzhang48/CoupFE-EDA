@@ -14,6 +14,7 @@
   <line x1="22" y1="88" x2="378" y2="88" stroke="#33475f"/>
   <text x="22" y="118" font-size="18" font-weight="650">Computed local-temperature path</text>
   <text x="48" y="136" class="small muted">°C</text>
+  <text x="376" y="136" text-anchor="end" class="small muted">cycle phase</text>
   <line x1="48.0" y1="352.00" x2="376.0" y2="352.00" stroke="#263852"/>
   <text x="40.0" y="357.00" text-anchor="end" class="small muted">-40</text>
   <line x1="48.0" y1="310.00" x2="376.0" y2="310.00" stroke="#263852"/>

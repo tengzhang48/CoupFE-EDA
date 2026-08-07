@@ -372,6 +372,7 @@
 .site-etv-output-visual { min-width: 0; margin: 0; padding: clamp(20px, 2.6vw, 32px); background: #08111f; color: #edf4ff; }
 .site-etv-output-visual > header { display: flex; gap: 18px; align-items: end; justify-content: space-between; margin-bottom: 18px; }
 .site-etv-output-visual > header > div { display: grid; gap: 4px; }
+.site-etv-output-visual > header span { color: #8bc3df; }
 .site-etv-output-visual > header h4 { margin: 0; color: #fff; font-size: 17px; }
 .site-etv-output-visual > header a { color: #8bc3df; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .site-etv-output-visual > a { display: block; overflow: hidden; border: 1px solid #344a62; background: #08111f; }
@@ -383,7 +384,7 @@
 .site-etv-metric { display: grid; gap: 7px; }
 .site-etv-metric > span { color: var(--site-muted); font-size: 11px; font-weight: 750; letter-spacing: .03em; text-transform: uppercase; }
 .site-etv-metric > strong { color: var(--site-cyan); font-size: clamp(38px, 4.4vw, 62px); line-height: .95; letter-spacing: -.055em; }
-.site-etv-metric > small { color: var(--site-muted); font-size: 9px; line-height: 1.5; }
+.site-etv-metric > small { color: var(--site-muted); font-size: 10px; line-height: 1.5; }
 .site-etv-reading > p:not(.site-kicker) { margin: 22px 0; color: var(--site-muted); font-size: 12px; line-height: 1.7; }
 .site-etv-reading dl { margin: 0 0 18px; }
 .site-etv-reading dl div { display: flex; gap: 15px; align-items: baseline; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--site-line); }
@@ -656,9 +657,9 @@
   .site-etv-setup-ledger dd { text-align: left; }
   .site-etv-path-grid { grid-template-columns: 1fr; }
   .site-etv-path-branches { grid-template-columns: 1fr; }
-  .site-etv-path-or { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; }
-  .site-etv-path-or::before,
-  .site-etv-path-or::after { height: 1px; background: var(--site-line); content: ""; }
+  .site-etv-path-branches > .site-etv-path-or { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; margin: 0; color: var(--site-muted); text-align: center; }
+  .site-etv-path-branches > .site-etv-path-or::before,
+  .site-etv-path-branches > .site-etv-path-or::after { height: 1px; background: var(--site-line); content: ""; }
   .site-etv-output-visual { padding: 20px 16px; }
   .site-etv-reading { padding: 27px 20px; }
   .site-output-register > header { padding: 16px; }
