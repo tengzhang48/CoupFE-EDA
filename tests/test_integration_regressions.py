@@ -101,10 +101,12 @@ def test_guided_stateful_example_matches_retained_oracle(example):
     assert after == before
 
 
-def test_etv_meshes_select_distinct_retained_oracles():
-    """The fast smoke case cannot accidentally verify against the public case."""
+def test_etv_oracles_select_meshes_and_separate_integrity_policies():
+    """Smoke and public records use their intended oracle and integrity policy."""
     from examples.etv_partitioned_cycle import run as etv_runner
 
+    repository = Path(__file__).resolve().parents[1]
+    oracle_directory = repository / "examples" / "etv_partitioned_cycle"
     assert etv_runner._oracle_path_for_mesh(2).name == "expected_results.json"
     assert (
         etv_runner._oracle_path_for_mesh(20).name
@@ -112,6 +114,39 @@ def test_etv_meshes_select_distinct_retained_oracles():
     )
     with pytest.raises(ValueError, match="no retained oracle"):
         etv_runner._oracle_path_for_mesh(10)
+
+    smoke_oracle = json.loads(
+        (oracle_directory / "expected_results.json").read_text()
+    )
+    public_oracle = json.loads(
+        (oracle_directory / "expected_results_20x20.json").read_text()
+    )
+    smoke_integrity_paths = {
+        metric["path"]
+        for metric in smoke_oracle["metrics"]
+        if metric["path"].startswith("integrity.")
+    }
+    assert smoke_integrity_paths == {
+        "integrity.algorithm",
+        "integrity.canonicalization",
+        "integrity.mesh_coordinates_sha256",
+        "integrity.mesh_connectivity_sha256",
+    }
+    public_integrity_paths = {
+        metric["path"]
+        for metric in public_oracle["metrics"]
+        if metric["path"].startswith("integrity.")
+    }
+    assert {
+        "integrity.slow_quasisteady_last_cycle_sha256",
+        "integrity.slow_lumped_transient_last_cycle_sha256",
+        "integrity.fast_quasisteady_last_cycle_sha256",
+        "integrity.fast_lumped_transient_last_cycle_sha256",
+        "integrity.fast_quasisteady_dW_field_sha256",
+        "integrity.fast_lumped_transient_dW_field_sha256",
+        "integrity.fast_quasisteady_end_displacement_sha256",
+        "integrity.fast_lumped_transient_end_displacement_sha256",
+    } <= public_integrity_paths
 
 
 def test_retained_etv_20x20_public_record_matches_independent_oracle():

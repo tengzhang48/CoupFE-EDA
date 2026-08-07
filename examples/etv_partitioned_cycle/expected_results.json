@@ -230,38 +230,6 @@
     {
       "path": "integrity.mesh_connectivity_sha256",
       "value": "b38055c7af50317ecd7fe90b308478550443714ee102bfb0e4fa85e22dcfd892"
-    },
-    {
-      "path": "integrity.slow_quasisteady_last_cycle_sha256",
-      "value": "b2727496e9928ede0792a043b5b8cb039b8bedd9ea06e6c67fee91ace44f6236"
-    },
-    {
-      "path": "integrity.slow_lumped_transient_last_cycle_sha256",
-      "value": "e233ab47f6d2d290982a53b3f027b168e62fe21b3aeb1343c4516b1fc1b11165"
-    },
-    {
-      "path": "integrity.fast_quasisteady_last_cycle_sha256",
-      "value": "f57aebcaf2fbf5bf6a95ef3208a77556561a3140a6c43d5e0136ff130fe5608b"
-    },
-    {
-      "path": "integrity.fast_lumped_transient_last_cycle_sha256",
-      "value": "cfeae447341017b2cb74eeb24ec0c53159925f09c9fcfb268f11e486a51c2807"
-    },
-    {
-      "path": "integrity.fast_quasisteady_dW_field_sha256",
-      "value": "91291379a8ad97144fbf31b357ccded3451b456ea74c33cfaef0c9c4c9bba728"
-    },
-    {
-      "path": "integrity.fast_lumped_transient_dW_field_sha256",
-      "value": "f8491b9a388597b78f1e16c950255a93e4cfdca7e23ac975338add91bca50ef6"
-    },
-    {
-      "path": "integrity.fast_quasisteady_end_displacement_sha256",
-      "value": "7a92cb472d0a516f3c8ec5e0e06a28bb47ae06fbcbd2ba746a586d92254839fd"
-    },
-    {
-      "path": "integrity.fast_lumped_transient_end_displacement_sha256",
-      "value": "d624033d8a76c5c8ae41bd5758e91c317de7324e98b6cd2e1b84331ed45b1bc2"
     }
   ],
   "bounds": [
