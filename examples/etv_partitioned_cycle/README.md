@@ -41,16 +41,17 @@ python examples/etv_partitioned_cycle/run.py --check
 python examples/etv_partitioned_cycle/run.py --mesh-size 20 --check
 ```
 
-The commands write deterministic JSON only to standard output and do not create
+The commands write JSON records only to standard output and do not create
 source-tree files. With the default 2 × 2 smoke mesh, `--check` reads
 `expected_results.json`. With `--mesh-size 20`, it reads
 `expected_results_20x20.json`, which is the oracle used for the public website
 evidence. Each check compares selected energies, temperature paths, mesh and
 retained mechanics data, verifies that all four solver records remain inside
-Core's residual-acceptance limit, and exits nonzero on a mismatch. Independent
-SHA-256 values in each oracle also bind the retained mesh, all four second-cycle
-state histories, the two displayed fast-cycle fields, and their end-state
-displacements.
+Core's residual-acceptance limit, and exits nonzero on a mismatch. The dynamic
+2 × 2 smoke check uses numerical tolerances for recomputed solver output and
+exact SHA-256 values for its deterministic mesh. The independent 20 × 20
+oracle additionally binds all four retained second-cycle state histories, the
+two displayed fast-cycle fields, and their end-state displacements.
 
 The 20 × 20 command solves four two-cycle cases and is intentionally kept out
 of the fast test suite. The default 2 × 2 check remains the routine CI smoke
