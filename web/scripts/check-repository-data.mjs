@@ -353,7 +353,7 @@ close(
 );
 equal(
   workflows.etv_partitioned_cycle.result,
-  `−${Math.abs(metricValue(etv, "results.fast_cycle.relative_energy_difference_percent")).toFixed(2)}% fast-cycle energy-density sensitivity`,
+  `−${Math.abs(metricValue(etv, "results.fast_cycle.relative_energy_difference_percent")).toFixed(2)}% energy-density change (lumped vs quasisteady)`,
   "ETV displayed result",
 );
 equal(
@@ -400,45 +400,102 @@ for (const [displayPath, oraclePath] of [
   ["fast.relativeDifferencePercent", "results.fast_cycle.relative_energy_difference_percent"],
   ["fast.quasisteadyPeakTemperatureC", "results.fast_cycle.quasisteady.temperature_C_max"],
   ["fast.lumpedTransientPeakTemperatureC", "results.fast_cycle.lumped_transient.temperature_C_max"],
+  ["fast.quasisteadyPeakTopDisplacementUm", "results.fast_cycle.quasisteady.last_cycle.peak_top_edge_displacement_x_m"],
+  ["fast.lumpedTransientPeakTopDisplacementUm", "results.fast_cycle.lumped_transient.last_cycle.peak_top_edge_displacement_x_m"],
 ]) {
   const displayed = displayPath.split(".").reduce((record, key) => record[key], site.etvComparison);
-  close(displayed, metricValue(etv, oraclePath), `featured ETV ${displayPath}`);
+  const oracleValue = metricValue(etv, oraclePath);
+  close(
+    displayed,
+    displayPath.endsWith("DisplacementUm") ? oracleValue * 1e6 : oracleValue,
+    `featured ETV ${displayPath}`,
+  );
 }
 const etvMedia = site.simulationMedia.find(
   (media) => media.id === site.etvComparison.mediaId,
 );
 if (!etvMedia) fail("featured ETV media record is missing");
+equal(
+  site.etvComparison.recordAsset,
+  "generated/simulation-media/etv-partitioned-record.json",
+  "featured ETV retained-state asset",
+);
+equal(
+  site.etvComparison.mobileAsset,
+  "generated/simulation-media/etv-partitioned-comparison-mobile.svg",
+  "featured ETV portrait asset",
+);
+const etvRecord = await readJson(
+  await requireFile(`web/public/${site.etvComparison.recordAsset}`),
+);
+equal(etvRecord.schema_version, 2, "featured ETV retained-state schema");
+equal(etvRecord.verification?.passed, true, "featured ETV retained-state verification");
+equal(etvRecord.inputs?.mesh?.nodes, site.etvComparison.setup.nodes, "featured ETV retained node count");
+equal(etvRecord.inputs?.mesh?.elements, site.etvComparison.setup.elements, "featured ETV retained element count");
+equal(site.etvComparison.setup.displacementDofs, 2 * etvRecord.inputs.mesh.nodes, "featured ETV displacement DOFs");
+close(site.etvComparison.setup.widthMm, etvRecord.inputs.geometry_mm.width, "featured ETV width");
+close(site.etvComparison.setup.heightMm, etvRecord.inputs.geometry_mm.height, "featured ETV height");
+close(site.etvComparison.setup.elasticModulusMPa, etvRecord.inputs.representative_elastic_modulus_MPa, "featured ETV elastic modulus");
+close(site.etvComparison.setup.poissonRatio, etvRecord.inputs.representative_poisson_ratio, "featured ETV Poisson ratio");
+close(site.etvComparison.setup.temperatureReferenceC, 42.5, "featured ETV reference temperature");
+close(site.etvComparison.setup.cteMismatchPerK, etvRecord.inputs.cte_mismatch_per_K, "featured ETV CTE mismatch");
+close(site.etvComparison.setup.distanceToNeutralPointOverHeight, etvRecord.inputs.distance_to_neutral_point_over_height, "featured ETV L_D / h");
+close(site.etvComparison.setup.jouleDensityWPerM3, etvRecord.inputs.dandu_context.derived_joule_density_W_per_m3, "featured ETV Joule density", 1e-3);
+close(site.etvComparison.setup.thermalConductanceDensityWPerM3K, etvRecord.inputs.thermal_conductance_density_W_per_m3K, "featured ETV thermal conductance density");
+close(site.etvComparison.setup.volumetricHeatCapacityJPerM3K, etvRecord.inputs.volumetric_heat_capacity_J_per_m3K, "featured ETV heat capacity");
+close(site.etvComparison.setup.inelasticHeatFraction, etvRecord.inputs.inelastic_heat_fraction, "featured ETV inelastic heat fraction");
+for (const model of ["quasisteady", "lumped_transient"]) {
+  const retained = etvRecord.results.fast_cycle[model].last_cycle;
+  finiteArray(retained.phase_fraction, 9, `featured ETV ${model} phase`);
+  finiteArray(retained.chamber_temperature_C, 9, `featured ETV ${model} chamber temperature`);
+  finiteArray(retained.local_temperature_C, 9, `featured ETV ${model} local temperature`);
+  finiteArray(retained.peak_displacement_m, 18, `featured ETV ${model} peak displacement`);
+  equal(retained.displacement_m.length, 9, `featured ETV ${model} retained displacement states`);
+  retained.displacement_m.forEach((state, index) => finiteArray(state, 18, `featured ETV ${model} displacement state ${index}`));
+}
 const etvSvg = await readFile(
   await requireFile(`web/public/${etvMedia.asset}`),
   "utf8",
 );
-const etvSvgValueMatches = [
-  ...etvSvg.matchAll(/<text x="([^"]+)"[^>]*class="value">([^<]+)<\/text>/g),
-];
-equal(etvSvgValueMatches.length, 8, "featured ETV SVG value-label count");
-const etvSvgValuesByX = new Map(
-  etvSvgValueMatches.map((match) => [match[1], match[2]]),
+const etvMobileSvg = await readFile(
+  await requireFile(`web/public/${site.etvComparison.mobileAsset}`),
+  "utf8",
 );
-equal(etvSvgValuesByX.size, 8, "featured ETV SVG value-label position count");
-for (const [x, label, value] of [
-  ["125.0", "slow quasisteady energy", site.etvComparison.slow.quasisteadyEnergyMPa],
-  ["189.0", "slow lumped-transient energy", site.etvComparison.slow.lumpedTransientEnergyMPa],
-  ["330.0", "fast quasisteady energy", site.etvComparison.fast.quasisteadyEnergyMPa],
-  ["394.0", "fast lumped-transient energy", site.etvComparison.fast.lumpedTransientEnergyMPa],
-  ["798.0", "fast quasisteady peak temperature", site.etvComparison.fast.quasisteadyPeakTemperatureC],
-  ["862.0", "fast lumped-transient peak temperature", site.etvComparison.fast.lumpedTransientPeakTemperatureC],
+for (const requiredText of [
+  "One-second solder-cycle response",
+  "Computed local-temperature path",
+  "Peak-temperature mechanics states",
+  `${site.etvComparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} °C`,
+  `${site.etvComparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} °C`,
+  site.etvComparison.fast.quasisteadyEnergyMPa.toFixed(6),
+  site.etvComparison.fast.lumpedTransientEnergyMPa.toFixed(6),
+  `-${Math.abs(site.etvComparison.fast.relativeDifferencePercent).toFixed(2)}%`,
+  "Energy-density change",
+  "lumped relative to quasisteady",
+  "prescribed uₓ",
+  "deformation ×10",
+  "not a spatial thermal field",
 ]) {
-  equal(
-    etvSvgValuesByX.get(x),
-    value.toFixed(3),
-    `featured ETV SVG ${label} label`,
-  );
+  if (!etvSvg.includes(requiredText)) {
+    fail(`featured ETV SVG is missing checked content: ${requiredText}`);
+  }
 }
-const etvSvgDifferenceSummary =
-  `Fast-cycle energy difference: ${site.etvComparison.fast.relativeDifferencePercent.toFixed(2)}%` +
-  ` · slow-cycle difference: ${site.etvComparison.slow.relativeDifferencePercent.toFixed(3)}%`;
-if (!etvSvg.includes(etvSvgDifferenceSummary)) {
-  fail(`featured ETV SVG difference summary drifted: expected ${etvSvgDifferenceSummary}`);
+for (const requiredText of [
+  "One-second partitioned solder-cycle response, portrait layout",
+  "Computed local-temperature path",
+  "Peak-temperature mechanics states",
+  site.etvComparison.fast.quasisteadyEnergyMPa.toFixed(6),
+  site.etvComparison.fast.lumpedTransientEnergyMPa.toFixed(6),
+  `-${Math.abs(site.etvComparison.fast.relativeDifferencePercent).toFixed(2)}%`,
+  "Energy-density change",
+  "lumped relative to quasisteady",
+  "prescribed uₓ",
+  "deformation ×10",
+  "not a spatial thermal field",
+]) {
+  if (!etvMobileSvg.includes(requiredText)) {
+    fail(`featured ETV portrait SVG is missing checked content: ${requiredText}`);
+  }
 }
 close(
   metricValue(etv, "results.fast_cycle.lumped_transient.temperature_C_max"),
@@ -648,11 +705,16 @@ equal(
 const simulationMediaContract = await readJson(
   path.join(webRoot, "contracts", "simulation-media.json"),
 );
-equal(simulationMediaContract.schemaVersion, 1, "simulation-media contract schema");
+equal(simulationMediaContract.schemaVersion, 3, "simulation-media contract schema");
 equal(
   simulationMediaContract.generatedBy,
   "web/scripts/render-simulation-media.py",
   "simulation-media generator",
+);
+equal(
+  simulationMediaContract.generatorSha256,
+  await sha256(await requireFile(simulationMediaContract.generatedBy)),
+  "simulation-media generator hash",
 );
 equal(
   simulationMediaContract.core?.revision,
@@ -676,22 +738,48 @@ for (const source of simulationMediaContract.sources) {
   const oraclePath = await requireFile(source.oracle);
   equal(await sha256(runnerPath), source.runnerSha256, `simulation-media runner hash ${source.caseId}`);
   equal(await sha256(oraclePath), source.oracleSha256, `simulation-media oracle hash ${source.caseId}`);
+  if (!Array.isArray(source.dependencies) || source.dependencies.length === 0) {
+    fail(`simulation-media source dependencies are missing for ${source.caseId}`);
+  }
+  for (const dependency of source.dependencies) {
+    const dependencyPath = await requireFile(dependency.path);
+    equal(
+      await sha256(dependencyPath),
+      dependency.sha256,
+      `simulation-media dependency hash ${source.caseId}:${dependency.path}`,
+    );
+  }
 }
+const etvSourceContract = simulationMediaContract.sources.find(
+  (source) => source.caseId === site.etvComparison.caseId,
+);
 equal(
-  simulationMediaContract.sources.find((source) => source.caseId === site.etvComparison.caseId)?.oraclePassed,
+  etvSourceContract?.dependencies.some(
+    (dependency) => dependency.path === "eda_multiphysics/etv_fe.py",
+  ),
+  true,
+  "featured ETV solver implementation hash",
+);
+equal(
+  etvSourceContract?.oraclePassed,
   site.etvComparison.oraclePassed,
   "featured ETV/contract oracle status",
 );
-equal(simulationMediaContract.artifacts?.length, 3, "simulation-media artifact count");
+equal(simulationMediaContract.artifacts?.length, 5, "simulation-media artifact count");
 equal(
   simulationMediaContract.artifacts.map((artifact) => artifact.name).join(","),
-  "solder-3d-dissipation.svg,design-linked-solder-screening.svg,etv-partitioned-comparison.svg",
+  "solder-3d-dissipation.svg,design-linked-solder-screening.svg,etv-partitioned-comparison.svg,etv-partitioned-comparison-mobile.svg,etv-partitioned-record.json",
   "simulation-media artifact order",
 );
 for (const artifact of simulationMediaContract.artifacts) {
-  if (!/^[a-z0-9-]+\.svg$/.test(artifact.name)) {
+  if (!/^[a-z0-9-]+\.(?:svg|json)$/.test(artifact.name)) {
     fail(`unsafe simulation-media artifact name: ${String(artifact.name)}`);
   }
+  equal(
+    artifact.mediaType,
+    artifact.name.endsWith(".svg") ? "image/svg+xml" : "application/json",
+    `simulation-media type ${artifact.name}`,
+  );
   equal(
     artifact.uri,
     `generated/simulation-media/${artifact.name}`,
@@ -699,13 +787,18 @@ for (const artifact of simulationMediaContract.artifacts) {
   );
   const assetPath = await requireFile(`web/public/${artifact.uri}`);
   equal(await sha256(assetPath), artifact.sha256, `simulation-media artifact hash ${artifact.name}`);
-  const accessibleSvg = await readFile(assetPath, "utf8");
-  if (
-    !accessibleSvg.includes('role="img"') ||
-    !accessibleSvg.includes("<title id=\"figure-title\">") ||
-    !accessibleSvg.includes("<desc id=\"figure-description\">")
-  ) {
-    fail(`simulation-media SVG lacks an accessible title/description: ${artifact.name}`);
+  if (artifact.name.endsWith(".svg")) {
+    const accessibleSvg = await readFile(assetPath, "utf8");
+    if (
+      !accessibleSvg.includes('role="img"') ||
+      !accessibleSvg.includes("<title id=\"figure-title\">") ||
+      !accessibleSvg.includes("<desc id=\"figure-description\">")
+    ) {
+      fail(`simulation-media SVG lacks an accessible title/description: ${artifact.name}`);
+    }
+  } else {
+    const retainedRecord = await readJson(assetPath);
+    equal(retainedRecord.verification?.passed, true, `simulation-media JSON verification ${artifact.name}`);
   }
 }
 

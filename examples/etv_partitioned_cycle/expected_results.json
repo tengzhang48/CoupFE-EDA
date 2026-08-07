@@ -1,8 +1,13 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "input_role": "Regression oracle read only when run.py is called with --check",
   "configuration": "2x2 Quad4, two -40 to 125 to -40 C cycles, eight increments per cycle; 1600 s and 1 s periods",
   "metrics": [
+    {
+      "path": "schema_version",
+      "value": 2,
+      "absolute_tolerance": 0.0
+    },
     {
       "path": "inputs.representative_elastic_modulus_MPa",
       "value": 43000.0,
@@ -28,6 +33,31 @@
       "value": 159517996.46865556,
       "relative_tolerance": 1e-10,
       "absolute_tolerance": 1e-3
+    },
+    {
+      "path": "inputs.mesh.coordinates_m",
+      "value": [
+        [0.0, 0.0],
+        [0.00005, 0.0],
+        [0.0001, 0.0],
+        [0.0, 0.00005],
+        [0.00005, 0.00005],
+        [0.0001, 0.00005],
+        [0.0, 0.0001],
+        [0.00005, 0.0001],
+        [0.0001, 0.0001]
+      ],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.connectivity",
+      "value": [[0, 1, 4, 3], [1, 2, 5, 4], [3, 4, 7, 6], [4, 5, 8, 7]],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.top_element_indices",
+      "value": [2, 3],
+      "absolute_tolerance": 0.0
     },
     {
       "path": "results.slow_cycle.quasisteady.dW_last_MPa",
@@ -72,6 +102,118 @@
       "path": "results.fast_cycle.quasisteady.temperature_C_max",
       "value": 144.93974955858192,
       "absolute_tolerance": 0.001
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.last_cycle.local_temperature_C",
+      "value": [
+        -20.06025044141805,
+        21.189749558581923,
+        62.43974955858192,
+        103.68974955858192,
+        144.93974955858192,
+        103.68974955858192,
+        62.43974955858192,
+        21.189749558581923,
+        -20.06025044141805
+      ],
+      "absolute_tolerance": 0.002
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.last_cycle.phase_fraction",
+      "value": [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.last_cycle.phase_fraction",
+      "value": [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.last_cycle.chamber_temperature_C",
+      "value": [-40.0, 1.25, 42.5, 83.75, 125.0, 83.75, 42.5, 1.25, -40.0],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.last_cycle.chamber_temperature_C",
+      "value": [-40.0, 1.25, 42.5, 83.75, 125.0, 83.75, 42.5, 1.25, -40.0],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.last_cycle.local_temperature_C",
+      "value": [
+        28.394580304620376,
+        25.657243214854418,
+        39.808979904995795,
+        64.37850669490467,
+        95.37376256299183,
+        98.60146223882845,
+        84.6969890490497,
+        60.27112789097367,
+        29.388973619934916
+      ],
+      "absolute_tolerance": 0.002
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.last_cycle.peak_displacement_m",
+      "value": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        6.146384973088222e-7,
+        1.702531669988473e-8,
+        6.146384973088554e-7,
+        0.0,
+        6.146384973088222e-7,
+        -1.7025316699884716e-8,
+        1.2292769947029831e-6,
+        0.0,
+        1.2292769947029831e-6,
+        0.0,
+        1.2292769947029831e-6,
+        0.0
+      ],
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 1e-12
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.last_cycle.peak_displacement_m",
+      "value": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        3.3660877343086765e-7,
+        1.7460058018735493e-8,
+        3.366087734308676e-7,
+        0.0,
+        3.3660877343086765e-7,
+        -1.7460058018735516e-8,
+        6.732175468659416e-7,
+        0.0,
+        6.732175468659416e-7,
+        0.0,
+        6.732175468659416e-7,
+        0.0
+      ],
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 1e-12
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.last_cycle.peak_top_edge_displacement_x_m",
+      "value": 1.2292769947029831e-6,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 1e-12
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.last_cycle.peak_top_edge_displacement_x_m",
+      "value": 6.732175468659415e-7,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 1e-12
     }
   ],
   "bounds": [

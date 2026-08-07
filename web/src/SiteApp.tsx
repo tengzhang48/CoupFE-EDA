@@ -171,18 +171,79 @@ function SimulationEvidenceLinks({
   media,
   assetLabel = "Generated SVG",
   downloadAsset = false,
+  recordAsset,
 }: {
   media: SimulationMedia;
   assetLabel?: string;
   downloadAsset?: boolean;
+  recordAsset?: string;
 }) {
   return (
     <nav className="site-inline-links" aria-label={`${media.title} evidence`}>
       <a href={publicAsset(media.asset)} download={downloadAsset || undefined}>{assetLabel}</a>
+      {recordAsset ? <a href={publicAsset(recordAsset)} download>Retained state JSON</a> : null}
       <SourceLink path={media.runnerPath}>Runner</SourceLink>
-      <SourceLink path={media.resultPath}>Oracle</SourceLink>
+      <SourceLink path={media.resultPath}>Regression oracle</SourceLink>
       <SourceLink path={media.evidencePath}>SHA-256 record</SourceLink>
     </nav>
+  );
+}
+
+function EtvSetupDiagram() {
+  const comparison = siteData.etvComparison;
+  return (
+    <figure className="site-etv-setup-figure" aria-labelledby="etv-setup-title" aria-describedby="etv-setup-caption">
+      <header><span>01 · Declared model</span><h4 id="etv-setup-title">What is being solved</h4></header>
+      <svg className="site-etv-setup-desktop" viewBox="0 0 440 300" role="img" aria-labelledby="etv-schematic-title etv-schematic-description">
+        <title id="etv-schematic-title">Plane-strain solder-block model setup</title>
+        <desc id="etv-schematic-description">A two-by-two quadrilateral mesh representing a 0.1 millimetre square SAC305 block. The bottom edge is fixed, horizontal thermal-mismatch displacement is prescribed at the top, lateral sides are traction free, and the top element row supplies the reported energy-density mean.</desc>
+        <defs>
+          <marker id="etv-arrow-desktop" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" /></marker>
+        </defs>
+        <rect className="site-etv-schematic-domain" x="80" y="45" width="190" height="190" />
+        <rect className="site-etv-schematic-sample" x="81" y="46" width="188" height="93" />
+        <path className="site-etv-schematic-grid" d="M175 45V235M80 140H270" />
+        <line className="site-etv-schematic-load" x1="94" y1="24" x2="202" y2="24" markerEnd="url(#etv-arrow-desktop)" />
+        <text x="80" y="15">prescribed top displacement</text>
+        <path className="site-etv-schematic-callout" d="M270 47H293V69" />
+        <text x="302" y="62">top: uₓ = γH</text>
+        <text x="302" y="79">uᵧ = 0</text>
+        <path className="site-etv-schematic-callout" d="M270 140H293" />
+        <text x="302" y="136">sides:</text>
+        <text x="302" y="153">traction free</text>
+        <path className="site-etv-schematic-callout" d="M270 235H293V218" />
+        <text x="302" y="213">bottom:</text>
+        <text x="302" y="230">uₓ = uᵧ = 0</text>
+        {[95, 127, 159, 191, 223, 255].map((x) => <path className="site-etv-schematic-fix" d={`M${x} 235l-8 13h16z`} key={x} />)}
+        <path className="site-etv-schematic-dimension" d="M80 270V258M80 264H270M270 270V258" />
+        <text x="175" y="286" textAnchor="middle">{comparison.setup.widthMm.toFixed(1)} mm</text>
+        <path className="site-etv-schematic-dimension" d="M50 45H62M56 45V235M50 235H62" />
+        <text x="35" y="140" textAnchor="middle" transform="rotate(-90 35 140)">{comparison.setup.heightMm.toFixed(1)} mm</text>
+        <text className="site-etv-schematic-sample-label" x="175" y="99" textAnchor="middle">top-layer Gauss-point</text>
+        <text className="site-etv-schematic-sample-label" x="175" y="116" textAnchor="middle">mean (2 elements)</text>
+      </svg>
+      <svg className="site-etv-setup-mobile" viewBox="0 0 300 390" role="img" aria-labelledby="etv-schematic-mobile-title etv-schematic-mobile-description">
+        <title id="etv-schematic-mobile-title">Plane-strain solder-block model setup, mobile layout</title>
+        <desc id="etv-schematic-mobile-description">A mobile schematic of the same two-by-two quadrilateral mesh and declared displacement boundary conditions.</desc>
+        <defs>
+          <marker id="etv-arrow-mobile" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" /></marker>
+        </defs>
+        <text x="22" y="18">prescribed top displacement</text>
+        <line className="site-etv-schematic-load" x1="55" y1="34" x2="170" y2="34" markerEnd="url(#etv-arrow-mobile)" />
+        <rect className="site-etv-schematic-domain" x="55" y="54" width="190" height="190" />
+        <rect className="site-etv-schematic-sample" x="56" y="55" width="188" height="93" />
+        <path className="site-etv-schematic-grid" d="M150 54V244M55 149H245" />
+        <text className="site-etv-schematic-sample-label" x="150" y="97" textAnchor="middle">top-layer Gauss-point</text>
+        <text className="site-etv-schematic-sample-label" x="150" y="116" textAnchor="middle">mean (2 elements)</text>
+        {[70, 102, 134, 166, 198, 230].map((x) => <path className="site-etv-schematic-fix" d={`M${x} 244l-8 13h16z`} key={x} />)}
+        <path className="site-etv-schematic-dimension" d="M55 283V271M55 277H245M245 283V271" />
+        <text x="150" y="302" textAnchor="middle">{comparison.setup.widthMm.toFixed(1)} mm × {comparison.setup.heightMm.toFixed(1)} mm</text>
+        <text x="22" y="329">Top: uₓ = γH; uᵧ = 0 (prescribed)</text>
+        <text x="22" y="352">Sides: traction free</text>
+        <text x="22" y="375">Bottom: uₓ = uᵧ = 0</text>
+      </svg>
+      <figcaption id="etv-setup-caption">Model schematic—not a solved field. Plane strain; out-of-plane package geometry is not modeled.</figcaption>
+    </figure>
   );
 }
 
@@ -190,93 +251,78 @@ function EtvComparisonResult() {
   const comparison = siteData.etvComparison;
   const media = siteData.simulationMedia.find((candidate) => candidate.id === comparison.mediaId);
   if (!media) throw new Error(`Missing ETV simulation media ${comparison.mediaId}`);
-  const energyScaleMaximumMPa = 0.8;
-  const cases = [
-    {
-      id: "slow",
-      label: "Slow cycle",
-      period: `${comparison.slow.periodSeconds.toLocaleString()} s period`,
-      quasisteady: comparison.slow.quasisteadyEnergyMPa,
-      transient: comparison.slow.lumpedTransientEnergyMPa,
-      difference: comparison.slow.relativeDifferencePercent,
-    },
-    {
-      id: "fast",
-      label: "Fast cycle",
-      period: `${comparison.fast.periodSeconds.toLocaleString()} s period`,
-      quasisteady: comparison.fast.quasisteadyEnergyMPa,
-      transient: comparison.fast.lumpedTransientEnergyMPa,
-      difference: comparison.fast.relativeDifferencePercent,
-    },
-  ];
-  const widthFor = (value: number) => `${(value / energyScaleMaximumMPa) * 100}%`;
   const temperatureLabel = (value: number) => value < 0 ? `−${Math.abs(value)}` : `${value}`;
-  const temperatureScaleMaximumC = 160;
 
   return (
     <article className="site-etv-result" aria-labelledby="etv-result-title">
-      <div className="site-etv-plot">
-        <header>
-          <div><span>Checked solver output · {comparison.caseId}</span><strong id="etv-result-title">Partitioned SAC305 ETV comparison</strong></div>
-          <p>{comparison.mesh} · {comparison.cycles} cycles · {comparison.incrementsPerCycle} increments/cycle</p>
-        </header>
-        <figure aria-labelledby="etv-plot-title" aria-describedby="etv-plot-caption">
-          <figcaption>
-            <strong id="etv-plot-title">{comparison.energyQuantity}</strong>
-            <span id="etv-plot-caption">Increment-summed, equal-volume top-layer Gauss-point mean · 1 {comparison.energyUnit} = 1 MJ/m³</span>
-          </figcaption>
-          <div className="site-etv-legend" aria-hidden="true"><span><i /> Quasisteady</span><span><i /> Lumped transient</span></div>
-          <div className="site-etv-axis" aria-hidden="true"><span>0</span><span>0.2</span><span>0.4</span><span>0.6</span><span>0.8 MPa</span></div>
-          <div className="site-etv-cases">
-            {cases.map((entry) => (
-              <section className={`site-etv-case site-etv-case-${entry.id}`} key={entry.id}>
-                <header><div><strong>{entry.label}</strong><span>{entry.period}</span></div><b>{formatSignedPercent(entry.difference, entry.id === "slow" ? 4 : 2)}</b></header>
-                <div
-                  className="site-etv-measures"
-                  role="img"
-                  aria-label={`${entry.label}, ${entry.period}: quasisteady ${entry.quasisteady.toFixed(6)} MPa; lumped transient ${entry.transient.toFixed(6)} MPa; relative difference ${entry.difference.toFixed(4)} percent`}
-                >
-                  <div><span>Quasisteady</span><i aria-hidden="true"><b style={{ width: widthFor(entry.quasisteady) }} /></i><strong>{entry.quasisteady.toFixed(6)}</strong></div>
-                  <div><span>Lumped transient</span><i aria-hidden="true"><b style={{ width: widthFor(entry.transient) }} /></i><strong>{entry.transient.toFixed(6)}</strong></div>
-                </div>
-              </section>
-            ))}
+      <header className="site-etv-case-header">
+        <div><span>Checked partitioned example · {comparison.caseId}</span><h3 id="etv-result-title">Thermal-mismatch shear in SAC305</h3></div>
+        <p>A uniform local temperature drives a spatial mechanics solve. The comparison asks how much the retained response changes between two declared uniform-temperature treatments.</p>
+      </header>
+
+      <section className="site-etv-setup" aria-label="Declared ETV model setup">
+        <EtvSetupDiagram />
+        <div className="site-etv-setup-ledger">
+          <p className="site-kicker"><span /> Selected retained inputs</p>
+          <dl>
+            <div><dt>Domain / mesh</dt><dd>{comparison.setup.widthMm.toFixed(1)} × {comparison.setup.heightMm.toFixed(1)} mm<br /><span>{comparison.mesh} · {comparison.setup.nodes} nodes · {comparison.setup.displacementDofs} DOFs</span></dd></div>
+            <div><dt>Constitutive inputs</dt><dd>{comparison.setup.material}<br /><span>Project elastic inputs: E = {(comparison.setup.elasticModulusMPa / 1000).toFixed(0)} GPa · ν = {comparison.setup.poissonRatio.toFixed(2)}</span></dd></div>
+            <div><dt>Chamber cycle</dt><dd>{temperatureLabel(comparison.temperatureCycleC.low)} → {comparison.temperatureCycleC.high} → {temperatureLabel(comparison.temperatureCycleC.low)} °C<br /><span>{comparison.cycles} cycles · {comparison.incrementsPerCycle} increments/cycle</span></dd></div>
+            <div><dt>Mismatch loading</dt><dd>γ = Δα(T<sub>local</sub> − T<sub>ref</sub>)(L<sub>D</sub>/h)<br /><span>Δα = {(comparison.setup.cteMismatchPerK * 1e6).toFixed(0)} × 10⁻⁶ K⁻¹ · L<sub>D</sub>/h = {comparison.setup.distanceToNeutralPointOverHeight.toFixed(0)} · T<sub>ref</sub> = {comparison.setup.temperatureReferenceC.toFixed(1)} °C</span></dd></div>
+            <div><dt>Thermal reduction</dt><dd>g<sub>th</sub> = {(comparison.setup.thermalConductanceDensityWPerM3K / 1e6).toFixed(1)} MW/m³K · ρc = {(comparison.setup.volumetricHeatCapacityJPerM3K / 1e6).toFixed(1)} MJ/m³K<br /><span>Taylor–Quinney fraction = {comparison.setup.inelasticHeatFraction.toFixed(1)}</span></dd></div>
+          </dl>
+          <div className="site-etv-input-note" role="note">
+            <strong>Scalar heating input</strong>
+            <p>q<sub>J</sub> = {comparison.setup.jouleDensityWPerM3.toExponential(5)} W/m³ comes from the documented representative current-density context. This cycle does not solve an electrical field or reproduce that bump geometry.</p>
           </div>
-          <section className="site-etv-temperature" aria-labelledby="etv-temperature-title">
-            <header><div><strong id="etv-temperature-title">Fast-cycle peak temperature</strong><span>{comparison.fast.periodSeconds.toLocaleString()} s period</span></div><b>0–{temperatureScaleMaximumC} °C scale</b></header>
-            <div
-              className="site-etv-measures"
-              role="img"
-              aria-label={`Fast-cycle peak temperature: quasisteady ${comparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} degrees Celsius; lumped transient ${comparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} degrees Celsius`}
-            >
-              <div><span>Quasisteady</span><i aria-hidden="true"><b style={{ width: `${(comparison.fast.quasisteadyPeakTemperatureC / temperatureScaleMaximumC) * 100}%` }} /></i><strong>{comparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} °C</strong></div>
-              <div><span>Lumped transient</span><i aria-hidden="true"><b style={{ width: `${(comparison.fast.lumpedTransientPeakTemperatureC / temperatureScaleMaximumC) * 100}%` }} /></i><strong>{comparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} °C</strong></div>
-            </div>
-          </section>
-          <div className="site-etv-method">
-            <span>Input cycle <strong>{temperatureLabel(comparison.temperatureCycleC.low)} → {temperatureLabel(comparison.temperatureCycleC.high)} → {temperatureLabel(comparison.temperatureCycleC.low)} °C</strong></span>
-            <span>Relative difference <strong>{comparison.relativeDifferenceDefinition}</strong></span>
-          </div>
-        </figure>
-      </div>
-      <div className="site-etv-reading">
-        <p className="site-kicker"><span /> What the run shows</p>
-        <h3><span>Fast-cycle energy-density difference</span>{formatSignedPercent(comparison.fast.relativeDifferencePercent, 2)}</h3>
-        <p>
-          At {comparison.slow.periodSeconds.toLocaleString()} s, the two declared temperature assumptions nearly agree.
-          At {comparison.fast.periodSeconds.toLocaleString()} s, the lumped-transient run has a lower recorded peak temperature and the same spatial mechanics path accumulates substantially less inelastic energy density.
-        </p>
-        <dl>
-          <div><dt>Fast-cycle peak temperature</dt><dd>{comparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} °C <span>lumped</span></dd></div>
-          <div><dt>Quasisteady comparison</dt><dd>{comparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} °C</dd></div>
-        </dl>
-        <div className="site-etv-check" role="note" aria-label="ETV regression status">
-          <span>Regression oracle <strong>{comparison.oraclePassed ? "passed" : "not passed"}</strong></span>
-          <code>{comparison.command}</code>
         </div>
-        <Boundary compact>{comparison.boundary}</Boundary>
-        <SimulationEvidenceLinks media={media} assetLabel="Download retained comparison SVG" downloadAsset />
-      </div>
+      </section>
+
+      <section className="site-etv-paths" aria-labelledby="etv-paths-title">
+        <header><span>02 · Two declared thermal paths</span><h4 id="etv-paths-title">Same mechanics; two alternative uniform-temperature treatments</h4></header>
+        <div className="site-etv-path-grid">
+          <div className="site-etv-path-input"><small>Prescribed chamber cycle</small><strong>{temperatureLabel(comparison.temperatureCycleC.low)} → {comparison.temperatureCycleC.high} → {temperatureLabel(comparison.temperatureCycleC.low)} °C</strong><span>1,600 s or 1 s period</span></div>
+          <div className="site-etv-path-branches" aria-label="Alternative uniform-temperature treatments">
+            <article><small>Alternative A</small><strong>Quasisteady</strong><p>Uniform chamber temperature plus the steady Joule-heating offset.</p></article>
+            <span className="site-etv-path-or" aria-hidden="true">OR</span>
+            <article><small>Alternative B</small><strong>Lumped transient</strong><p>Uniform temperature advanced by backward Euler with finite heat capacity and one-increment-lagged inelastic heating.</p></article>
+          </div>
+          <div className="site-etv-path-solve"><small>Shared spatial solve</small><strong>{comparison.setup.elements} Quad4 elements</strong><span>stateful plane-strain SAC305 mechanics</span></div>
+        </div>
+        <p>Partitioned uniform-temperature feedback—not a monolithic φ–T–u element or a spatial thermal-field solution.</p>
+      </section>
+
+      <section className="site-etv-output" aria-labelledby="etv-output-title">
+        <figure className="site-etv-output-visual">
+          <header><div><span>03 · Oracle-gated solver output</span><h4 id="etv-output-title">Second-cycle temperature path and peak states</h4></div><a href={publicAsset(media.asset)}>Open full figure <span aria-hidden="true">↗</span></a></header>
+          <a href={publicAsset(media.asset)} aria-describedby="etv-output-caption">
+            <picture>
+              <source media="(max-width: 620px)" srcSet={publicAsset(comparison.mobileAsset)} />
+              <img src={publicAsset(media.asset)} alt={media.alt} loading="lazy" />
+            </picture>
+          </a>
+          <figcaption id="etv-output-caption">Nine retained states per model. Mesh deformation is magnified 10×; temperature is uniform by construction and is not presented as a spatial contour.</figcaption>
+        </figure>
+        <div className="site-etv-reading">
+          <p className="site-kicker"><span /> What this case establishes</p>
+          <div className="site-etv-metric"><span>Energy-density change</span><strong>{formatSignedPercent(comparison.fast.relativeDifferencePercent, 2)}</strong><small>Lumped relative to quasisteady<br />{comparison.relativeDifferenceDefinition}</small></div>
+          <p>
+            At {comparison.slow.periodSeconds.toLocaleString()} s, the two treatments nearly agree. At {comparison.fast.periodSeconds.toLocaleString()} s, they produce different retained temperature paths and second-cycle inelastic-energy results. This comparison does not establish which treatment is more accurate.
+          </p>
+          <dl>
+            <div><dt>Quasisteady peak state</dt><dd>{comparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} °C <span>prescribed top uₓ {comparison.fast.quasisteadyPeakTopDisplacementUm.toFixed(3)} µm</span></dd></div>
+            <div><dt>Lumped peak state</dt><dd>{comparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} °C <span>prescribed top uₓ {comparison.fast.lumpedTransientPeakTopDisplacementUm.toFixed(3)} µm</span></dd></div>
+            <div><dt>Second-cycle dW</dt><dd>{comparison.fast.quasisteadyEnergyMPa.toFixed(6)} → {comparison.fast.lumpedTransientEnergyMPa.toFixed(6)} MPa<span>top-layer Gauss-point mean</span></dd></div>
+            <div><dt>1,600 s control</dt><dd>{comparison.slow.quasisteadyEnergyMPa.toFixed(6)} → {comparison.slow.lumpedTransientEnergyMPa.toFixed(6)} MPa<span>{formatSignedPercent(comparison.slow.relativeDifferencePercent, 4)}</span></dd></div>
+          </dl>
+          <div className="site-etv-check" role="note" aria-label="ETV regression status">
+            <span>Regression oracle <strong>{comparison.oraclePassed ? "passed" : "not passed"}</strong></span>
+            <code>{comparison.command}</code>
+          </div>
+          <Boundary compact>{comparison.boundary}</Boundary>
+          <SimulationEvidenceLinks media={media} assetLabel="Retained solver-state SVG" recordAsset={comparison.recordAsset} />
+        </div>
+      </section>
     </article>
   );
 }
@@ -472,8 +518,8 @@ function PublicSite() {
 
         <section className="site-section site-simulation-evidence" id="simulations">
           <div className="site-section-heading">
-            <div><p className="site-kicker"><span /> Separate checked setup · partitioned ETV</p><h2>At one second, the thermal assumption changes the mechanical result</h2></div>
-            <p>The same spatial SAC305 mechanics calculation is driven by two declared temperature treatments. The comparison below reports the retained second-cycle values, not an illustrative concept.</p>
+            <div><p className="site-kicker"><span /> Separate checked setup · partitioned ETV</p><h2>How does a 0.1 mm solder block respond to a one-second thermal cycle?</h2></div>
+            <p>A fixed-bottom, shear-driven SAC305 block is solved with two uniform-temperature treatments. The case sheet below establishes the geometry and loading before showing the retained solver states and second-cycle comparison.</p>
           </div>
           <EtvComparisonResult />
           <SupportingSimulationOutputs />

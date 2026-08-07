@@ -68,9 +68,9 @@
       "title": "Partitioned ETV cycle",
       "summary": "Quasisteady and lumped-transient temperature assumptions drive the same spatial SAC305 mechanics calculation.",
       "command": "python examples/etv_partitioned_cycle/run.py --check",
-      "result": "−66.85% fast-cycle energy-density sensitivity",
+      "result": "−66.85% energy-density change (lumped vs quasisteady)",
       "detail": "98.60 °C transient peak · 144.94 °C quasisteady peak",
-      "boundary": "Uniform one-increment-lagged thermal feedback with unit Taylor–Quinney fraction; not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation.",
+      "boundary": "An idealized square block with uniform one-increment-lagged thermal feedback and unit Taylor–Quinney fraction. L_D/h = 6 is a loading parameter, not modeled package geometry. Not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation.",
       "tier": "NumPy / SciPy / CoupFE",
       "readmePath": "examples/etv_partitioned_cycle/README.md",
       "runnerPath": "examples/etv_partitioned_cycle/run.py",
@@ -196,13 +196,13 @@
     {
       "id": "etv_partitioned_comparison",
       "eyebrow": "CoupFE partitioned mechanics",
-      "title": "ETV assumption comparison",
+      "title": "One-second solder-cycle response",
       "asset": "generated/simulation-media/etv-partitioned-comparison.svg",
-      "alt": "Paired bars comparing quasisteady and lumped-transient inelastic energy density and peak temperature for checked slow and fast ETV cycles",
-      "summary": "The same spatial SAC305 mechanics path is evaluated with quasisteady and backward-Euler lumped-temperature assumptions, separated into energy-density and temperature panels.",
-      "result": "−66.85% fast-cycle energy-density difference",
+      "alt": "Retained one-second temperature paths and two magnified deformed-mesh snapshots comparing quasisteady and lumped-transient treatments for the checked SAC305 block",
+      "summary": "Nine retained second-cycle states expose the computed temperature paths and peak-state deformed meshes before the checked inelastic-energy comparison.",
+      "result": "−66.85% energy-density change, lumped relative to quasisteady",
       "detail": "1 s and 1,600 s periods · second-cycle values",
-      "boundary": "Uniform one-increment-lagged thermal feedback with unit Taylor–Quinney fraction; not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation.",
+      "boundary": "An idealized square block with uniform one-increment-lagged thermal feedback and unit Taylor–Quinney fraction. L_D/h = 6 is a loading parameter, not modeled package geometry. Not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation.",
       "runnerPath": "examples/etv_partitioned_cycle/run.py",
       "resultPath": "examples/etv_partitioned_cycle/expected_results.json",
       "evidencePath": "web/contracts/simulation-media.json"
@@ -230,6 +230,25 @@
     "incrementsPerCycle": 8,
     "oraclePassed": true,
     "command": "python examples/etv_partitioned_cycle/run.py --check",
+    "mobileAsset": "generated/simulation-media/etv-partitioned-comparison-mobile.svg",
+    "recordAsset": "generated/simulation-media/etv-partitioned-record.json",
+    "setup": {
+      "widthMm": 0.1,
+      "heightMm": 0.1,
+      "nodes": 9,
+      "elements": 4,
+      "displacementDofs": 18,
+      "material": "SAC305 · non-aged Anand fit",
+      "elasticModulusMPa": 43000.0,
+      "poissonRatio": 0.4,
+      "temperatureReferenceC": 42.5,
+      "cteMismatchPerK": 0.00002,
+      "distanceToNeutralPointOverHeight": 6.0,
+      "jouleDensityWPerM3": 159517996.46865556,
+      "thermalConductanceDensityWPerM3K": 8000000.0,
+      "volumetricHeatCapacityJPerM3K": 1600000.0,
+      "inelasticHeatFraction": 1.0
+    },
     "temperatureCycleC": {
       "low": -40.0,
       "high": 125.0
@@ -249,9 +268,11 @@
       "lumpedTransientEnergyMPa": 0.25222928532970823,
       "relativeDifferencePercent": -66.8476348734628,
       "quasisteadyPeakTemperatureC": 144.93974955858192,
-      "lumpedTransientPeakTemperatureC": 98.60146223882845
+      "lumpedTransientPeakTemperatureC": 98.60146223882845,
+      "quasisteadyPeakTopDisplacementUm": 1.229276994702983,
+      "lumpedTransientPeakTopDisplacementUm": 0.6732175468659415
     },
-    "boundary": "Uniform one-increment-lagged thermal feedback with unit Taylor–Quinney fraction; not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation."
+    "boundary": "An idealized square block with uniform one-increment-lagged thermal feedback and unit Taylor–Quinney fraction. L_D/h = 6 is a loading parameter, not modeled package geometry. Not a monolithic φ–T–u element, stabilized-cycle or convergence study, measured-device result, or predictive-life calculation."
   },
   "solderComparison": {
     "baselineMediaId": "solder_3d_dissipation",

@@ -53,6 +53,44 @@ def test_guided_stateful_example_matches_retained_oracle(example):
         assert float(np.mean(field)) == pytest.approx(
             record["results"]["dW_mean_MPa"], rel=1.0e-10, abs=1.0e-12
         )
+    if example == "etv_partitioned_cycle":
+        mesh = record["inputs"]["mesh"]
+        assert mesh["nodes"] == 9
+        assert mesh["elements"] == 4
+        assert mesh["top_element_indices"] == [2, 3]
+        for model in ("quasisteady", "lumped_transient"):
+            result = record["results"]["fast_cycle"][model]
+            retained = result["last_cycle"]
+            assert retained["step"] == list(range(9))
+            assert retained["phase_fraction"] == pytest.approx(
+                np.linspace(0.0, 1.0, 9)
+            )
+            assert len(retained["displacement_m"]) == 9
+            assert np.asarray(retained["displacement_m"]).shape == (9, 18)
+            assert np.asarray(retained["increment_dW_element_MPa"]).shape == (
+                9,
+                4,
+            )
+            field = np.asarray(retained["dW_element_MPa"], dtype=float)
+            assert field.shape == (4,)
+            assert float(np.mean(field[mesh["top_element_indices"]])) == pytest.approx(
+                result["dW_last_MPa"], rel=1.0e-10, abs=1.0e-12
+            )
+            peak_index = retained["peak_temperature_state_index"]
+            assert retained["local_temperature_C"][peak_index] == pytest.approx(
+                result["temperature_C_max"]
+            )
+        quasisteady_states = record["results"]["fast_cycle"]["quasisteady"][
+            "last_cycle"
+        ]
+        transient_states = record["results"]["fast_cycle"]["lumped_transient"][
+            "last_cycle"
+        ]
+        assert transient_states["phase_fraction"] == quasisteady_states["phase_fraction"]
+        assert (
+            transient_states["chamber_temperature_C"]
+            == quasisteady_states["chamber_temperature_C"]
+        )
     after = {
         path.relative_to(runner.parent): (path.stat().st_size, path.stat().st_mtime_ns)
         for path in runner.parent.iterdir()

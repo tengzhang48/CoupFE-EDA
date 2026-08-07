@@ -34,6 +34,7 @@ def _case_record(comparison, period_s):
             "max_residual_fraction_of_acceptance_limit": result[
                 "max_residual_fraction_of_limit"
             ],
+            "last_cycle": result["last_cycle"],
         }
 
     return {
@@ -52,8 +53,9 @@ def run():
     common = {"q_joule": q_joule, "ncyc": 2}
     slow = thermoviscoplastic_comparison(period=1600.0, **common)
     fast = thermoviscoplastic_comparison(period=1.0, **common)
+    mesh = slow["quasisteady"]["mesh"]
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "example": "etv_partitioned_cycle",
         "inputs": {
             "material": "SAC305_non_aged_Anand_fit",
@@ -63,7 +65,16 @@ def run():
                 "project model inputs; separate from the cited non-aged Anand fit"
             ),
             "geometry_mm": {"width": 0.1, "height": 0.1},
-            "mesh": {"element": "Quad4_plane_strain", "nx": 2, "ny": 2},
+            "mesh": {
+                "element": "Quad4_plane_strain",
+                "nx": 2,
+                "ny": 2,
+                "nodes": len(mesh["coordinates_m"]),
+                "elements": len(mesh["connectivity"]),
+                "coordinates_m": mesh["coordinates_m"],
+                "connectivity": mesh["connectivity"],
+                "top_element_indices": mesh["top_element_indices"],
+            },
             "temperature_cycle_C": {"low": -40.0, "high": 125.0},
             "cycles": 2,
             "increments_per_cycle": 8,
@@ -113,6 +124,36 @@ def _value_at(record, path):
     return value
 
 
+def _compare_metric(actual, expected, *, path, rel_tol, abs_tol):
+    if isinstance(expected, list):
+        if not isinstance(actual, list) or len(actual) != len(expected):
+            return [
+                f"{path}: expected an array of length {len(expected)}, "
+                f"observed {type(actual).__name__} of length "
+                f"{len(actual) if isinstance(actual, list) else 'n/a'}"
+            ]
+        failures = []
+        for index, (actual_item, expected_item) in enumerate(zip(actual, expected)):
+            failures.extend(
+                _compare_metric(
+                    actual_item,
+                    expected_item,
+                    path=f"{path}[{index}]",
+                    rel_tol=rel_tol,
+                    abs_tol=abs_tol,
+                )
+            )
+        return failures
+    if not math.isclose(
+        float(actual),
+        float(expected),
+        rel_tol=rel_tol,
+        abs_tol=abs_tol,
+    ):
+        return [f"{path}: expected {expected!r}, observed {actual!r}"]
+    return []
+
+
 def _check(record):
     oracle_path = Path(__file__).with_name("expected_results.json")
     with oracle_path.open() as stream:
@@ -121,15 +162,15 @@ def _check(record):
     for metric in oracle["metrics"]:
         actual = _value_at(record, metric["path"])
         expected = metric["value"]
-        if not math.isclose(
-            float(actual),
-            float(expected),
-            rel_tol=metric.get("relative_tolerance", 0.0),
-            abs_tol=metric.get("absolute_tolerance", 0.0),
-        ):
-            failures.append(
-                f"{metric['path']}: expected {expected!r}, observed {actual!r}"
+        failures.extend(
+            _compare_metric(
+                actual,
+                expected,
+                path=metric["path"],
+                rel_tol=metric.get("relative_tolerance", 0.0),
+                abs_tol=metric.get("absolute_tolerance", 0.0),
             )
+        )
     for bound in oracle["bounds"]:
         actual = float(_value_at(record, bound["path"]))
         if "maximum_exclusive" in bound and not actual < bound["maximum_exclusive"]:
