@@ -1,0 +1,432 @@
+{
+  "schema_version": 3,
+  "input_role": "Regression oracle read only when run.py is called with --mesh-size 20 --check",
+  "configuration": "20x20 Quad4, two -40 to 125 to -40 C cycles, eight increments per cycle; 1600 s and 1 s periods",
+  "metrics": [
+    {
+      "path": "schema_version",
+      "value": 3,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.representative_elastic_modulus_MPa",
+      "value": 43000.0,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.representative_poisson_ratio",
+      "value": 0.4,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.volumetric_heat_capacity_J_per_m3K",
+      "value": 1600000.0,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.dandu_context.solder_resistivity_ohm_m",
+      "value": 1.33e-7,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.dandu_context.derived_joule_density_W_per_m3",
+      "value": 159517996.46865556,
+      "relative_tolerance": 1e-10,
+      "absolute_tolerance": 0.001
+    },
+    {
+      "path": "inputs.mesh.nx",
+      "value": 20,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.ny",
+      "value": 20,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.nodes",
+      "value": 441,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.elements",
+      "value": 400,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.mechanical_displacement_dofs",
+      "value": 882,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.element_width_um",
+      "value": 5.0,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.element_height_um",
+      "value": 5.0,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.top_row_depth_um",
+      "value": 5.0,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.top_row_element_count",
+      "value": 20,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "inputs.mesh.top_element_indices",
+      "value": [
+        380,
+        381,
+        382,
+        383,
+        384,
+        385,
+        386,
+        387,
+        388,
+        389,
+        390,
+        391,
+        392,
+        393,
+        394,
+        395,
+        396,
+        397,
+        398,
+        399
+      ],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.slow_cycle.quasisteady.cycle_dW_MPa",
+      "value": [0.20085341724753708, 0.19712248717734293],
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.cycle_dW_MPa",
+      "value": [0.20076533192862184, 0.19700317420208485],
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.quasisteady.dW_last_MPa",
+      "value": 0.19712248717734293,
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.dW_last_MPa",
+      "value": 0.19700317420208485,
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.relative_energy_difference_percent",
+      "value": -0.0605273284476865,
+      "absolute_tolerance": 0.0002
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.cycle_dW_MPa",
+      "value": [0.30094791162911955, 0.2862182696275743],
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.cycle_dW_MPa",
+      "value": [0.15219147912853953, 0.10829074240423134],
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.dW_last_MPa",
+      "value": 0.2862182696275743,
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.dW_last_MPa",
+      "value": 0.10829074240423134,
+      "relative_tolerance": 2e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.relative_energy_difference_percent",
+      "value": -62.16497900530994,
+      "absolute_tolerance": 0.002
+    },
+    {
+      "path": "results.slow_cycle.quasisteady.temperature_C_max",
+      "value": 144.93974955858192,
+      "absolute_tolerance": 0.002
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.temperature_C_max",
+      "value": 144.89851325883956,
+      "absolute_tolerance": 0.002
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.temperature_C_max",
+      "value": 144.93974955858192,
+      "absolute_tolerance": 0.002
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.temperature_C_max",
+      "value": 98.57631847986272,
+      "absolute_tolerance": 0.002
+    },
+    {
+      "path": "results.slow_cycle.quasisteady.dW_field_summary_MPa.minimum",
+      "value": 0.0011686116291629172,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-9
+    },
+    {
+      "path": "results.slow_cycle.quasisteady.dW_field_summary_MPa.maximum",
+      "value": 0.8383436635992882,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.quasisteady.dW_field_summary_MPa.mean",
+      "value": 0.3884598011318027,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.quasisteady.dW_field_summary_MPa.top_row_mean",
+      "value": 0.197122487177343,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.dW_field_summary_MPa.minimum",
+      "value": 0.0011673169033173697,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-9
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.dW_field_summary_MPa.maximum",
+      "value": 0.8378517181286542,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.dW_field_summary_MPa.mean",
+      "value": 0.38821261200928936,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.dW_field_summary_MPa.top_row_mean",
+      "value": 0.19700317420208488,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.dW_field_summary_MPa.minimum",
+      "value": 0.00007098814351645689,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-9
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.dW_field_summary_MPa.maximum",
+      "value": 1.5193073107140878,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.dW_field_summary_MPa.mean",
+      "value": 0.6110895640561459,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.dW_field_summary_MPa.top_row_mean",
+      "value": 0.2862182696275743,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.dW_field_summary_MPa.minimum",
+      "value": 0.000002172738849957245,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-9
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.dW_field_summary_MPa.maximum",
+      "value": 0.5881698116429507,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.dW_field_summary_MPa.mean",
+      "value": 0.1998963024795285,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.dW_field_summary_MPa.top_row_mean",
+      "value": 0.10829074240423135,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 5e-7
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.last_cycle.phase_fraction",
+      "value": [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.last_cycle.phase_fraction",
+      "value": [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.last_cycle.chamber_temperature_C",
+      "value": [-40.0, 1.25, 42.5, 83.75, 125.0, 83.75, 42.5, 1.25, -40.0],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.last_cycle.chamber_temperature_C",
+      "value": [-40.0, 1.25, 42.5, 83.75, 125.0, 83.75, 42.5, 1.25, -40.0],
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.last_cycle.local_temperature_C",
+      "value": [
+        -20.06025044141805,
+        21.189749558581923,
+        62.43974955858192,
+        103.68974955858192,
+        144.93974955858192,
+        103.68974955858192,
+        62.43974955858192,
+        21.189749558581923,
+        -20.06025044141805
+      ],
+      "absolute_tolerance": 0.002
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.last_cycle.local_temperature_C",
+      "value": [
+        28.38043455080691,
+        25.628292907489993,
+        39.78832205202309,
+        64.36579545703063,
+        95.36208841773316,
+        98.57631847986272,
+        84.67911335704167,
+        60.26031615835069,
+        29.37522116131538
+      ],
+      "absolute_tolerance": 0.002
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.last_cycle.peak_top_edge_displacement_x_m",
+      "value": 0.0000012292769947029831,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 1e-12
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.last_cycle.peak_top_edge_displacement_x_m",
+      "value": 6.729158217583527e-7,
+      "relative_tolerance": 5e-6,
+      "absolute_tolerance": 1e-12
+    },
+    {
+      "path": "results.slow_cycle.quasisteady.max_iterations",
+      "value": 10,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.max_iterations",
+      "value": 10,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.max_iterations",
+      "value": 10,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.max_iterations",
+      "value": 10,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "integrity.algorithm",
+      "value": "sha256"
+    },
+    {
+      "path": "integrity.canonicalization",
+      "value": "sorted compact JSON; finite floats formatted with .12e"
+    },
+    {
+      "path": "integrity.mesh_coordinates_sha256",
+      "value": "dbe5b2f15378957ac3413d9f8104b55c53b47b9d561f16ad961f6d7656665d15"
+    },
+    {
+      "path": "integrity.mesh_connectivity_sha256",
+      "value": "4424ae4c01221e12e4e08a774cd92fd51c3a0e8597e17d873005136c56e61a17"
+    },
+    {
+      "path": "integrity.slow_quasisteady_last_cycle_sha256",
+      "value": "a609abaaf35624fc131041ce87aa9c23ad43166eee9432c3fd7d75b47ab3e1de"
+    },
+    {
+      "path": "integrity.slow_lumped_transient_last_cycle_sha256",
+      "value": "b1ae0b79fdc3db389d7a528f51197accd12554c8fe8677f19e0848f285ef0c4f"
+    },
+    {
+      "path": "integrity.fast_quasisteady_last_cycle_sha256",
+      "value": "27ea22176933d92e74203014df29ed316b05e7ded6771907591becd4e35c104d"
+    },
+    {
+      "path": "integrity.fast_lumped_transient_last_cycle_sha256",
+      "value": "87c54a46853892def807b4575b5b4a9869f840a2858737147f86e1b2be0d4744"
+    },
+    {
+      "path": "integrity.fast_quasisteady_dW_field_sha256",
+      "value": "96a86837f9dae04363e772a9d1a1ba6ccb51f1d2197bae02e52c16f6d52f1ab9"
+    },
+    {
+      "path": "integrity.fast_lumped_transient_dW_field_sha256",
+      "value": "ab92f3c1b32331787de5c5fda6096d34599cafec27be0f772785f3d03301d48c"
+    },
+    {
+      "path": "integrity.fast_quasisteady_end_displacement_sha256",
+      "value": "40cd2a5f0da4f68748787cf871767a456645ca059e10c582a6e41157f4567a7f"
+    },
+    {
+      "path": "integrity.fast_lumped_transient_end_displacement_sha256",
+      "value": "c84d3338561f1571861202869e575c4848fa993fcf6f3f231203e5b945897796"
+    }
+  ],
+  "bounds": [
+    {
+      "path": "results.slow_cycle.quasisteady.max_residual_fraction_of_acceptance_limit",
+      "maximum_exclusive": 1.0
+    },
+    {
+      "path": "results.slow_cycle.lumped_transient.max_residual_fraction_of_acceptance_limit",
+      "maximum_exclusive": 1.0
+    },
+    {
+      "path": "results.fast_cycle.quasisteady.max_residual_fraction_of_acceptance_limit",
+      "maximum_exclusive": 1.0
+    },
+    {
+      "path": "results.fast_cycle.lumped_transient.max_residual_fraction_of_acceptance_limit",
+      "maximum_exclusive": 1.0
+    }
+  ],
+  "current_limits": "Selected single 20x20 mesh with a 20-element, 5 um-deep top-row mean; not mesh/load-step convergence, a spatial thermal field, a monolithic multiphysics solve, crack/life prediction, or measured-device validation."
+}

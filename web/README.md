@@ -7,7 +7,8 @@ This directory builds two browser surfaces from one React/Vite source tree:
   contour, a nine-state load-sweep video, numerical comparison, and provenance
   links. A separate evidence section establishes the geometry, loading, and two
   thermal paths for a checked partitioned ETV case before showing its retained
-  second-cycle temperature states and magnified deformed-mesh snapshots. It
+  second-cycle uniform-temperature states and actual accumulated element-mean
+  inelastic-energy fields. It
   then keeps one representative stateful 3-D solder result and one
   explicitly analytic TSV-to-device screen in a compact proof register. The
   design-linked variant of the same solder block remains retained but is not
@@ -46,13 +47,16 @@ The authoritative claim boundary is:
 The public evidence section does not use stock, generated-concept, or
 CoupFE-Cardiac simulation media. The renderer executes CoupFE-EDA's
 `solder_3d_cycle`, `design_linked_solder_screening`, and
-`etv_partitioned_cycle` runners and refuses to publish when
-their numerical oracles fail. The website promotes the ETV comparison as its
-featured result and shows the baseline solder field as the representative 3-D
-FE result. It does not repeat the design-linked result in the proof register
-because that run uses the same 3 × 3 × 2 block. The TSV device map comes from
-the separate CoupFE-EDA analytic screening runner and remains labeled as
-synthetic integration evidence, not FE output.
+`etv_partitioned_cycle` runners and refuses to publish when their numerical
+oracles fail. The ETV runner defaults to a 2 × 2 fast smoke oracle; the renderer
+uses the explicit public-evidence command
+`python examples/etv_partitioned_cycle/run.py --mesh-size 20 --check` and its
+`expected_results_20x20.json` oracle. The website promotes that selected
+20 × 20 comparison as its featured result and shows the baseline solder field
+as the representative 3-D FE result. It does not repeat the design-linked
+result in the proof register because that run uses the same 3 × 3 × 2 block.
+The TSV device map comes from the separate CoupFE-EDA analytic screening runner
+and remains labeled as synthetic integration evidence, not FE output.
 
 The renderer accepts either the exact clean CoupFE checkout selected by
 `setup.sh` or a PEP 610 VCS installation of that same revision whose installed
@@ -73,9 +77,17 @@ a runner, oracle, solver-dependency, generator, and artifact hash contract at
 Hex8 element values as two exact 3 × 3 layers. The design-linked figure remains
 available as retained evidence and records the stable synthetic joint identity
 and distance-to-neutral-point handed to another 18-element solder result. The
-ETV figure shows all nine second-cycle temperature states, two peak-temperature
-deformed-mesh snapshots, and the exact energy comparison. The figure states
-that deformation is magnified and temperature is uniform by construction.
+ETV record uses 400 Quad4 elements, 441 nodes, and 882 displacement degrees of
+freedom. Its top-row aggregation contains 20 elements over a 5 µm depth. The
+figure shows all nine second-cycle uniform-temperature states and the actual
+accumulated element-mean `dW` fields on a common scale; the 400 values are
+neither smoothed nor interpolated. The temperature is uniform by construction,
+so the colored cells are mechanical energy-density output, not a spatial
+thermal field.
+
+The featured 20 × 20 result is one selected mesh. It does not establish mesh or
+load-step convergence, experimental or device validation, crack location, or
+predictive life.
 
 ## Check and preview the public site
 

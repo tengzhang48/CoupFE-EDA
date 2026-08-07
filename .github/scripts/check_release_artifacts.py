@@ -267,6 +267,7 @@ PUBLIC_EXAMPLE_FILES = RETAINED_VISUAL_EVIDENCE_FILES | {
     "examples/design_linked_solder_screening/run.py",
     "examples/etv_partitioned_cycle/README.md",
     "examples/etv_partitioned_cycle/expected_results.json",
+    "examples/etv_partitioned_cycle/expected_results_20x20.json",
     "examples/etv_partitioned_cycle/run.py",
     "examples/solder_3d_cycle/README.md",
     "examples/solder_3d_cycle/expected_results.json",

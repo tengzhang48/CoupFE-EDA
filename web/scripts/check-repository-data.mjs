@@ -344,38 +344,80 @@ for (const [key, expected] of Object.entries({
 }
 
 const etv = await readJson(
-  await requireFile("examples/etv_partitioned_cycle/expected_results.json"),
+  await requireFile("examples/etv_partitioned_cycle/expected_results_20x20.json"),
 );
-close(
-  metricValue(etv, "results.fast_cycle.relative_energy_difference_percent"),
-  -66.8476348734628,
-  "ETV fast-cycle energy sensitivity",
+const etvCommand =
+  "python examples/etv_partitioned_cycle/run.py --mesh-size 20 --check";
+const etvMeshSize = 20;
+const etvNodeCount = 441;
+const etvElementCount = 400;
+const etvDisplacementDofs = 882;
+const etvTopRowElements = 20;
+const etvTopRowDepthUm = 5.0;
+const valueAt = (record, valuePath) =>
+  valuePath.split(".").reduce((value, key) => value[key], record);
+const signedPercent = (value, digits, minus = "−") =>
+  `${value < 0 ? minus : "+"}${Math.abs(value).toFixed(digits)}%`;
+const fastSensitivity = metricValue(
+  etv,
+  "results.fast_cycle.relative_energy_difference_percent",
+);
+const fastQuasisteadyPeakTemperature = metricValue(
+  etv,
+  "results.fast_cycle.quasisteady.temperature_C_max",
+);
+const fastTransientPeakTemperature = metricValue(
+  etv,
+  "results.fast_cycle.lumped_transient.temperature_C_max",
+);
+
+equal(etv.schema_version, 3, "ETV 20x20 oracle schema");
+equal(metricValue(etv, "schema_version"), 3, "ETV 20x20 retained-record schema metric");
+equal(
+  etv.configuration,
+  "20x20 Quad4, two -40 to 125 to -40 C cycles, eight increments per cycle; 1600 s and 1 s periods",
+  "ETV retained configuration",
 );
 equal(
   workflows.etv_partitioned_cycle.result,
-  `−${Math.abs(metricValue(etv, "results.fast_cycle.relative_energy_difference_percent")).toFixed(2)}% energy-density change (lumped vs quasisteady)`,
+  `${signedPercent(fastSensitivity, 2)} energy-density change (lumped vs quasisteady)`,
   "ETV displayed result",
 );
 equal(
   workflows.etv_partitioned_cycle.detail,
-  `${metricValue(etv, "results.fast_cycle.lumped_transient.temperature_C_max").toFixed(2)} °C transient peak · ${metricValue(etv, "results.fast_cycle.quasisteady.temperature_C_max").toFixed(2)} °C quasisteady peak`,
+  `${fastTransientPeakTemperature.toFixed(2)} °C transient peak · ${fastQuasisteadyPeakTemperature.toFixed(2)} °C quasisteady peak`,
   "ETV displayed detail",
 );
-equal(workflows.etv_partitioned_cycle.command, "python examples/etv_partitioned_cycle/run.py --check", "ETV command");
+equal(workflows.etv_partitioned_cycle.command, etvCommand, "ETV command");
 equal(workflows.etv_partitioned_cycle.tier, "NumPy / SciPy / CoupFE", "ETV tier");
 equal(site.etvComparison.caseId, "etv_partitioned_cycle", "featured ETV case ID");
 equal(site.etvComparison.mediaId, "etv_partitioned_comparison", "featured ETV media ID");
-equal(
-  etv.configuration,
-  "2x2 Quad4, two -40 to 125 to -40 C cycles, eight increments per cycle; 1600 s and 1 s periods",
-  "ETV retained configuration",
-);
-equal(site.etvComparison.mesh, "2 × 2 Quad4 plane strain", "featured ETV mesh");
+equal(site.etvComparison.mesh, "20 × 20 Quad4 plane strain", "featured ETV mesh");
 equal(site.etvComparison.cycles, 2, "featured ETV cycle count");
 equal(site.etvComparison.incrementsPerCycle, 8, "featured ETV increments per cycle");
-equal(site.etvComparison.command, workflows.etv_partitioned_cycle.command, "featured ETV command");
+equal(site.etvComparison.command, etvCommand, "featured ETV command");
+equal(site.etvComparison.command, workflows.etv_partitioned_cycle.command, "featured ETV/workflow command");
 equal(site.etvComparison.boundary, workflows.etv_partitioned_cycle.boundary, "featured ETV boundary");
 equal(site.etvComparison.oraclePassed, true, "featured ETV oracle status");
+equal(site.etvComparison.setup.meshNx, etvMeshSize, "featured ETV mesh nx");
+equal(site.etvComparison.setup.meshNy, etvMeshSize, "featured ETV mesh ny");
+equal(site.etvComparison.setup.nodes, etvNodeCount, "featured ETV node count");
+equal(site.etvComparison.setup.elements, etvElementCount, "featured ETV element count");
+equal(
+  site.etvComparison.setup.displacementDofs,
+  etvDisplacementDofs,
+  "featured ETV displacement DOFs",
+);
+equal(
+  site.etvComparison.setup.topAggregationElements,
+  etvTopRowElements,
+  "featured ETV top-row element count",
+);
+close(
+  site.etvComparison.setup.topRowDepthMicrometers,
+  etvTopRowDepthUm,
+  "featured ETV top-row depth",
+);
 close(site.etvComparison.temperatureCycleC.low, -40.0, "featured ETV low temperature");
 close(site.etvComparison.temperatureCycleC.high, 125.0, "featured ETV high temperature");
 equal(
@@ -391,7 +433,8 @@ equal(
 equal(site.etvComparison.energyUnit, "MPa", "featured ETV energy-density unit");
 equal(site.etvComparison.slow.periodSeconds, 1600.0, "featured ETV slow period");
 equal(site.etvComparison.fast.periodSeconds, 1.0, "featured ETV fast period");
-for (const [displayPath, oraclePath] of [
+
+const displayedOracleMetrics = [
   ["slow.quasisteadyEnergyMPa", "results.slow_cycle.quasisteady.dW_last_MPa"],
   ["slow.lumpedTransientEnergyMPa", "results.slow_cycle.lumped_transient.dW_last_MPa"],
   ["slow.relativeDifferencePercent", "results.slow_cycle.relative_energy_difference_percent"],
@@ -402,8 +445,9 @@ for (const [displayPath, oraclePath] of [
   ["fast.lumpedTransientPeakTemperatureC", "results.fast_cycle.lumped_transient.temperature_C_max"],
   ["fast.quasisteadyPeakTopDisplacementUm", "results.fast_cycle.quasisteady.last_cycle.peak_top_edge_displacement_x_m"],
   ["fast.lumpedTransientPeakTopDisplacementUm", "results.fast_cycle.lumped_transient.last_cycle.peak_top_edge_displacement_x_m"],
-]) {
-  const displayed = displayPath.split(".").reduce((record, key) => record[key], site.etvComparison);
+];
+for (const [displayPath, oraclePath] of displayedOracleMetrics) {
+  const displayed = valueAt(site.etvComparison, displayPath);
   const oracleValue = metricValue(etv, oraclePath);
   close(
     displayed,
@@ -411,10 +455,16 @@ for (const [displayPath, oraclePath] of [
     `featured ETV ${displayPath}`,
   );
 }
+
 const etvMedia = site.simulationMedia.find(
   (media) => media.id === site.etvComparison.mediaId,
 );
 if (!etvMedia) fail("featured ETV media record is missing");
+equal(
+  etvMedia.result,
+  `${signedPercent(fastSensitivity, 2)} energy-density change, lumped relative to quasisteady`,
+  "featured ETV media result",
+);
 equal(
   site.etvComparison.recordAsset,
   "generated/simulation-media/etv-partitioned-record.json",
@@ -428,11 +478,66 @@ equal(
 const etvRecord = await readJson(
   await requireFile(`web/public/${site.etvComparison.recordAsset}`),
 );
-equal(etvRecord.schema_version, 2, "featured ETV retained-state schema");
+equal(etvRecord.schema_version, 3, "featured ETV retained-state schema");
+equal(etvRecord.verification?.oracle, "expected_results_20x20.json", "featured ETV retained-state oracle");
 equal(etvRecord.verification?.passed, true, "featured ETV retained-state verification");
-equal(etvRecord.inputs?.mesh?.nodes, site.etvComparison.setup.nodes, "featured ETV retained node count");
-equal(etvRecord.inputs?.mesh?.elements, site.etvComparison.setup.elements, "featured ETV retained element count");
-equal(site.etvComparison.setup.displacementDofs, 2 * etvRecord.inputs.mesh.nodes, "featured ETV displacement DOFs");
+
+const etvMesh = etvRecord.inputs?.mesh;
+equal(etvMesh?.nx, etvMeshSize, "featured ETV retained mesh nx");
+equal(etvMesh?.ny, etvMeshSize, "featured ETV retained mesh ny");
+equal(etvMesh?.nodes, etvNodeCount, "featured ETV retained node count");
+equal(etvMesh?.elements, etvElementCount, "featured ETV retained element count");
+equal(
+  etvMesh?.mechanical_displacement_dofs,
+  etvDisplacementDofs,
+  "featured ETV retained displacement DOFs",
+);
+close(etvMesh?.element_width_um, etvTopRowDepthUm, "featured ETV element width");
+close(etvMesh?.element_height_um, etvTopRowDepthUm, "featured ETV element height");
+close(etvMesh?.top_row_depth_um, etvTopRowDepthUm, "featured ETV retained top-row depth");
+equal(
+  etvMesh?.top_row_element_count,
+  etvTopRowElements,
+  "featured ETV retained top-row element count",
+);
+
+if (!Array.isArray(etvMesh?.coordinates_m) || etvMesh.coordinates_m.length !== etvNodeCount) {
+  fail(`featured ETV retained coordinates: expected ${etvNodeCount} nodes`);
+}
+etvMesh.coordinates_m.forEach((coordinate, index) =>
+  finiteArray(coordinate, 2, `featured ETV coordinate ${index}`),
+);
+if (!Array.isArray(etvMesh.connectivity) || etvMesh.connectivity.length !== etvElementCount) {
+  fail(`featured ETV retained connectivity: expected ${etvElementCount} elements`);
+}
+etvMesh.connectivity.forEach((connection, elementIndex) => {
+  if (
+    !Array.isArray(connection) ||
+    connection.length !== 4 ||
+    connection.some(
+      (node) => !Number.isInteger(node) || node < 0 || node >= etvNodeCount,
+    )
+  ) {
+    fail(`featured ETV connectivity ${elementIndex} is not a valid Quad4`);
+  }
+});
+const topElementIndices = finiteArray(
+  etvMesh.top_element_indices,
+  etvTopRowElements,
+  "featured ETV top-row element indices",
+);
+const firstTopElement = etvElementCount - etvTopRowElements;
+topElementIndices.forEach((elementIndex, offset) => {
+  equal(elementIndex, firstTopElement + offset, `featured ETV top-row element ${offset}`);
+});
+
+equal(site.etvComparison.setup.nodes, etvMesh.nodes, "featured ETV/site node count");
+equal(site.etvComparison.setup.elements, etvMesh.elements, "featured ETV/site element count");
+equal(
+  site.etvComparison.setup.displacementDofs,
+  etvMesh.mechanical_displacement_dofs,
+  "featured ETV/site displacement DOFs",
+);
 close(site.etvComparison.setup.widthMm, etvRecord.inputs.geometry_mm.width, "featured ETV width");
 close(site.etvComparison.setup.heightMm, etvRecord.inputs.geometry_mm.height, "featured ETV height");
 close(site.etvComparison.setup.elasticModulusMPa, etvRecord.inputs.representative_elastic_modulus_MPa, "featured ETV elastic modulus");
@@ -444,15 +549,119 @@ close(site.etvComparison.setup.jouleDensityWPerM3, etvRecord.inputs.dandu_contex
 close(site.etvComparison.setup.thermalConductanceDensityWPerM3K, etvRecord.inputs.thermal_conductance_density_W_per_m3K, "featured ETV thermal conductance density");
 close(site.etvComparison.setup.volumetricHeatCapacityJPerM3K, etvRecord.inputs.volumetric_heat_capacity_J_per_m3K, "featured ETV heat capacity");
 close(site.etvComparison.setup.inelasticHeatFraction, etvRecord.inputs.inelastic_heat_fraction, "featured ETV inelastic heat fraction");
-for (const model of ["quasisteady", "lumped_transient"]) {
-  const retained = etvRecord.results.fast_cycle[model].last_cycle;
-  finiteArray(retained.phase_fraction, 9, `featured ETV ${model} phase`);
-  finiteArray(retained.chamber_temperature_C, 9, `featured ETV ${model} chamber temperature`);
-  finiteArray(retained.local_temperature_C, 9, `featured ETV ${model} local temperature`);
-  finiteArray(retained.peak_displacement_m, 18, `featured ETV ${model} peak displacement`);
-  equal(retained.displacement_m.length, 9, `featured ETV ${model} retained displacement states`);
-  retained.displacement_m.forEach((state, index) => finiteArray(state, 18, `featured ETV ${model} displacement state ${index}`));
+
+for (const integrityKey of [
+  "algorithm",
+  "canonicalization",
+  "mesh_coordinates_sha256",
+  "mesh_connectivity_sha256",
+  "slow_quasisteady_last_cycle_sha256",
+  "slow_lumped_transient_last_cycle_sha256",
+  "fast_quasisteady_last_cycle_sha256",
+  "fast_lumped_transient_last_cycle_sha256",
+  "fast_quasisteady_dW_field_sha256",
+  "fast_lumped_transient_dW_field_sha256",
+  "fast_quasisteady_end_displacement_sha256",
+  "fast_lumped_transient_end_displacement_sha256",
+]) {
+  const integrityPath = `integrity.${integrityKey}`;
+  equal(
+    valueAt(etvRecord, integrityPath),
+    metricValue(etv, integrityPath),
+    `featured ETV retained ${integrityPath}`,
+  );
 }
+
+for (const [displayPath, oraclePath] of displayedOracleMetrics) {
+  const retained = valueAt(etvRecord, oraclePath);
+  const oracleValue = metricValue(etv, oraclePath);
+  close(retained, oracleValue, `featured ETV retained ${oraclePath}`);
+}
+
+const fastEndTopDisplacementUm = {};
+for (const cycle of ["slow_cycle", "fast_cycle"]) {
+  for (const model of ["quasisteady", "lumped_transient"]) {
+    const label = `featured ETV ${cycle} ${model}`;
+    const result = etvRecord.results[cycle][model];
+    const retained = result.last_cycle;
+    finiteArray(retained.step, 9, `${label} step`);
+    finiteArray(retained.phase_fraction, 9, `${label} phase`);
+    finiteArray(retained.chamber_temperature_C, 9, `${label} chamber temperature`);
+    finiteArray(retained.local_temperature_C, 9, `${label} local temperature`);
+    finiteArray(retained.peak_displacement_m, etvDisplacementDofs, `${label} peak displacement`);
+    if (!Array.isArray(retained.displacement_m) || retained.displacement_m.length !== 9) {
+      fail(`${label} must retain nine displacement states`);
+    }
+    retained.displacement_m.forEach((state, stateIndex) =>
+      finiteArray(state, etvDisplacementDofs, `${label} displacement state ${stateIndex}`),
+    );
+    if (
+      !Array.isArray(retained.increment_dW_element_MPa) ||
+      retained.increment_dW_element_MPa.length !== 9
+    ) {
+      fail(`${label} must retain nine incremental dW fields`);
+    }
+    retained.increment_dW_element_MPa.forEach((field, stateIndex) =>
+      finiteArray(field, etvElementCount, `${label} incremental dW state ${stateIndex}`),
+    );
+    if (
+      !Array.isArray(retained.accumulated_dW_element_MPa) ||
+      retained.accumulated_dW_element_MPa.length !== 9
+    ) {
+      fail(`${label} must retain nine accumulated dW fields`);
+    }
+    retained.accumulated_dW_element_MPa.forEach((field, stateIndex) =>
+      finiteArray(field, etvElementCount, `${label} accumulated dW state ${stateIndex}`),
+    );
+    const finalField = finiteArray(
+      retained.dW_element_MPa,
+      etvElementCount,
+      `${label} final accumulated dW field`,
+    );
+    exactNumericArrays(
+      retained.accumulated_dW_element_MPa.at(-1),
+      finalField,
+      `${label} final accumulated dW identity`,
+    );
+    const topRowMean =
+      topElementIndices.reduce((sum, elementIndex) => sum + finalField[elementIndex], 0) /
+      topElementIndices.length;
+    close(topRowMean, result.dW_last_MPa, `${label} retained top-row scalar`);
+    close(
+      topRowMean,
+      result.dW_field_summary_MPa?.top_row_mean,
+      `${label} field-summary top-row mean`,
+    );
+    close(
+      result.dW_field_summary_MPa?.minimum,
+      Math.min(...finalField),
+      `${label} field-summary minimum`,
+    );
+    close(
+      result.dW_field_summary_MPa?.maximum,
+      Math.max(...finalField),
+      `${label} field-summary maximum`,
+    );
+    close(
+      result.dW_field_summary_MPa?.mean,
+      finalField.reduce((sum, value) => sum + value, 0) / finalField.length,
+      `${label} field-summary mean`,
+    );
+
+    if (cycle === "fast_cycle") {
+      const maximumY = Math.max(...etvMesh.coordinates_m.map((coordinate) => coordinate[1]));
+      const topNodes = etvMesh.coordinates_m.flatMap((coordinate, node) =>
+        Math.abs(coordinate[1] - maximumY) <= 1e-12 ? [node] : [],
+      );
+      equal(topNodes.length, etvMeshSize + 1, `${label} top-node count`);
+      const endDisplacement = retained.displacement_m.at(-1);
+      fastEndTopDisplacementUm[model] =
+        topNodes.reduce((sum, node) => sum + endDisplacement[2 * node], 0) /
+        topNodes.length * 1e6;
+    }
+  }
+}
+
 const etvSvg = await readFile(
   await requireFile(`web/public/${etvMedia.asset}`),
   "utf8",
@@ -461,54 +670,48 @@ const etvMobileSvg = await readFile(
   await requireFile(`web/public/${site.etvComparison.mobileAsset}`),
   "utf8",
 );
-for (const requiredText of [
-  "One-second solder-cycle response",
-  "Computed local-temperature path",
+const commonEtvSvgText = [
   "cycle phase",
-  "Peak-temperature mechanics states",
-  `${site.etvComparison.fast.quasisteadyPeakTemperatureC.toFixed(2)} °C`,
-  `${site.etvComparison.fast.lumpedTransientPeakTemperatureC.toFixed(2)} °C`,
-  site.etvComparison.fast.quasisteadyEnergyMPa.toFixed(6),
-  site.etvComparison.fast.lumpedTransientEnergyMPa.toFixed(6),
-  `-${Math.abs(site.etvComparison.fast.relativeDifferencePercent).toFixed(2)}%`,
+  "20 × 20 Quad4",
+  "bottom fixed",
+  "sides free",
+  "20-element",
+  "5 µm",
+  "inelastic-energy fields",
+  "top-row mean dW",
+  "common scale · no smoothing",
+  "Common dW scale · MPa",
+  "uₓ,ₑₙd",
+  `${fastEndTopDisplacementUm.quasisteady.toFixed(3)} µm`,
+  `${fastEndTopDisplacementUm.lumped_transient.toFixed(3)} µm`,
+  "prescribed",
+  "×10",
+  metricValue(etv, "results.fast_cycle.quasisteady.dW_last_MPa").toFixed(6),
+  metricValue(etv, "results.fast_cycle.lumped_transient.dW_last_MPa").toFixed(6),
+  signedPercent(fastSensitivity, 2, "-"),
+  metricValue(etv, "results.slow_cycle.quasisteady.dW_last_MPa").toFixed(6),
+  metricValue(etv, "results.slow_cycle.lumped_transient.dW_last_MPa").toFixed(6),
   "Energy-density change",
   "lumped relative to quasisteady",
-  "prescribed uₓ",
-  "deformation ×10",
-  "not a spatial thermal field",
+  "Selected single mesh",
+  "not convergence evidence",
+  "spatial",
+  "thermal field",
+];
+for (const [svg, label, title] of [
+  [etvSvg, "featured ETV SVG", "One-second partitioned solder-block setup and result"],
+  [
+    etvMobileSvg,
+    "featured ETV portrait SVG",
+    "One-second partitioned solder-block setup and result, portrait layout",
+  ],
 ]) {
-  if (!etvSvg.includes(requiredText)) {
-    fail(`featured ETV SVG is missing checked content: ${requiredText}`);
+  for (const requiredText of [title, ...commonEtvSvgText]) {
+    if (!svg.includes(requiredText)) {
+      fail(`${label} is missing checked content: ${requiredText}`);
+    }
   }
 }
-for (const requiredText of [
-  "One-second partitioned solder-cycle response, portrait layout",
-  "Computed local-temperature path",
-  "cycle phase",
-  "Peak-temperature mechanics states",
-  site.etvComparison.fast.quasisteadyEnergyMPa.toFixed(6),
-  site.etvComparison.fast.lumpedTransientEnergyMPa.toFixed(6),
-  `-${Math.abs(site.etvComparison.fast.relativeDifferencePercent).toFixed(2)}%`,
-  "Energy-density change",
-  "lumped relative to quasisteady",
-  "prescribed uₓ",
-  "deformation ×10",
-  "not a spatial thermal field",
-]) {
-  if (!etvMobileSvg.includes(requiredText)) {
-    fail(`featured ETV portrait SVG is missing checked content: ${requiredText}`);
-  }
-}
-close(
-  metricValue(etv, "results.fast_cycle.lumped_transient.temperature_C_max"),
-  98.60146223882845,
-  "ETV transient peak temperature",
-);
-close(
-  metricValue(etv, "results.fast_cycle.quasisteady.temperature_C_max"),
-  144.93974955858192,
-  "ETV quasisteady peak temperature",
-);
 
 const solder3d = await readJson(
   await requireFile("examples/solder_3d_cycle/expected_results.json"),
@@ -754,6 +957,11 @@ for (const source of simulationMediaContract.sources) {
 }
 const etvSourceContract = simulationMediaContract.sources.find(
   (source) => source.caseId === site.etvComparison.caseId,
+);
+equal(
+  etvSourceContract?.oracle,
+  "examples/etv_partitioned_cycle/expected_results_20x20.json",
+  "featured ETV 20x20 contract oracle",
 );
 equal(
   etvSourceContract?.dependencies.some(
