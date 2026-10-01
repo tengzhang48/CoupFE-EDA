@@ -125,6 +125,7 @@ PUBLIC_TEST_FILES = {
     "tests/test_integration_regressions.py",
     "tests/test_native_element_evaluation.py",
     "tests/test_periodic_adapter.py",
+    "tests/test_stacked_memory_package.py",
     "tests/test_toolchain.py",
     "tests/test_tsv_axisymmetric_field.py",
     "tests/test_tsv_axisymmetric_visual_media.py",
@@ -260,7 +261,19 @@ RETAINED_VISUAL_EVIDENCE_FILES = {
         "visual-evidence.json",
     }
 }
-PUBLIC_EXAMPLE_FILES = RETAINED_VISUAL_EVIDENCE_FILES | {
+STACKED_PACKAGE_FIGURES = {
+    "examples/stacked_memory_package/fenicsx_verification/comparison.png",
+    *(
+        f"examples/stacked_memory_package/figures/{name}.png"
+        for name in {
+            "metrics",
+            "package_exploded",
+            "thermal_comparison",
+            "warpage_comparison",
+        }
+    ),
+}
+PUBLIC_EXAMPLE_FILES = RETAINED_VISUAL_EVIDENCE_FILES | STACKED_PACKAGE_FIGURES | {
     "examples/REFERENCES.md",
     "examples/design_linked_solder_screening/README.md",
     "examples/design_linked_solder_screening/expected_results.json",
@@ -286,6 +299,7 @@ PUBLIC_EXAMPLE_FILES = RETAINED_VISUAL_EVIDENCE_FILES | {
     "examples/stacked_memory_package/fenicsx_verification/cross_residual.json",
     "examples/stacked_memory_package/fenicsx_verification/cross_residual_check.py",
     "examples/stacked_memory_package/fenicsx_verification/fenicsx_reference.py",
+    "examples/stacked_memory_package/fenicsx_verification/reference_run.txt",
     "examples/stacked_memory_package/render_figures.py",
     "examples/stacked_memory_package/run.py",
     "examples/stacked_memory_package/solve_mechanics.py",
@@ -575,6 +589,8 @@ def _is_allowed_public_image(path: PurePosixPath) -> bool:
                 "retained",
                 "contour.svg",
             )
+            or "/".join(parts)
+            in {name.casefold() for name in STACKED_PACKAGE_FIGURES}
         )
     )
 

@@ -53,6 +53,12 @@ include examples/tsv_axisymmetric_field/retained/summary.json
 include examples/tsv_axisymmetric_field/retained/contour.svg
 include examples/tsv_axisymmetric_field/retained/load-sweep.webm
 include examples/tsv_axisymmetric_field/retained/visual-evidence.json
+include examples/stacked_memory_package/figures/metrics.png
+include examples/stacked_memory_package/figures/package_exploded.png
+include examples/stacked_memory_package/figures/thermal_comparison.png
+include examples/stacked_memory_package/figures/warpage_comparison.png
+include examples/stacked_memory_package/fenicsx_verification/comparison.png
+include examples/stacked_memory_package/fenicsx_verification/reference_run.txt
 recursive-include skills *.md *.yaml
 
 # Retain the reviewed frontend source in the source distribution. The wheel
@@ -70,6 +76,7 @@ include tests/conftest.py
 include tests/test_integration_regressions.py
 include tests/test_native_element_evaluation.py
 include tests/test_periodic_adapter.py
+include tests/test_stacked_memory_package.py
 include tests/test_toolchain.py
 include tests/test_tsv_axisymmetric_field.py
 include tests/test_tsv_axisymmetric_visual_media.py

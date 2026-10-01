@@ -112,7 +112,7 @@ Retained run environment: Python 3.12, DOLFINx 0.10.0, basix 0.10.0, UFL 2025.2,
 | `cross_residual.json` | Cross-residual output, folded into `COMPARISON.md` when present. |
 | `COMPARISON.md`, `comparison.json` | Two-solver comparison, actual errors against the predeclared tolerances. |
 | `comparison.png` | Relative-error distributions for T, U and von Mises, plus a von Mises parity plot. |
-| `reference_run.log` | Console log of the retained reference run. |
+| `reference_run.txt` | Console log of the retained reference run. |
 
 ## Mesh identity and ID mapping
 
