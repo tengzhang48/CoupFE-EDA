@@ -53,6 +53,7 @@ include examples/tsv_axisymmetric_field/retained/summary.json
 include examples/tsv_axisymmetric_field/retained/contour.svg
 include examples/tsv_axisymmetric_field/retained/load-sweep.webm
 include examples/tsv_axisymmetric_field/retained/visual-evidence.json
+include examples/stacked_memory_package/figures/hero.png
 include examples/stacked_memory_package/figures/metrics.png
 include examples/stacked_memory_package/figures/package_exploded.png
 include examples/stacked_memory_package/figures/thermal_comparison.png

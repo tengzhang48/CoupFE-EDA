@@ -34,7 +34,8 @@ python examples/stacked_memory_package/run.py --mesh-size 0.45 --check   # headl
   mesh, field arrays for both designs, `result.json` (thermal),
   `mechanics_result.json`, a quality audit and `summary.json`.
 - **Figures:** `render_figures.py` (needs `pyvista`) redraws the figures above
-  from a finished run.
+  from a finished run, plus `figures/hero.png`, the project website's lead
+  figure (`--only hero` draws just that one).
 - **Check:** `--check` compares the run with the retained result for that mesh
   size. The first item it compares is the Gmsh version, because the mesh (and
   with it every number) is reproducible only with the same Gmsh version and one

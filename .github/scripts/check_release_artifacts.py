@@ -266,6 +266,7 @@ STACKED_PACKAGE_FIGURES = {
     *(
         f"examples/stacked_memory_package/figures/{name}.png"
         for name in {
+            "hero",
             "metrics",
             "package_exploded",
             "thermal_comparison",

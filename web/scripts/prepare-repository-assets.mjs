@@ -28,6 +28,13 @@ for (const name of [
   await copyFile(path.join(tsvFieldSource, name), path.join(tsvFieldOutput, name));
 }
 
+const packageOutput = path.join(repositoryAssets, "stacked_memory_package");
+await mkdir(packageOutput, { recursive: true });
+await copyFile(
+  path.join(repositoryRoot, "examples", "stacked_memory_package", "figures", "hero.png"),
+  path.join(packageOutput, "hero.png"),
+);
+
 const legalOutput = path.join(webRoot, "public", "legal");
 await mkdir(legalOutput, { recursive: true });
 for (const [source, target] of [
@@ -41,5 +48,5 @@ for (const [source, target] of [
 }
 
 console.log(
-  "prepared one solver-field evidence bundle and five public legal records",
+  "prepared one solver-field evidence bundle, the featured package figure, and five public legal records",
 );
