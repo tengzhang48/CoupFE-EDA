@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import siteData from "../site-data.json";
-import SiteApp, { formatSignedPercent } from "./SiteApp";
+import SiteApp, { formatScientific, formatSignedPercent } from "./SiteApp";
 
 afterEach(() => {
   window.history.replaceState({}, "", "/");
@@ -15,17 +15,26 @@ describe("public CoupFE-EDA site", () => {
     expect(formatSignedPercent(12.345, 2)).toBe("+12.35%");
   });
 
-  it("keeps the evidence-first narrative and leads with one real solver field", () => {
+  it("formats small verification differences in scientific notation", () => {
+    expect(formatScientific(4.825188370782331e-10, 1)).toBe("4.8 × 10⁻¹⁰");
+    expect(formatScientific(1e-5, 0)).toBe("1 × 10⁻⁵");
+  });
+
+  it("keeps the evidence-first narrative and leads with the featured package result", () => {
     const { container } = render(<SiteApp />);
     expect(screen.getByRole("heading", { level: 1, name: /EDA-aware multiphysics, with results you can inspect/i })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    const heroResult = screen.getByRole("figure", { name: "Solver-derived TSV stress field" });
-    expect(within(heroResult).getByRole("img", { name: /Axisymmetric TSV radial stress field/i })).toBeInTheDocument();
-    expect(heroResult).toHaveTextContent("30 µm TSV · σrr(20 µm) = 354.172 MPa");
-    expect(heroResult).toHaveTextContent("0.0633% from the declared Lamé reference · 2,400 DOFs · 9 static solves");
+    const heroResult = screen.getByRole("figure", { name: "Stacked-memory package: heat to warpage" });
+    const heroImage = within(heroResult).getByRole("img", { name: /Synthetic stacked-memory package/i });
+    expect(heroImage).toHaveAttribute("src", expect.stringContaining("repository-assets/stacked_memory_package/hero.png"));
+    expect(heroImage).toHaveAccessibleName(expect.stringContaining("peak die 76.2 versus 60.5 °C"));
+    expect(heroImage).toHaveAccessibleName(expect.stringContaining("substrate warpage 3.91 versus 1.90 µm"));
+    expect(heroResult).toHaveTextContent("Top TIM k = 1 → 5 W/(m·K): peak die −15.7 °C, substrate warpage ×0.49");
+    expect(heroResult).toHaveTextContent("90 CAD bodies · 355,233 conformal Tet4 · 16 W · independent FEniCSx solve within 4.8 × 10⁻¹⁰ on every field");
     expect(heroResult).toHaveTextContent("Measured-device comparison: not performed.");
-    expect(heroResult).toHaveTextContent("not a finite-depth 3-D model, transient simulation, or experimental result");
-    expect(within(heroResult).getByRole("link", { name: /Open the complete solver-derived TSV contour/i })).toHaveAttribute("href", expect.stringContaining("contour.svg"));
+    expect(heroResult).toHaveTextContent("so the relative effect of the TIM is the robust result");
+    expect(within(heroResult).getByRole("link", { name: /Open the full-resolution package/i })).toHaveAttribute("href", expect.stringContaining("hero.png"));
+    expect(within(heroResult).getByRole("link", { name: /Open example/i })).toHaveAttribute("href", expect.stringContaining("examples/stacked_memory_package/README.md"));
     expect(screen.getByRole("link", { name: /Explore retained field/i })).toHaveAttribute("href", expect.stringContaining("surface=workbench"));
     expect(screen.getByRole("heading", { name: /From design record to checked result\./i })).toBeInTheDocument();
     const processFigure = screen.getByRole("figure", { name: /From design record to checked result\./i });

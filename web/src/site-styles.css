@@ -95,8 +95,8 @@
 .site-hero-result > header strong { font-size: 16px; letter-spacing: -.015em; }
 .site-hero-result > header > a { flex: 0 0 auto; color: var(--site-cyan); font-size: 11px; font-weight: 700; }
 .site-hero-result > header > a span { margin-left: 5px; }
-.site-hero-result-visual { display: block; overflow: hidden; border: 1px solid #284059; background: #07101f; }
-.site-hero-result-visual svg { display: block; width: 100%; height: auto; background: #07101f; }
+.site-hero-result-visual { display: block; overflow: hidden; border: 1px solid var(--site-line-strong); background: #ffffff; }
+.site-hero-result-visual img { display: block; width: 100%; max-width: 100%; height: auto; }
 .site-hero-result figcaption { display: grid; gap: 5px; padding: 13px 0 12px; border-bottom: 1px solid var(--site-line-strong); }
 .site-hero-result figcaption strong { color: var(--site-ink); font-size: 14px; line-height: 1.4; }
 .site-hero-result figcaption span { color: var(--site-muted); font-size: 11px; line-height: 1.5; }

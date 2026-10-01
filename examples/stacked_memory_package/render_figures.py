@@ -184,14 +184,103 @@ def comparison(run, out):
     print("rendered", out / "metrics.png", flush=True)
 
 
+def hero(run, out):
+    """Website hero: rows are temperature and warpage, columns the two TIMs, one scale per row."""
+    a, meta, g = load(run)
+    rid = a["region_id"]
+    visible = np.array([o["id"] not in ("encapsulation", "top_tim", "copper_lid") for o in meta["objects"]])[rid]
+    thermal = json.loads((run / "result.json").read_text())["results"]
+    mechanics = json.loads((run / "mechanics_result.json").read_text())["results"]
+    cases = ("baseline", "improved")
+    size = (1200, 760)
+
+    def snap(meshes, scalars, cmap, clim):
+        imgs = []
+        for m in meshes:
+            p = plotter(size)
+            p.add_mesh(m, scalars=scalars, cmap=cmap, clim=clim, show_scalar_bar=False)
+            fit_camera(p, np.vstack([q.points for q in meshes]), size, margin=1.02)
+            imgs.append(p.screenshot(transparent_background=True, return_img=True))
+            p.close()
+        alpha = np.maximum(*(i[..., 3] for i in imgs)) > 0
+        rows, cols = np.where(alpha.any(1))[0], np.where(alpha.any(0))[0]
+        return [i[rows[0]:rows[-1] + 1, cols[0]:cols[-1] + 1] for i in imgs]
+
+    temps = []
+    for case in cases:
+        m = g.copy()
+        m.point_data["T"] = np.load(run / f"{case}_fields.npz")["temperature_C"]
+        temps.append(m.extract_cells(visible))
+    amp = 300
+    warps, w = [], []
+    for case in cases:
+        d = np.load(run / f"{case}_mechanics.npz")
+        u, nodes = d["displacement_m"], d["substrate_top_nodes"]
+        fit = np.linalg.lstsq(np.c_[np.ones(len(nodes)), g.points[nodes, :2]], u[nodes, 2], rcond=None)[0]
+        w.append((u[:, 2] - np.c_[np.ones(len(u)), g.points[:, :2]] @ fit) * 1e6)
+        m = g.copy()
+        m.points = g.points + u * 1e3 * amp
+        m.point_data["w"] = w[-1]
+        warps.append(m.extract_cells(visible))
+    vmax = max(np.abs(v).max() for v in w)
+    rows = [("Temperature (°C)", snap(temps, "T", "inferno", (40, 80)), "inferno", (40, 80),
+             [f"Peak die {thermal[c]['peak_die_C']:.1f} °C" for c in cases]),
+            ("Warpage w (µm)", snap(warps, "w", "coolwarm", (-vmax, vmax)), "coolwarm", (-vmax, vmax),
+             [f"Substrate warpage {mechanics[c]['substrate_warpage_um']:.2f} µm" for c in cases])]
+
+    ink, muted = "#1c2730", "#5d6d78"
+    W, left, gap, cbar, right = 7.7, 0.06, 0.12, 0.11, 0.62
+    pw = (W - left - gap - 0.18 - cbar - right) / 2
+    phs = [pw * r[1][0].shape[0] / r[1][0].shape[1] for r in rows]
+    top, strip, rowgap, bottom = 0.30, 0.27, 0.10, 0.30
+    H = top + sum(phs) + 2 * strip + rowgap + bottom
+    fig = plt.figure(figsize=(W, H), dpi=200)
+    fig.patch.set_facecolor("#ffffff")
+    for j, case in enumerate(cases):
+        fig.text((left + j * (pw + gap)) / W, 1 - 0.17 / H,
+                 f"Top TIM  k = {thermal[case]['top_tim_k_W_mK']:.0f} W/(m·K)",
+                 fontsize=9, color=muted, va="center")
+    y = H - top
+    for (label, imgs, cmap, clim, values), ph in zip(rows, phs):
+        y -= strip
+        for j, value in enumerate(values):
+            fig.text((left + j * (pw + gap)) / W, (y + 0.11) / H, value,
+                     fontsize=11, weight="bold", color=ink, va="center")
+        y -= ph
+        for j, img in enumerate(imgs):
+            ax = fig.add_axes([(left + j * (pw + gap)) / W, y / H, pw / W, ph / H])
+            ax.imshow(img, interpolation="lanczos")
+            ax.set_axis_off()
+        cax = fig.add_axes([(left + 2 * pw + gap + 0.18) / W, (y + 0.12 * ph) / H, cbar / W, 0.76 * ph / H])
+        bar = fig.colorbar(matplotlib.cm.ScalarMappable(matplotlib.colors.Normalize(*clim), cmap), cax=cax)
+        bar.outline.set_visible(False)
+        bar.set_ticks(np.linspace(*clim, 5) if cmap == "inferno" else [-vmax, 0, vmax])
+        fmt = "{:.0f}" if cmap == "inferno" else "{:.1f}"
+        bar.ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(
+            lambda v, _, fmt=fmt: fmt.format(0.0 if abs(v) < 1e-12 else v).replace("-", "\u2212")))
+        bar.ax.tick_params(labelsize=8, colors=ink, length=2)
+        bar.set_label(label, fontsize=8.5, color=ink, labelpad=4)
+        y -= rowgap
+    fig.text(left / W, 0.11 / H,
+             f"Same mesh ({meta['elements']:,} Tet4, {len(meta['objects'])} bodies); mold, top TIM and lid hidden; "
+             f"deformation ×{amp}", fontsize=7.5, color=muted, va="center")
+    fig.savefig(out / "hero.png", dpi=200, facecolor="#ffffff")
+    plt.close(fig)
+    print("rendered", out / "hero.png", flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--run", type=Path, default=HERE / "runs" / "h0.45")
     ap.add_argument("--out", type=Path, default=HERE / "figures")
+    ap.add_argument("--only", choices=("readme", "hero"), default=None, help="render one figure set")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
-    exploded(a.run, a.out)
-    comparison(a.run, a.out)
+    if a.only in (None, "readme"):
+        exploded(a.run, a.out)
+        comparison(a.run, a.out)
+    if a.only in (None, "hero"):
+        hero(a.run, a.out)
 
 
 if __name__ == "__main__":

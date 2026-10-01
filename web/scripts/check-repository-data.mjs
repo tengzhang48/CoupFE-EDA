@@ -343,6 +343,71 @@ for (const [key, expected] of Object.entries({
   equal(site.tsvField[key], expected, `public field asset ${key}`);
 }
 
+const featured = site.featuredPackage;
+const featuredOracle = await readJson(await requireFile(featured.oraclePath));
+const featuredCoarseOracle = await readJson(await requireFile(featured.coarseOraclePath));
+const featuredVerification = await readJson(await requireFile(featured.verificationPath));
+for (const sourcePath of [featured.runnerPath, featured.readmePath, featured.rendererPath]) {
+  await requireFile(sourcePath);
+}
+function oracleValue(oracle, metricPath, label) {
+  const metric = oracle.metrics?.find((candidate) => candidate.path === metricPath);
+  if (!metric) fail(`${label}: retained oracle has no metric ${metricPath}`);
+  return metric.value;
+}
+if (!featuredOracle.configuration?.includes(`h = ${featured.meshSizeMm} mm`)) {
+  fail(`featured package oracle is not the ${featured.meshSizeMm} mm mesh`);
+}
+for (const [key, metricPath] of Object.entries({
+  cadBodies: "mesh.cad_bodies",
+  materials: "mesh.materials",
+  bodyInterfaces: "mesh.body_adjacencies",
+  nodes: "mesh.nodes",
+  elements: "mesh.elements",
+  baselineTopTimK: "thermal.baseline.top_tim_k_W_mK",
+  improvedTopTimK: "thermal.improved.top_tim_k_W_mK",
+})) {
+  equal(featured[key], oracleValue(featuredOracle, metricPath, `featured package ${key}`), `featured package ${key}`);
+}
+close(featured.powerW, oracleValue(featuredOracle, "power_W", "featured package power"), "featured package power", 1e-9);
+for (const [key, metricPath] of Object.entries({
+  peakDieBaselineC: "thermal.baseline.peak_die_C",
+  peakDieImprovedC: "thermal.improved.peak_die_C",
+  peakDieReductionC: "comparison.peak_die_reduction_C",
+  warpageBaselineUm: "mechanics.baseline.substrate_warpage_um",
+  warpageImprovedUm: "mechanics.improved.substrate_warpage_um",
+  warpageRatio: "comparison.warpage_ratio_improved_to_baseline",
+})) {
+  const expected = oracleValue(featuredOracle, metricPath, `featured package ${key}`);
+  close(featured[key], expected, `featured package ${key}`, Math.abs(expected) * 1e-12);
+}
+for (const design of ["baseline", "improved"]) {
+  const fine = oracleValue(featuredOracle, `mechanics.${design}.substrate_warpage_um`, "featured fine warpage");
+  const coarse = oracleValue(featuredCoarseOracle, `mechanics.${design}.substrate_warpage_um`, "featured coarse warpage");
+  const changePercent = (100 * Math.abs(fine - coarse)) / fine;
+  if (changePercent < 11 || changePercent > 13) {
+    fail(`featured package ${design} warpage mesh change ${changePercent.toFixed(2)}% is outside the stated 11–13%`);
+  }
+}
+equal(featuredVerification.passed, true, "featured package FEniCSx comparison passed");
+equal(featuredVerification.tolerances?.field_relative, featured.fenicsxFieldTolerance, "featured package FEniCSx field tolerance");
+close(
+  featured.fenicsxWorstFieldRelativeDifference,
+  Math.max(...["baseline", "improved"].map((design) => featuredVerification.cases?.[design]?.checks?.worst_field_relative_error)),
+  "featured package FEniCSx worst field difference",
+  0,
+);
+if (!(featured.fenicsxWorstFieldRelativeDifference < featured.fenicsxFieldTolerance)) {
+  fail("featured package FEniCSx difference is not below its tolerance");
+}
+const featuredHero = await requireFile(featured.heroSourcePath);
+equal(await sha256(featuredHero), featured.heroSha256, "featured package hero SHA-256");
+const featuredHeroBytes = await readFile(featuredHero);
+equal(featuredHeroBytes.subarray(1, 4).toString("latin1"), "PNG", "featured package hero format");
+equal(featuredHeroBytes.readUInt32BE(16), featured.heroWidth, "featured package hero width");
+equal(featuredHeroBytes.readUInt32BE(20), featured.heroHeight, "featured package hero height");
+equal(featured.heroAsset, "repository-assets/stacked_memory_package/hero.png", "featured package hero asset");
+
 const etv = await readJson(
   await requireFile("examples/etv_partitioned_cycle/expected_results_20x20.json"),
 );

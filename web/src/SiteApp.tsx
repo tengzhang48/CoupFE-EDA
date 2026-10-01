@@ -103,8 +103,17 @@ function ProcessDiagram() {
   );
 }
 
+const SUPERSCRIPT: Record<string, string> = {
+  "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+};
+
+export function formatScientific(value: number, fractionDigits: number) {
+  const [mantissa, exponent] = value.toExponential(fractionDigits).split("e");
+  return `${mantissa} × 10${String(Number(exponent)).replace(/./g, (c) => SUPERSCRIPT[c] ?? c)}`;
+}
+
 function HeroResult() {
-  const field = siteData.tsvField;
+  const pkg = siteData.featuredPackage;
   return (
     <figure
       className="site-hero-result"
@@ -113,36 +122,37 @@ function HeroResult() {
     >
       <header>
         <div>
-          <span>Actual CoupFE output</span>
-          <strong id="hero-result-title">Solver-derived TSV stress field</strong>
+          <span>Featured example · actual CoupFE output</span>
+          <strong id="hero-result-title">{pkg.title}</strong>
         </div>
-        <a href={publicAsset(field.contourAsset)}>Open full figure <span aria-hidden="true">↗</span></a>
+        <a href={repositoryFile(pkg.readmePath)}>Open example <span aria-hidden="true">↗</span></a>
       </header>
       <a
         className="site-hero-result-visual"
-        href={publicAsset(field.contourAsset)}
-        aria-label="Open the complete solver-derived TSV contour"
+        href={publicAsset(pkg.heroAsset)}
+        aria-label="Open the full-resolution package temperature and warpage figure"
       >
-        <svg
-          viewBox="0 160 580 418"
-          role="img"
-          aria-labelledby="hero-field-title hero-field-description"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          <title id="hero-field-title">Axisymmetric TSV radial stress field</title>
-          <desc id="hero-field-description">
-            Cropped view of the retained radial stress reconstruction around the copper and silicon interface. The complete figure also contains the fixed color scale, recovered stress profiles, and Lamé comparison.
-          </desc>
-          <image href={publicAsset(field.contourAsset)} width="1200" height="720" />
-        </svg>
+        <img
+          src={publicAsset(pkg.heroAsset)}
+          width={pkg.heroWidth}
+          height={pkg.heroHeight}
+          alt={`Synthetic stacked-memory package, top TIM k = ${pkg.baselineTopTimK} W/(m·K) on the left and ${pkg.improvedTopTimK} W/(m·K) on the right. Top row: temperature on one scale, peak die ${pkg.peakDieBaselineC.toFixed(1)} versus ${pkg.peakDieImprovedC.toFixed(1)} °C. Bottom row: out-of-plane displacement on one scale, substrate warpage ${pkg.warpageBaselineUm.toFixed(2)} versus ${pkg.warpageImprovedUm.toFixed(2)} µm.`}
+          fetchPriority="high"
+        />
       </a>
       <figcaption id="hero-result-caption">
-        <strong>{field.diameterUm} µm TSV · σrr({field.queryRadiusUm} µm) = {field.sigmaRrAtQueryMpa.toFixed(3)} MPa</strong>
-        <span>{field.relativeErrorPercent.toFixed(4)}% from the declared Lamé reference · {field.degreesOfFreedom.toLocaleString()} DOFs · {field.loadSteps} static solves</span>
+        <strong>
+          Top TIM k = {pkg.baselineTopTimK} → {pkg.improvedTopTimK} W/(m·K): peak die −{pkg.peakDieReductionC.toFixed(1)} °C,
+          substrate warpage ×{pkg.warpageRatio.toFixed(2)}
+        </strong>
+        <span>
+          {pkg.cadBodies} CAD bodies · {pkg.elements.toLocaleString("en-US")} conformal Tet4 · {pkg.powerW} W ·
+          independent FEniCSx solve within {formatScientific(pkg.fenicsxWorstFieldRelativeDifference, 1)} on every field
+        </span>
       </figcaption>
       <div className="site-hero-result-scope" id="hero-result-scope" role="note">
         <span>Scope</span>
-        <p><strong>Measured-device comparison: not performed.</strong> Axisymmetric plane-strain component verification; not a finite-depth 3-D model, transient simulation, or experimental result.</p>
+        <p><strong>Measured-device comparison: not performed.</strong> {pkg.claimBoundary}</p>
       </div>
     </figure>
   );
