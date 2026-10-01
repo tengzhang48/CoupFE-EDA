@@ -1,0 +1,2390 @@
+{
+  "cases": {
+    "baseline": {
+      "fields": {
+        "temperature_C": {
+          "max_absolute_error": 2.0463630789890885e-12,
+          "rms_absolute_error": 4.3824739251103024e-13,
+          "scale": 36.208154561499555,
+          "max_relative_error": 5.6516635652152353e-14,
+          "rms_relative_error": 1.2103555064278877e-14,
+          "l2_relative_error": 2.1513384150639147e-14,
+          "node_or_cell_of_max": 5413,
+          "definition": "scale = peak temperature rise above 40 C",
+          "l2_definition": "L2 difference divided by L2 original temperature rise"
+        },
+        "displacement_m": {
+          "max_absolute_error": 3.1263202660398077e-15,
+          "rms_absolute_error": 8.407944167023154e-16,
+          "scale": 7.600669833467988e-06,
+          "max_relative_error": 4.113216775018563e-10,
+          "rms_relative_error": 1.106210946040637e-10,
+          "l2_relative_error": 4.6440800073718914e-10,
+          "node_or_cell_of_max": 1990,
+          "definition": "scale = max nodal displacement magnitude"
+        },
+        "von_mises_MPa": {
+          "max_absolute_error": 1.6420074189227307e-09,
+          "rms_absolute_error": 3.6818990771453035e-11,
+          "scale": 53.75048462241265,
+          "max_relative_error": 3.054869980163962e-11,
+          "rms_relative_error": 6.849983033660018e-13,
+          "l2_relative_error": 5.711458929272967e-12,
+          "node_or_cell_of_max": 78279
+        },
+        "stress_MPa": {
+          "max_absolute_error": 3.1045281900787813e-09,
+          "rms_absolute_error": 2.3730722610255555e-11,
+          "scale": 63.22053541085748,
+          "max_relative_error": 4.910632549855961e-11,
+          "rms_relative_error": 3.753641511580752e-13,
+          "l2_relative_error": 8.624885582494153e-12,
+          "node_or_cell_of_max": 124783
+        },
+        "principal_max_MPa": {
+          "max_absolute_error": 1.192228538116069e-09,
+          "rms_absolute_error": 3.2621730984737946e-11,
+          "scale": 77.43592300255501,
+          "max_relative_error": 1.539632372015158e-11,
+          "rms_relative_error": 4.2127387031548116e-13,
+          "l2_relative_error": 6.635581629383341e-12,
+          "node_or_cell_of_max": 124957
+        },
+        "substrate_detrended_w_um": {
+          "max_absolute_error": 3.689537564355305e-11,
+          "rms_absolute_error": 1.277807214212657e-11,
+          "scale": 2.748535865447734,
+          "max_relative_error": 1.3423647152424126e-11,
+          "rms_relative_error": 4.649046899027834e-12,
+          "l2_relative_error": 1.703275318457458e-11,
+          "node_or_cell_of_max": 5
+        }
+      },
+      "metrics": {
+        "peak_active_die_C": {
+          "coupfe": 76.20815456149955,
+          "fenicsx": 76.20815456149955,
+          "difference": 0.0,
+          "relative_error": 0.0,
+          "scale_definition": "peak temperature rise above 40 C"
+        },
+        "peak_all_C": {
+          "coupfe": 76.20815456149955,
+          "fenicsx": 76.20815456149955,
+          "difference": 0.0,
+          "relative_error": 0.0,
+          "scale_definition": "peak temperature rise above 40 C"
+        },
+        "top_removed_W": {
+          "coupfe": 15.301068304076805,
+          "fenicsx": 15.301068304076608,
+          "difference": -1.971756091734278e-13,
+          "relative_error": 1.2886394940207702e-14,
+          "scale_definition": "original value"
+        },
+        "board_removed_W": {
+          "coupfe": 0.6989316959215279,
+          "fenicsx": 0.6989316959215581,
+          "difference": 3.019806626980426e-14,
+          "relative_error": 4.320603350229909e-14,
+          "scale_definition": "original value"
+        },
+        "substrate_warpage_um": {
+          "coupfe": 3.905612899130354,
+          "fenicsx": 3.9056128991499084,
+          "difference": 1.9554580177327807e-11,
+          "relative_error": 5.006789121800049e-12,
+          "scale_definition": "original value"
+        },
+        "active_die_p95_vm_MPa": {
+          "coupfe": 9.974874863451664,
+          "fenicsx": 9.97487486345884,
+          "difference": 7.176481631177012e-12,
+          "relative_error": 7.194558056534548e-13,
+          "scale_definition": "original value"
+        },
+        "active_die_mean_vm_MPa": {
+          "coupfe": 5.070152309818488,
+          "fenicsx": 5.070152309823004,
+          "difference": 4.515499085755437e-12,
+          "relative_error": 8.906042283998154e-13,
+          "scale_definition": "original value"
+        },
+        "active_die_max_principal_MPa": {
+          "coupfe": 27.696925215910497,
+          "fenicsx": 27.6969252159341,
+          "difference": 2.3604229681950528e-11,
+          "relative_error": 8.522328561002533e-13,
+          "scale_definition": "original value"
+        },
+        "max_displacement_um": {
+          "coupfe": 7.600669833467989,
+          "fenicsx": 7.600669835649691,
+          "difference": 2.1817019302261542e-09,
+          "relative_error": 2.8704074483270906e-10,
+          "scale_definition": "original value"
+        }
+      },
+      "ordering": {
+        "substrate_top_nodes_identical": true,
+        "peak_active_die_node_coupfe": 57850,
+        "peak_active_die_node_fenicsx": 57850,
+        "peak_vm_cell_coupfe": 287560,
+        "peak_vm_cell_fenicsx": 287560
+      },
+      "per_body": [
+        {
+          "id": "board",
+          "material": "organic",
+          "power_W": 0.0,
+          "mean_C_coupfe": 40.505686040585786,
+          "mean_C_fenicsx": 40.50568604058581,
+          "mean_relative_error": 5.887149547099203e-16,
+          "peak_C_coupfe": 56.57693389026596,
+          "peak_C_fenicsx": 56.57693389026587,
+          "peak_relative_error": 2.5510981370763213e-15
+        },
+        {
+          "id": "bga.0.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.52322020273459,
+          "mean_C_fenicsx": 54.52322020273504,
+          "mean_relative_error": 1.2363014048908328e-14,
+          "peak_C_coupfe": 54.88202436224232,
+          "peak_C_fenicsx": 54.88202436224279,
+          "peak_relative_error": 1.2951729003618247e-14
+        },
+        {
+          "id": "bga.0.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.24775998714444,
+          "mean_C_fenicsx": 54.24775998714544,
+          "mean_relative_error": 2.7669602871366254e-14,
+          "peak_C_coupfe": 54.60850333152089,
+          "peak_C_fenicsx": 54.608503331521845,
+          "peak_relative_error": 2.6295934643709775e-14
+        },
+        {
+          "id": "bga.0.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.97821505116802,
+          "mean_C_fenicsx": 53.978215051168924,
+          "mean_relative_error": 2.4922266416053293e-14,
+          "peak_C_coupfe": 54.345178574651804,
+          "peak_C_fenicsx": 54.3451785746527,
+          "peak_relative_error": 2.4726028097816655e-14
+        },
+        {
+          "id": "bga.0.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.864789986248205,
+          "mean_C_fenicsx": 53.864789986248084,
+          "mean_relative_error": 3.3360514100228817e-15,
+          "peak_C_coupfe": 54.198200219756224,
+          "peak_C_fenicsx": 54.19820021975608,
+          "peak_relative_error": 3.9247663647328025e-15
+        },
+        {
+          "id": "bga.0.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.73571905021378,
+          "mean_C_fenicsx": 53.73571905021388,
+          "mean_relative_error": 2.7473364553129617e-15,
+          "peak_C_coupfe": 54.08003116192764,
+          "peak_C_fenicsx": 54.08003116192781,
+          "peak_relative_error": 4.7097196376793625e-15
+        },
+        {
+          "id": "bga.0.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.505837834240374,
+          "mean_C_fenicsx": 54.505837834240715,
+          "mean_relative_error": 9.419439275358725e-15,
+          "peak_C_coupfe": 54.86726954511296,
+          "peak_C_fenicsx": 54.86726954511332,
+          "peak_relative_error": 9.811915911832005e-15
+        },
+        {
+          "id": "bga.0.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.460968816788075,
+          "mean_C_fenicsx": 54.46096881678918,
+          "mean_relative_error": 3.0613177644915857e-14,
+          "peak_C_coupfe": 54.83231964283338,
+          "peak_C_fenicsx": 54.83231964283447,
+          "peak_relative_error": 3.0024462690205934e-14
+        },
+        {
+          "id": "bga.1.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.42287314449417,
+          "mean_C_fenicsx": 54.42287314449439,
+          "mean_relative_error": 6.083387865335843e-15,
+          "peak_C_coupfe": 54.82008346635695,
+          "peak_C_fenicsx": 54.82008346635716,
+          "peak_relative_error": 5.887149547099203e-15
+        },
+        {
+          "id": "bga.1.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.35418166483465,
+          "mean_C_fenicsx": 54.354181664835636,
+          "mean_relative_error": 2.7277126234892976e-14,
+          "peak_C_coupfe": 54.735382509921685,
+          "peak_C_fenicsx": 54.73538250992267,
+          "peak_relative_error": 2.7277126234892976e-14
+        },
+        {
+          "id": "bga.1.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.85476513330119,
+          "mean_C_fenicsx": 54.85476513330319,
+          "mean_relative_error": 5.514296742449587e-14,
+          "peak_C_coupfe": 55.25926308803693,
+          "peak_C_fenicsx": 55.2592630880389,
+          "peak_relative_error": 5.435801415154931e-14
+        },
+        {
+          "id": "bga.1.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.87303386541129,
+          "mean_C_fenicsx": 54.87303386541101,
+          "mean_relative_error": 7.653294411228964e-15,
+          "peak_C_coupfe": 55.28336948867079,
+          "peak_C_fenicsx": 55.28336948867052,
+          "peak_relative_error": 7.457056092992323e-15
+        },
+        {
+          "id": "bga.1.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.75190239233575,
+          "mean_C_fenicsx": 54.75190239233563,
+          "mean_relative_error": 3.3360514100228817e-15,
+          "peak_C_coupfe": 55.120170086303304,
+          "peak_C_fenicsx": 55.12017008630316,
+          "peak_relative_error": 3.9247663647328025e-15
+        },
+        {
+          "id": "bga.1.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.3828737206083,
+          "mean_C_fenicsx": 54.382873720609005,
+          "mean_relative_error": 1.942759350542737e-14,
+          "peak_C_coupfe": 54.73105402420797,
+          "peak_C_fenicsx": 54.73105402420868,
+          "peak_relative_error": 1.962383182366401e-14
+        },
+        {
+          "id": "bga.1.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.31226693760154,
+          "mean_C_fenicsx": 54.31226693760251,
+          "mean_relative_error": 2.6688411280183053e-14,
+          "peak_C_coupfe": 54.670079186000336,
+          "peak_C_fenicsx": 54.67007918600131,
+          "peak_relative_error": 2.6884649598419694e-14
+        },
+        {
+          "id": "bga.2.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.07499470999674,
+          "mean_C_fenicsx": 54.07499470999674,
+          "mean_relative_error": 0.0,
+          "peak_C_coupfe": 54.41844287430591,
+          "peak_C_fenicsx": 54.41844287430591,
+          "peak_relative_error": 0.0
+        },
+        {
+          "id": "bga.2.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.70144527616341,
+          "mean_C_fenicsx": 54.70144527616433,
+          "mean_relative_error": 2.5314743052526574e-14,
+          "peak_C_coupfe": 55.07653113460071,
+          "peak_C_fenicsx": 55.07653113460162,
+          "peak_relative_error": 2.5314743052526574e-14
+        },
+        {
+          "id": "bga.2.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.17906873119139,
+          "mean_C_fenicsx": 56.17906873119135,
+          "mean_relative_error": 1.1774299094198406e-15,
+          "peak_C_coupfe": 56.58775474052912,
+          "peak_C_fenicsx": 56.58775474052909,
+          "peak_relative_error": 7.849532729465604e-16
+        },
+        {
+          "id": "bga.2.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.39534171867054,
+          "mean_C_fenicsx": 56.395341718671794,
+          "mean_relative_error": 3.47341823278853e-14,
+          "peak_C_coupfe": 56.79499156287248,
+          "peak_C_fenicsx": 56.79499156287375,
+          "peak_relative_error": 3.493042064612194e-14
+        },
+        {
+          "id": "bga.2.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 55.954939755838524,
+          "mean_C_fenicsx": 55.954939755838986,
+          "mean_relative_error": 1.2755490685381608e-14,
+          "peak_C_coupfe": 56.33923214755967,
+          "peak_C_fenicsx": 56.33923214756012,
+          "peak_relative_error": 1.2363014048908328e-14
+        },
+        {
+          "id": "bga.2.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.70012396300395,
+          "mean_C_fenicsx": 54.70012396300563,
+          "mean_relative_error": 4.6312243103847064e-14,
+          "peak_C_coupfe": 55.05658576830161,
+          "peak_C_fenicsx": 55.05658576830325,
+          "peak_relative_error": 4.5331051512663866e-14
+        },
+        {
+          "id": "bga.2.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.85278224658464,
+          "mean_C_fenicsx": 53.85278224658525,
+          "mean_relative_error": 1.687649536835105e-14,
+          "peak_C_coupfe": 54.18898138581801,
+          "peak_C_fenicsx": 54.18898138581861,
+          "peak_relative_error": 1.648401873187777e-14
+        },
+        {
+          "id": "bga.3.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.545460511839515,
+          "mean_C_fenicsx": 53.545460511840986,
+          "mean_relative_error": 4.0621331874984506e-14,
+          "peak_C_coupfe": 53.89746343920614,
+          "peak_C_fenicsx": 53.89746343920759,
+          "peak_relative_error": 4.0032616920274583e-14
+        },
+        {
+          "id": "bga.3.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.86745332420537,
+          "mean_C_fenicsx": 54.867453324206934,
+          "mean_relative_error": 4.3172430012060823e-14,
+          "peak_C_coupfe": 55.25467322603941,
+          "peak_C_fenicsx": 55.254673226040936,
+          "peak_relative_error": 4.2191238420877626e-14
+        },
+        {
+          "id": "bga.3.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.60508208241793,
+          "mean_C_fenicsx": 56.60508208241781,
+          "mean_relative_error": 3.3360514100228817e-15,
+          "peak_C_coupfe": 57.02212235667897,
+          "peak_C_fenicsx": 57.02212235667888,
+          "peak_relative_error": 2.5510981370763213e-15
+        },
+        {
+          "id": "bga.3.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.872216268525925,
+          "mean_C_fenicsx": 56.87221626852582,
+          "mean_relative_error": 2.9435747735496017e-15,
+          "peak_C_coupfe": 57.328053318673625,
+          "peak_C_fenicsx": 57.32805331867353,
+          "peak_relative_error": 2.5510981370763213e-15
+        },
+        {
+          "id": "bga.3.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.38995555886426,
+          "mean_C_fenicsx": 56.3899555588642,
+          "mean_relative_error": 1.5699065458931208e-15,
+          "peak_C_coupfe": 56.8001315561448,
+          "peak_C_fenicsx": 56.80013155614473,
+          "peak_relative_error": 1.9623831823664012e-15
+        },
+        {
+          "id": "bga.3.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.90358821008826,
+          "mean_C_fenicsx": 54.90358821008935,
+          "mean_relative_error": 3.0220701008442575e-14,
+          "peak_C_coupfe": 55.29928157169526,
+          "peak_C_fenicsx": 55.29928157169636,
+          "peak_relative_error": 3.0416939326679216e-14
+        },
+        {
+          "id": "bga.3.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.95361790109188,
+          "mean_C_fenicsx": 53.95361790109254,
+          "mean_relative_error": 1.825016359600753e-14,
+          "peak_C_coupfe": 54.301530820290985,
+          "peak_C_fenicsx": 54.301530820291646,
+          "peak_relative_error": 1.825016359600753e-14
+        },
+        {
+          "id": "bga.4.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.76069173603327,
+          "mean_C_fenicsx": 53.76069173603352,
+          "mean_relative_error": 6.868341138282404e-15,
+          "peak_C_coupfe": 54.0954141312444,
+          "peak_C_fenicsx": 54.095414131244645,
+          "peak_relative_error": 6.868341138282404e-15
+        },
+        {
+          "id": "bga.4.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.767143697848496,
+          "mean_C_fenicsx": 54.767143697849576,
+          "mean_relative_error": 2.9828224371969294e-14,
+          "peak_C_coupfe": 55.13820065595507,
+          "peak_C_fenicsx": 55.13820065595611,
+          "peak_relative_error": 2.8847032780786096e-14
+        },
+        {
+          "id": "bga.4.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 55.74668462577251,
+          "mean_C_fenicsx": 55.746684625772524,
+          "mean_relative_error": 3.924766364732802e-16,
+          "peak_C_coupfe": 56.17390765684128,
+          "peak_C_fenicsx": 56.17390765684128,
+          "peak_relative_error": 0.0
+        },
+        {
+          "id": "bga.4.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.36958374768894,
+          "mean_C_fenicsx": 56.36958374769052,
+          "mean_relative_error": 4.3564906648534105e-14,
+          "peak_C_coupfe": 56.793968908681066,
+          "peak_C_fenicsx": 56.79396890868267,
+          "peak_relative_error": 4.434985992148066e-14
+        },
+        {
+          "id": "bga.4.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.19168371467927,
+          "mean_C_fenicsx": 56.19168371467935,
+          "mean_relative_error": 2.1586215006030413e-15,
+          "peak_C_coupfe": 56.583660920995236,
+          "peak_C_fenicsx": 56.58366092099533,
+          "peak_relative_error": 2.5510981370763213e-15
+        },
+        {
+          "id": "bga.4.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.870310184936706,
+          "mean_C_fenicsx": 54.870310184936805,
+          "mean_relative_error": 2.7473364553129617e-15,
+          "peak_C_coupfe": 55.229028569200054,
+          "peak_C_fenicsx": 55.22902856920014,
+          "peak_relative_error": 2.3548598188396813e-15
+        },
+        {
+          "id": "bga.4.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.7700701120196,
+          "mean_C_fenicsx": 53.770070112020754,
+          "mean_relative_error": 3.1790607554335695e-14,
+          "peak_C_coupfe": 54.12599351844347,
+          "peak_C_fenicsx": 54.12599351844471,
+          "peak_relative_error": 3.414546737317538e-14
+        },
+        {
+          "id": "bga.5.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.26513587365214,
+          "mean_C_fenicsx": 54.265135873653826,
+          "mean_relative_error": 4.6508481422083704e-14,
+          "peak_C_coupfe": 54.62783388526004,
+          "peak_C_fenicsx": 54.6278338852617,
+          "peak_relative_error": 4.591976646737379e-14
+        },
+        {
+          "id": "bga.5.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.52803714341,
+          "mean_C_fenicsx": 54.52803714340948,
+          "mean_relative_error": 1.4521635549511368e-14,
+          "peak_C_coupfe": 54.88907439829609,
+          "peak_C_fenicsx": 54.88907439829559,
+          "peak_relative_error": 1.3736682276564808e-14
+        },
+        {
+          "id": "bga.5.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.78756730848689,
+          "mean_C_fenicsx": 54.78756730848784,
+          "mean_relative_error": 2.6099696325473134e-14,
+          "peak_C_coupfe": 55.16065111235779,
+          "peak_C_fenicsx": 55.16065111235872,
+          "peak_relative_error": 2.5707219688999856e-14
+        },
+        {
+          "id": "bga.5.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 55.06367575074648,
+          "mean_C_fenicsx": 55.063675750745574,
+          "mean_relative_error": 2.4922266416053293e-14,
+          "peak_C_coupfe": 55.447332715864064,
+          "peak_C_fenicsx": 55.447332715863205,
+          "peak_relative_error": 2.3744836506633454e-14
+        },
+        {
+          "id": "bga.5.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.54287391004519,
+          "mean_C_fenicsx": 54.54287391004692,
+          "mean_relative_error": 4.7882149649740184e-14,
+          "peak_C_coupfe": 54.907769877789285,
+          "peak_C_fenicsx": 54.907769877790976,
+          "peak_relative_error": 4.6704719740320345e-14
+        },
+        {
+          "id": "bga.5.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.43458480510747,
+          "mean_C_fenicsx": 54.43458480510758,
+          "mean_relative_error": 3.1398130917862417e-15,
+          "peak_C_coupfe": 54.80033015232197,
+          "peak_C_fenicsx": 54.800330152322104,
+          "peak_relative_error": 3.728528046496162e-15
+        },
+        {
+          "id": "bga.5.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.320511823195424,
+          "mean_C_fenicsx": 54.32051182319497,
+          "mean_relative_error": 1.2559252367144967e-14,
+          "peak_C_coupfe": 54.69868273399096,
+          "peak_C_fenicsx": 54.69868273399051,
+          "peak_relative_error": 1.2363014048908328e-14
+        },
+        {
+          "id": "bga.6.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.53309121228084,
+          "mean_C_fenicsx": 54.53309121228122,
+          "mean_relative_error": 1.0596869184778567e-14,
+          "peak_C_coupfe": 54.915341578117584,
+          "peak_C_fenicsx": 54.91534157811798,
+          "peak_relative_error": 1.0989345821251847e-14
+        },
+        {
+          "id": "bga.6.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.29023282976529,
+          "mean_C_fenicsx": 54.290232829766424,
+          "mean_relative_error": 3.139813091786242e-14,
+          "peak_C_coupfe": 54.62754249778685,
+          "peak_C_fenicsx": 54.627542497788006,
+          "peak_relative_error": 3.1986845872572336e-14
+        },
+        {
+          "id": "bga.6.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.8839041929789,
+          "mean_C_fenicsx": 53.88390419298007,
+          "mean_relative_error": 3.2183084190808977e-14,
+          "peak_C_coupfe": 54.23830121152949,
+          "peak_C_fenicsx": 54.238301211530654,
+          "peak_relative_error": 3.2183084190808977e-14
+        },
+        {
+          "id": "bga.6.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.53032266155285,
+          "mean_C_fenicsx": 53.53032266155429,
+          "mean_relative_error": 3.96401402838013e-14,
+          "peak_C_coupfe": 53.893589450650566,
+          "peak_C_fenicsx": 53.89358945065201,
+          "peak_relative_error": 3.983637860203794e-14
+        },
+        {
+          "id": "bga.6.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.877645135860185,
+          "mean_C_fenicsx": 53.87764513586074,
+          "mean_relative_error": 1.5306588822457928e-14,
+          "peak_C_coupfe": 54.2420361405038,
+          "peak_C_fenicsx": 54.24203614050435,
+          "peak_relative_error": 1.5110350504221288e-14
+        },
+        {
+          "id": "bga.6.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.31958010065315,
+          "mean_C_fenicsx": 54.31958010065468,
+          "mean_relative_error": 4.2387476739114267e-14,
+          "peak_C_coupfe": 54.67633269728192,
+          "peak_C_fenicsx": 54.676332697283456,
+          "peak_relative_error": 4.2387476739114267e-14
+        },
+        {
+          "id": "bga.6.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 54.41839588585286,
+          "mean_C_fenicsx": 54.41839588585265,
+          "mean_relative_error": 5.887149547099203e-15,
+          "peak_C_coupfe": 54.80381464707395,
+          "peak_C_fenicsx": 54.80381464707376,
+          "peak_relative_error": 5.298434592389283e-15
+        },
+        {
+          "id": "substrate",
+          "material": "organic",
+          "power_W": 0.0,
+          "mean_C_coupfe": 68.77047555331839,
+          "mean_C_fenicsx": 68.77047555331883,
+          "mean_relative_error": 1.2166775730671687e-14,
+          "peak_C_coupfe": 74.8776891465755,
+          "peak_C_fenicsx": 74.87768914657548,
+          "peak_relative_error": 7.849532729465604e-16
+        },
+        {
+          "id": "interposer_attach",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 70.00631376715528,
+          "mean_C_fenicsx": 70.00631376715566,
+          "mean_relative_error": 1.0596869184778567e-14,
+          "peak_C_coupfe": 75.23833632100266,
+          "peak_C_fenicsx": 75.23833632100265,
+          "peak_relative_error": 3.924766364732802e-16
+        },
+        {
+          "id": "interposer",
+          "material": "silicon",
+          "power_W": 0.0,
+          "mean_C_coupfe": 70.10082820482653,
+          "mean_C_fenicsx": 70.10082820482691,
+          "mean_relative_error": 1.0596869184778567e-14,
+          "peak_C_coupfe": 75.28372882373958,
+          "peak_C_fenicsx": 75.28372882373962,
+          "peak_relative_error": 1.1774299094198406e-15
+        },
+        {
+          "id": "logic.attach",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 74.72546584924618,
+          "mean_C_fenicsx": 74.72546584924626,
+          "mean_relative_error": 2.3548598188396813e-15,
+          "peak_C_coupfe": 76.20815456149955,
+          "peak_C_fenicsx": 76.20815456149955,
+          "peak_relative_error": 0.0
+        },
+        {
+          "id": "logic.die",
+          "material": "silicon",
+          "power_W": 8.0,
+          "mean_C_coupfe": 75.35773725781019,
+          "mean_C_fenicsx": 75.35773725781029,
+          "mean_relative_error": 2.7473364553129617e-15,
+          "peak_C_coupfe": 76.20815456149955,
+          "peak_C_fenicsx": 76.20815456149955,
+          "peak_relative_error": 0.0
+        },
+        {
+          "id": "memory.stack_0.attach_0",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 69.89909458092512,
+          "mean_C_fenicsx": 69.89909458092602,
+          "mean_relative_error": 2.4726028097816655e-14,
+          "peak_C_coupfe": 70.46170294186945,
+          "peak_C_fenicsx": 70.46170294186986,
+          "peak_relative_error": 1.1381822457725127e-14
+        },
+        {
+          "id": "memory.stack_0.die_0",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 70.06053733529528,
+          "mean_C_fenicsx": 70.0605373352962,
+          "mean_relative_error": 2.5510981370763215e-14,
+          "peak_C_coupfe": 70.20800034883906,
+          "peak_C_fenicsx": 70.20800034884002,
+          "peak_relative_error": 2.6295934643709775e-14
+        },
+        {
+          "id": "memory.stack_0.attach_1",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 69.7503492606653,
+          "mean_C_fenicsx": 69.75034926066623,
+          "mean_relative_error": 2.5510981370763215e-14,
+          "peak_C_coupfe": 70.19836210908176,
+          "peak_C_fenicsx": 70.19836210908268,
+          "peak_relative_error": 2.5510981370763215e-14
+        },
+        {
+          "id": "memory.stack_0.die_1",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 69.4235251368679,
+          "mean_C_fenicsx": 69.42352513686882,
+          "mean_relative_error": 2.5510981370763215e-14,
+          "peak_C_coupfe": 69.62706789195799,
+          "peak_C_fenicsx": 69.62706789195897,
+          "peak_relative_error": 2.7080887916656335e-14
+        },
+        {
+          "id": "memory.stack_0.attach_2",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 68.65558157569497,
+          "mean_C_fenicsx": 68.65558157569583,
+          "mean_relative_error": 2.3941074824870092e-14,
+          "peak_C_coupfe": 69.58647215744622,
+          "peak_C_fenicsx": 69.58647215744719,
+          "peak_relative_error": 2.6688411280183053e-14
+        },
+        {
+          "id": "memory.stack_0.die_2",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 67.8722642668873,
+          "mean_C_fenicsx": 67.87226426688812,
+          "mean_relative_error": 2.2763644915450253e-14,
+          "peak_C_coupfe": 68.13819505304741,
+          "peak_C_fenicsx": 68.13819505304829,
+          "peak_relative_error": 2.4333551461343373e-14
+        },
+        {
+          "id": "memory.stack_0.attach_3",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 66.63454242346326,
+          "mean_C_fenicsx": 66.634542423464,
+          "mean_relative_error": 2.040878509661057e-14,
+          "peak_C_coupfe": 68.06608498411262,
+          "peak_C_fenicsx": 68.06608498411349,
+          "peak_relative_error": 2.3941074824870092e-14
+        },
+        {
+          "id": "memory.stack_0.die_3",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 65.38315738455026,
+          "mean_C_fenicsx": 65.38315738455091,
+          "mean_relative_error": 1.805392527777089e-14,
+          "peak_C_coupfe": 65.78962590376712,
+          "peak_C_fenicsx": 65.78962590376776,
+          "peak_relative_error": 1.766144864129761e-14
+        },
+        {
+          "id": "memory.stack_1.attach_0",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 69.89130592744137,
+          "mean_C_fenicsx": 69.8913059274418,
+          "mean_relative_error": 1.2166775730671687e-14,
+          "peak_C_coupfe": 70.45805572150495,
+          "peak_C_fenicsx": 70.45805572150536,
+          "peak_relative_error": 1.1381822457725127e-14
+        },
+        {
+          "id": "memory.stack_1.die_0",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 70.05434770220303,
+          "mean_C_fenicsx": 70.05434770220347,
+          "mean_relative_error": 1.2166775730671687e-14,
+          "peak_C_coupfe": 70.19737848746203,
+          "peak_C_fenicsx": 70.1973784874625,
+          "peak_relative_error": 1.2951729003618247e-14
+        },
+        {
+          "id": "memory.stack_1.attach_1",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 69.74543991059005,
+          "mean_C_fenicsx": 69.74543991059049,
+          "mean_relative_error": 1.2166775730671687e-14,
+          "peak_C_coupfe": 70.19548779507693,
+          "peak_C_fenicsx": 70.19548779507741,
+          "peak_relative_error": 1.3344205640091527e-14
+        },
+        {
+          "id": "memory.stack_1.die_1",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 69.41926365717484,
+          "mean_C_fenicsx": 69.41926365717528,
+          "mean_relative_error": 1.2166775730671687e-14,
+          "peak_C_coupfe": 69.61845972464768,
+          "peak_C_fenicsx": 69.61845972464816,
+          "peak_relative_error": 1.3344205640091527e-14
+        },
+        {
+          "id": "memory.stack_1.attach_2",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 68.652280301702,
+          "mean_C_fenicsx": 68.65228030170242,
+          "mean_relative_error": 1.1381822457725127e-14,
+          "peak_C_coupfe": 69.58521108194935,
+          "peak_C_fenicsx": 69.58521108194984,
+          "peak_relative_error": 1.3344205640091527e-14
+        },
+        {
+          "id": "memory.stack_1.die_2",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 67.869190063518,
+          "mean_C_fenicsx": 67.86919006351842,
+          "mean_relative_error": 1.1381822457725127e-14,
+          "peak_C_coupfe": 68.13539617654274,
+          "peak_C_fenicsx": 68.13539617654325,
+          "peak_relative_error": 1.4129158913038088e-14
+        },
+        {
+          "id": "memory.stack_1.attach_3",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 66.63330499866724,
+          "mean_C_fenicsx": 66.63330499866765,
+          "mean_relative_error": 1.1381822457725127e-14,
+          "peak_C_coupfe": 68.06286373306153,
+          "peak_C_fenicsx": 68.06286373306204,
+          "peak_relative_error": 1.4129158913038088e-14
+        },
+        {
+          "id": "memory.stack_1.die_3",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 65.38188288258112,
+          "mean_C_fenicsx": 65.38188288258152,
+          "mean_relative_error": 1.0989345821251847e-14,
+          "peak_C_coupfe": 65.78433789442226,
+          "peak_C_fenicsx": 65.78433789442263,
+          "peak_relative_error": 1.0204392548305285e-14
+        },
+        {
+          "id": "memory.stack_2.attach_0",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 69.91528334541988,
+          "mean_C_fenicsx": 69.91528334542018,
+          "mean_relative_error": 8.242009365938885e-15,
+          "peak_C_coupfe": 70.46083815261811,
+          "peak_C_fenicsx": 70.46083815261834,
+          "peak_relative_error": 6.279626183572483e-15
+        },
+        {
+          "id": "memory.stack_2.die_0",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 70.08074891583495,
+          "mean_C_fenicsx": 70.08074891583524,
+          "mean_relative_error": 8.242009365938885e-15,
+          "peak_C_coupfe": 70.22284390023,
+          "peak_C_fenicsx": 70.22284390023033,
+          "peak_relative_error": 9.026962638885445e-15
+        },
+        {
+          "id": "memory.stack_2.attach_1",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 69.77328998420084,
+          "mean_C_fenicsx": 69.77328998420114,
+          "mean_relative_error": 8.242009365938885e-15,
+          "peak_C_coupfe": 70.22249990843187,
+          "peak_C_fenicsx": 70.22249990843211,
+          "peak_relative_error": 6.672102820045763e-15
+        },
+        {
+          "id": "memory.stack_2.die_1",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 69.44865109592553,
+          "mean_C_fenicsx": 69.44865109592583,
+          "mean_relative_error": 8.242009365938885e-15,
+          "peak_C_coupfe": 69.65201383555387,
+          "peak_C_fenicsx": 69.65201383555416,
+          "peak_relative_error": 7.849532729465605e-15
+        },
+        {
+          "id": "memory.stack_2.attach_2",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 68.68356467409569,
+          "mean_C_fenicsx": 68.68356467409596,
+          "mean_relative_error": 7.457056092992323e-15,
+          "peak_C_coupfe": 69.60664555354384,
+          "peak_C_fenicsx": 69.60664555354417,
+          "peak_relative_error": 9.026962638885445e-15
+        },
+        {
+          "id": "memory.stack_2.die_2",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 67.90246272897227,
+          "mean_C_fenicsx": 67.90246272897252,
+          "mean_relative_error": 7.064579456519044e-15,
+          "peak_C_coupfe": 68.16493820358096,
+          "peak_C_fenicsx": 68.16493820358109,
+          "peak_relative_error": 3.532289728259522e-15
+        },
+        {
+          "id": "memory.stack_2.attach_3",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 66.66655390727284,
+          "mean_C_fenicsx": 66.66655390727306,
+          "mean_relative_error": 5.887149547099203e-15,
+          "peak_C_coupfe": 68.0928361907861,
+          "peak_C_fenicsx": 68.09283619078622,
+          "peak_relative_error": 3.1398130917862417e-15
+        },
+        {
+          "id": "memory.stack_2.die_3",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 65.41543852382144,
+          "mean_C_fenicsx": 65.41543852382162,
+          "mean_relative_error": 5.1021962741526425e-15,
+          "peak_C_coupfe": 65.81671812794632,
+          "peak_C_fenicsx": 65.81671812794647,
+          "peak_relative_error": 4.3172430012060825e-15
+        },
+        {
+          "id": "memory.stack_3.attach_0",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 69.91729572537851,
+          "mean_C_fenicsx": 69.91729572537913,
+          "mean_relative_error": 1.726897200482433e-14,
+          "peak_C_coupfe": 70.46043665590794,
+          "peak_C_fenicsx": 70.46043665590828,
+          "peak_relative_error": 9.419439275358725e-15
+        },
+        {
+          "id": "memory.stack_3.die_0",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 70.08411065705234,
+          "mean_C_fenicsx": 70.084110657053,
+          "mean_relative_error": 1.8446401914244172e-14,
+          "peak_C_coupfe": 70.2306482754729,
+          "peak_C_fenicsx": 70.23064827547375,
+          "peak_relative_error": 2.3548598188396813e-14
+        },
+        {
+          "id": "memory.stack_3.attach_1",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 69.77853715747666,
+          "mean_C_fenicsx": 69.77853715747734,
+          "mean_relative_error": 1.883887855071745e-14,
+          "peak_C_coupfe": 70.22390789242425,
+          "peak_C_fenicsx": 70.2239078924251,
+          "peak_relative_error": 2.3548598188396813e-14
+        },
+        {
+          "id": "memory.stack_3.die_1",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 69.45647573227453,
+          "mean_C_fenicsx": 69.45647573227522,
+          "mean_relative_error": 1.9231355187190732e-14,
+          "peak_C_coupfe": 69.65746686983753,
+          "peak_C_fenicsx": 69.65746686983833,
+          "peak_relative_error": 2.1978691642503693e-14
+        },
+        {
+          "id": "memory.stack_3.attach_2",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 68.69202420139445,
+          "mean_C_fenicsx": 68.69202420139506,
+          "mean_relative_error": 1.687649536835105e-14,
+          "peak_C_coupfe": 69.61752260621785,
+          "peak_C_fenicsx": 69.61752260621864,
+          "peak_relative_error": 2.1978691642503693e-14
+        },
+        {
+          "id": "memory.stack_3.die_2",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 67.911212662747,
+          "mean_C_fenicsx": 67.91121266274757,
+          "mean_relative_error": 1.569906545893121e-14,
+          "peak_C_coupfe": 68.17256414455451,
+          "peak_C_fenicsx": 68.17256414455505,
+          "peak_relative_error": 1.4914112185984647e-14
+        },
+        {
+          "id": "memory.stack_3.attach_3",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 66.67774758530052,
+          "mean_C_fenicsx": 66.67774758530105,
+          "mean_relative_error": 1.4521635549511368e-14,
+          "peak_C_coupfe": 68.10283524039235,
+          "peak_C_fenicsx": 68.10283524039288,
+          "peak_relative_error": 1.4521635549511368e-14
+        },
+        {
+          "id": "memory.stack_3.die_3",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 65.43014020235495,
+          "mean_C_fenicsx": 65.43014020235539,
+          "mean_relative_error": 1.2166775730671687e-14,
+          "peak_C_coupfe": 65.82375124694175,
+          "peak_C_fenicsx": 65.82375124694218,
+          "peak_relative_error": 1.1774299094198407e-14
+        },
+        {
+          "id": "encapsulation",
+          "material": "mold",
+          "power_W": 0.0,
+          "mean_C_coupfe": 63.125800741737294,
+          "mean_C_fenicsx": 63.1258007417375,
+          "mean_relative_error": 5.690911228862563e-15,
+          "peak_C_coupfe": 75.21326212386404,
+          "peak_C_fenicsx": 75.21326212386428,
+          "peak_relative_error": 6.672102820045763e-15
+        },
+        {
+          "id": "top_tim",
+          "material": "top_tim",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.54990176405031,
+          "mean_C_fenicsx": 56.549901764050304,
+          "mean_relative_error": 1.962383182366401e-16,
+          "peak_C_coupfe": 75.84076790508075,
+          "peak_C_fenicsx": 75.8407679050807,
+          "peak_relative_error": 1.5699065458931208e-15
+        },
+        {
+          "id": "copper_lid",
+          "material": "copper",
+          "power_W": 0.0,
+          "mean_C_coupfe": 51.84901645027399,
+          "mean_C_fenicsx": 51.84901645027387,
+          "mean_relative_error": 3.3360514100228817e-15,
+          "peak_C_coupfe": 53.84888497790841,
+          "peak_C_fenicsx": 53.848884977908234,
+          "peak_relative_error": 4.9059579559160025e-15
+        }
+      ],
+      "checks": {
+        "fields_within_tolerance": true,
+        "metrics_within_tolerance": true,
+        "worst_field_relative_error": 4.113216775018563e-10,
+        "worst_field": "displacement_m",
+        "worst_metric_relative_error": 2.8704074483270906e-10,
+        "worst_metric": "max_displacement_um",
+        "worst_body_temperature_relative_error": 5.514296742449587e-14,
+        "worst_body": "bga.1.2"
+      }
+    },
+    "improved": {
+      "fields": {
+        "temperature_C": {
+          "max_absolute_error": 1.0231815394945443e-12,
+          "rms_absolute_error": 4.536657204624891e-13,
+          "scale": 20.536363314754105,
+          "max_relative_error": 4.9822917710043226e-14,
+          "rms_relative_error": 2.2090849947933983e-14,
+          "l2_relative_error": 3.5138037141259747e-14,
+          "node_or_cell_of_max": 1250,
+          "definition": "scale = peak temperature rise above 40 C",
+          "l2_definition": "L2 difference divided by L2 original temperature rise"
+        },
+        "displacement_m": {
+          "max_absolute_error": 2.3400692276568255e-15,
+          "rms_absolute_error": 6.291727016664714e-16,
+          "scale": 4.849695074759163e-06,
+          "max_relative_error": 4.825188370782331e-10,
+          "rms_relative_error": 1.2973448680125857e-10,
+          "l2_relative_error": 4.488817119384115e-10,
+          "node_or_cell_of_max": 1990,
+          "definition": "scale = max nodal displacement magnitude"
+        },
+        "von_mises_MPa": {
+          "max_absolute_error": 1.2098997359544228e-09,
+          "rms_absolute_error": 2.7610949502987697e-11,
+          "scale": 32.44504232926167,
+          "max_relative_error": 3.72907430255757e-11,
+          "rms_relative_error": 8.510067338727377e-13,
+          "l2_relative_error": 6.954077803921828e-12,
+          "node_or_cell_of_max": 78279
+        },
+        "stress_MPa": {
+          "max_absolute_error": 2.283142563896945e-09,
+          "rms_absolute_error": 1.7735614919237895e-11,
+          "scale": 38.2799152135378,
+          "max_relative_error": 5.964335477654103e-11,
+          "rms_relative_error": 4.633138506264415e-13,
+          "l2_relative_error": 1.0416359557108136e-11,
+          "node_or_cell_of_max": 124783
+        },
+        "principal_max_MPa": {
+          "max_absolute_error": 8.741336543494072e-10,
+          "rms_absolute_error": 2.4439515659320356e-11,
+          "scale": 46.82125932638874,
+          "max_relative_error": 1.866958870661431e-11,
+          "rms_relative_error": 5.219747612714487e-13,
+          "l2_relative_error": 7.938338302774992e-12,
+          "node_or_cell_of_max": 124957
+        },
+        "substrate_detrended_w_um": {
+          "max_absolute_error": 2.769273699243513e-11,
+          "rms_absolute_error": 9.561287882126426e-12,
+          "scale": 1.401486991759795,
+          "max_relative_error": 1.9759539086169036e-11,
+          "rms_relative_error": 6.8222451855373076e-12,
+          "l2_relative_error": 2.781518042699128e-11,
+          "node_or_cell_of_max": 5
+        }
+      },
+      "metrics": {
+        "peak_active_die_C": {
+          "coupfe": 60.536363314754105,
+          "fenicsx": 60.5363633147533,
+          "difference": -8.029132914089132e-13,
+          "relative_error": 3.909715070302003e-14,
+          "scale_definition": "peak temperature rise above 40 C"
+        },
+        "peak_all_C": {
+          "coupfe": 60.536363314754105,
+          "fenicsx": 60.5363633147533,
+          "difference": -8.029132914089132e-13,
+          "relative_error": 3.909715070302003e-14,
+          "scale_definition": "peak temperature rise above 40 C"
+        },
+        "top_removed_W": {
+          "coupfe": 15.5647964333497,
+          "fenicsx": 15.564796433348837,
+          "difference": -8.633094239485217e-13,
+          "relative_error": 5.546551332330717e-14,
+          "scale_definition": "original value"
+        },
+        "board_removed_W": {
+          "coupfe": 0.4352035666494182,
+          "fenicsx": 0.4352035666494183,
+          "difference": 5.551115123125783e-17,
+          "relative_error": 1.2755215141877569e-16,
+          "scale_definition": "original value"
+        },
+        "substrate_warpage_um": {
+          "coupfe": 1.9007208501059587,
+          "fenicsx": 1.9007208501202726,
+          "difference": 1.4313883411887218e-11,
+          "relative_error": 7.530765715065033e-12,
+          "scale_definition": "original value"
+        },
+        "active_die_p95_vm_MPa": {
+          "coupfe": 6.536073733494608,
+          "fenicsx": 6.536073733496302,
+          "difference": 1.6937562463681388e-12,
+          "relative_error": 2.5913970916337063e-13,
+          "scale_definition": "original value"
+        },
+        "active_die_mean_vm_MPa": {
+          "coupfe": 3.541791146202357,
+          "fenicsx": 3.541791146205503,
+          "difference": 3.1463720517876936e-12,
+          "relative_error": 8.883561796582369e-13,
+          "scale_definition": "original value"
+        },
+        "active_die_max_principal_MPa": {
+          "coupfe": 18.482315667315675,
+          "fenicsx": 18.482315667340547,
+          "difference": 2.4872548465282307e-11,
+          "relative_error": 1.3457484934784006e-12,
+          "scale_definition": "original value"
+        },
+        "max_displacement_um": {
+          "coupfe": 4.849695074759163,
+          "fenicsx": 4.849695076404159,
+          "difference": 1.6449961393050216e-09,
+          "relative_error": 3.39195787353025e-10,
+          "scale_definition": "original value"
+        }
+      },
+      "ordering": {
+        "substrate_top_nodes_identical": true,
+        "peak_active_die_node_coupfe": 57853,
+        "peak_active_die_node_fenicsx": 57853,
+        "peak_vm_cell_coupfe": 287560,
+        "peak_vm_cell_fenicsx": 287560
+      },
+      "per_body": [
+        {
+          "id": "board",
+          "material": "organic",
+          "power_W": 0.0,
+          "mean_C_coupfe": 40.314852855599064,
+          "mean_C_fenicsx": 40.314852855599064,
+          "mean_relative_error": 0.0,
+          "peak_C_coupfe": 49.472577200193484,
+          "peak_C_fenicsx": 49.47257720019315,
+          "peak_relative_error": 1.626164675258355e-14
+        },
+        {
+          "id": "bga.0.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.50952308075304,
+          "mean_C_fenicsx": 49.5095230807528,
+          "mean_relative_error": 1.176374445931576e-14,
+          "peak_C_coupfe": 49.744775447595046,
+          "peak_C_fenicsx": 49.744775447594805,
+          "peak_relative_error": 1.176374445931576e-14
+        },
+        {
+          "id": "bga.0.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.244125908881514,
+          "mean_C_fenicsx": 49.2441259088817,
+          "mean_relative_error": 8.995804586535582e-15,
+          "peak_C_coupfe": 49.478470231833526,
+          "peak_C_fenicsx": 49.47847023183367,
+          "peak_relative_error": 6.9198496819504474e-15
+        },
+        {
+          "id": "bga.0.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.94117492131708,
+          "mean_C_fenicsx": 48.94117492131731,
+          "mean_relative_error": 1.1417751975218239e-14,
+          "peak_C_coupfe": 49.174411602803424,
+          "peak_C_fenicsx": 49.17441160280364,
+          "peak_relative_error": 1.0379774522925672e-14
+        },
+        {
+          "id": "bga.0.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.815911341699795,
+          "mean_C_fenicsx": 48.8159113416993,
+          "mean_relative_error": 2.4219473886826566e-14,
+          "peak_C_coupfe": 49.02640452689813,
+          "peak_C_fenicsx": 49.02640452689762,
+          "peak_relative_error": 2.4911458855021613e-14
+        },
+        {
+          "id": "bga.0.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.78621100033397,
+          "mean_C_fenicsx": 48.786211000333594,
+          "mean_relative_error": 1.8337601657168687e-14,
+          "peak_C_coupfe": 49.006581918808486,
+          "peak_C_fenicsx": 49.006581918808116,
+          "peak_relative_error": 1.7991609173071165e-14
+        },
+        {
+          "id": "bga.0.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.40976125864845,
+          "mean_C_fenicsx": 49.40976125864823,
+          "mean_relative_error": 1.0725767007023194e-14,
+          "peak_C_coupfe": 49.64536451632456,
+          "peak_C_fenicsx": 49.64536451632432,
+          "peak_relative_error": 1.176374445931576e-14
+        },
+        {
+          "id": "bga.0.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.46687459404227,
+          "mean_C_fenicsx": 49.46687459404249,
+          "mean_relative_error": 1.0725767007023194e-14,
+          "peak_C_coupfe": 49.709840146051036,
+          "peak_C_fenicsx": 49.709840146051235,
+          "peak_relative_error": 9.687789554730627e-15
+        },
+        {
+          "id": "bga.1.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.3591239291167,
+          "mean_C_fenicsx": 49.35912392911634,
+          "mean_relative_error": 1.729962420487612e-14,
+          "peak_C_coupfe": 49.61813146821483,
+          "peak_C_fenicsx": 49.61813146821446,
+          "peak_relative_error": 1.7991609173071165e-14
+        },
+        {
+          "id": "bga.1.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.107946778343596,
+          "mean_C_fenicsx": 49.107946778344065,
+          "mean_relative_error": 2.2835503950436477e-14,
+          "peak_C_coupfe": 49.34915663532709,
+          "peak_C_fenicsx": 49.34915663532754,
+          "peak_relative_error": 2.179752649814391e-14
+        },
+        {
+          "id": "bga.1.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.120636136224014,
+          "mean_C_fenicsx": 49.120636136224405,
+          "mean_relative_error": 1.902958662536373e-14,
+          "peak_C_coupfe": 49.3676643935831,
+          "peak_C_fenicsx": 49.36766439358349,
+          "peak_relative_error": 1.902958662536373e-14
+        },
+        {
+          "id": "bga.1.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.027831440242316,
+          "mean_C_fenicsx": 49.02783144024185,
+          "mean_relative_error": 2.2835503950436477e-14,
+          "peak_C_coupfe": 49.27290682788613,
+          "peak_C_fenicsx": 49.272906827885656,
+          "peak_relative_error": 2.3181496434534e-14
+        },
+        {
+          "id": "bga.1.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.05552899232825,
+          "mean_C_fenicsx": 49.05552899232813,
+          "mean_relative_error": 5.88187222965788e-15,
+          "peak_C_coupfe": 49.27812259427675,
+          "peak_C_fenicsx": 49.2781225942766,
+          "peak_relative_error": 7.26584216604797e-15
+        },
+        {
+          "id": "bga.1.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.12301474910448,
+          "mean_C_fenicsx": 49.12301474910431,
+          "mean_relative_error": 8.303819618340537e-15,
+          "peak_C_coupfe": 49.3431022676146,
+          "peak_C_fenicsx": 49.34310226761443,
+          "peak_relative_error": 8.303819618340537e-15
+        },
+        {
+          "id": "bga.1.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.2845028331766,
+          "mean_C_fenicsx": 49.284502833176866,
+          "mean_relative_error": 1.2801721911608329e-14,
+          "peak_C_coupfe": 49.516361740259384,
+          "peak_C_fenicsx": 49.51636174025963,
+          "peak_relative_error": 1.2109736943413283e-14
+        },
+        {
+          "id": "bga.2.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.00602062936704,
+          "mean_C_fenicsx": 49.006020629366816,
+          "mean_relative_error": 1.1071759491120717e-14,
+          "peak_C_coupfe": 49.22721757730834,
+          "peak_C_fenicsx": 49.22721757730808,
+          "peak_relative_error": 1.2455729427510806e-14
+        },
+        {
+          "id": "bga.2.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.02808860112975,
+          "mean_C_fenicsx": 49.02808860113018,
+          "mean_relative_error": 2.0759549045851345e-14,
+          "peak_C_coupfe": 49.26096463363403,
+          "peak_C_fenicsx": 49.26096463363443,
+          "peak_relative_error": 1.9375579109461253e-14
+        },
+        {
+          "id": "bga.2.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.45428413293243,
+          "mean_C_fenicsx": 49.45428413293204,
+          "mean_relative_error": 1.902958662536373e-14,
+          "peak_C_coupfe": 49.69070099774657,
+          "peak_C_fenicsx": 49.69070099774617,
+          "peak_relative_error": 1.9375579109461253e-14
+        },
+        {
+          "id": "bga.2.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.46890370912989,
+          "mean_C_fenicsx": 49.468903709129975,
+          "mean_relative_error": 4.151909809170268e-15,
+          "peak_C_coupfe": 49.69887779107799,
+          "peak_C_fenicsx": 49.69887779107807,
+          "peak_relative_error": 3.805917325072746e-15
+        },
+        {
+          "id": "bga.2.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.32145109792475,
+          "mean_C_fenicsx": 49.321451097924616,
+          "mean_relative_error": 6.573857197852925e-15,
+          "peak_C_coupfe": 49.545429163122414,
+          "peak_C_fenicsx": 49.54542916312225,
+          "peak_relative_error": 7.957827134243014e-15
+        },
+        {
+          "id": "bga.2.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.02375205531859,
+          "mean_C_fenicsx": 49.023752055319264,
+          "mean_relative_error": 3.2869285989264624e-14,
+          "peak_C_coupfe": 49.240809502815026,
+          "peak_C_fenicsx": 49.24080950281566,
+          "peak_relative_error": 3.079333108467949e-14
+        },
+        {
+          "id": "bga.2.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.86061781786032,
+          "mean_C_fenicsx": 48.86061781786054,
+          "mean_relative_error": 1.0725767007023194e-14,
+          "peak_C_coupfe": 49.07510656200726,
+          "peak_C_fenicsx": 49.07510656200745,
+          "peak_relative_error": 9.341797070633104e-15
+        },
+        {
+          "id": "bga.3.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.61532197185916,
+          "mean_C_fenicsx": 48.61532197185963,
+          "mean_relative_error": 2.2835503950436477e-14,
+          "peak_C_coupfe": 48.838318932547296,
+          "peak_C_fenicsx": 48.83831893254776,
+          "peak_relative_error": 2.2489511466338955e-14
+        },
+        {
+          "id": "bga.3.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.02960883378681,
+          "mean_C_fenicsx": 49.029608833787115,
+          "mean_relative_error": 1.4877676816193463e-14,
+          "peak_C_coupfe": 49.26273292789028,
+          "peak_C_fenicsx": 49.262732927890546,
+          "peak_relative_error": 1.2801721911608329e-14
+        },
+        {
+          "id": "bga.3.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.59400333790727,
+          "mean_C_fenicsx": 49.594003337907424,
+          "mean_relative_error": 7.611834650145492e-15,
+          "peak_C_coupfe": 49.83588512888983,
+          "peak_C_fenicsx": 49.83588512888998,
+          "peak_relative_error": 7.26584216604797e-15
+        },
+        {
+          "id": "bga.3.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.64129630583459,
+          "mean_C_fenicsx": 49.641296305834246,
+          "mean_relative_error": 1.6607639236681073e-14,
+          "peak_C_coupfe": 49.90177812721101,
+          "peak_C_fenicsx": 49.901778127210676,
+          "peak_relative_error": 1.626164675258355e-14
+        },
+        {
+          "id": "bga.3.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.46526363748776,
+          "mean_C_fenicsx": 49.46526363748725,
+          "mean_relative_error": 2.4911458855021613e-14,
+          "peak_C_coupfe": 49.70042984052132,
+          "peak_C_fenicsx": 49.70042984052078,
+          "peak_relative_error": 2.62954287914117e-14
+        },
+        {
+          "id": "bga.3.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.047960337123136,
+          "mean_C_fenicsx": 49.047960337123484,
+          "mean_relative_error": 1.69536317207786e-14,
+          "peak_C_coupfe": 49.288246471759464,
+          "peak_C_fenicsx": 49.28824647175979,
+          "peak_relative_error": 1.591565426848603e-14
+        },
+        {
+          "id": "bga.3.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.87119821011613,
+          "mean_C_fenicsx": 48.871198210116084,
+          "mean_relative_error": 2.075954904585134e-15,
+          "peak_C_coupfe": 49.093329430827076,
+          "peak_C_fenicsx": 49.09332943082701,
+          "peak_relative_error": 3.1139323568777016e-15
+        },
+        {
+          "id": "bga.4.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.804122797475,
+          "mean_C_fenicsx": 48.80412279747469,
+          "mean_relative_error": 1.5223669300290985e-14,
+          "peak_C_coupfe": 49.01916390593132,
+          "peak_C_fenicsx": 49.019163905930995,
+          "peak_relative_error": 1.591565426848603e-14
+        },
+        {
+          "id": "bga.4.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.06891688642012,
+          "mean_C_fenicsx": 49.06891688642026,
+          "mean_relative_error": 6.9198496819504474e-15,
+          "peak_C_coupfe": 49.294665015849546,
+          "peak_C_fenicsx": 49.294665015849674,
+          "peak_relative_error": 6.227864713755403e-15
+        },
+        {
+          "id": "bga.4.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.203756133652654,
+          "mean_C_fenicsx": 49.20375613365229,
+          "mean_relative_error": 1.7645616688973643e-14,
+          "peak_C_coupfe": 49.45625391133295,
+          "peak_C_fenicsx": 49.45625391133255,
+          "peak_relative_error": 1.9375579109461253e-14
+        },
+        {
+          "id": "bga.4.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.454851484296526,
+          "mean_C_fenicsx": 49.45485148429704,
+          "mean_relative_error": 2.4911458855021613e-14,
+          "peak_C_coupfe": 49.701707842884176,
+          "peak_C_fenicsx": 49.7017078428846,
+          "peak_relative_error": 2.0759549045851345e-14
+        },
+        {
+          "id": "bga.4.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.45938507182146,
+          "mean_C_fenicsx": 49.45938507182118,
+          "mean_relative_error": 1.3493706879803373e-14,
+          "peak_C_coupfe": 49.68676531836538,
+          "peak_C_fenicsx": 49.68676531836511,
+          "peak_relative_error": 1.314771439570585e-14
+        },
+        {
+          "id": "bga.4.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.12687875895971,
+          "mean_C_fenicsx": 49.12687875895945,
+          "mean_relative_error": 1.2801721911608329e-14,
+          "peak_C_coupfe": 49.34758933884165,
+          "peak_C_fenicsx": 49.34758933884138,
+          "peak_relative_error": 1.314771439570585e-14
+        },
+        {
+          "id": "bga.4.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.80679954830079,
+          "mean_C_fenicsx": 48.80679954830113,
+          "mean_relative_error": 1.6607639236681073e-14,
+          "peak_C_coupfe": 49.03569469393299,
+          "peak_C_fenicsx": 49.035694693933365,
+          "peak_relative_error": 1.8337601657168687e-14
+        },
+        {
+          "id": "bga.5.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.256044801363664,
+          "mean_C_fenicsx": 49.25604480136419,
+          "mean_relative_error": 2.5603443823216657e-14,
+          "peak_C_coupfe": 49.491792043964956,
+          "peak_C_fenicsx": 49.49179204396546,
+          "peak_relative_error": 2.456546637092409e-14
+        },
+        {
+          "id": "bga.5.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.218053809092375,
+          "mean_C_fenicsx": 49.21805380909165,
+          "mean_relative_error": 3.5291233377947285e-14,
+          "peak_C_coupfe": 49.444797520323384,
+          "peak_C_fenicsx": 49.44479752032265,
+          "peak_relative_error": 3.563722586204481e-14
+        },
+        {
+          "id": "bga.5.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.079878472101775,
+          "mean_C_fenicsx": 49.079878472101875,
+          "mean_relative_error": 4.843894777365313e-15,
+          "peak_C_coupfe": 49.31272726840069,
+          "peak_C_fenicsx": 49.31272726840078,
+          "peak_relative_error": 4.151909809170268e-15
+        },
+        {
+          "id": "bga.5.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.146389303716994,
+          "mean_C_fenicsx": 49.146389303715985,
+          "mean_relative_error": 4.913093274184818e-14,
+          "peak_C_coupfe": 49.37732513977578,
+          "peak_C_fenicsx": 49.37732513977478,
+          "peak_relative_error": 4.843894777365313e-14
+        },
+        {
+          "id": "bga.5.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.92715746112822,
+          "mean_C_fenicsx": 48.92715746112896,
+          "mean_relative_error": 3.598321834614233e-14,
+          "peak_C_coupfe": 49.1541321490514,
+          "peak_C_fenicsx": 49.15413214905211,
+          "peak_relative_error": 3.459924840975224e-14
+        },
+        {
+          "id": "bga.5.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.15479978873674,
+          "mean_C_fenicsx": 49.154799788736604,
+          "mean_relative_error": 6.573857197852925e-15,
+          "peak_C_coupfe": 49.386214287700334,
+          "peak_C_fenicsx": 49.3862142877002,
+          "peak_relative_error": 6.573857197852925e-15
+        },
+        {
+          "id": "bga.5.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.28766555498667,
+          "mean_C_fenicsx": 49.287665554986056,
+          "mean_relative_error": 2.9755353632386925e-14,
+          "peak_C_coupfe": 49.53256760929452,
+          "peak_C_fenicsx": 49.532567609293906,
+          "peak_relative_error": 2.9755353632386925e-14
+        },
+        {
+          "id": "bga.6.0",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.51592801498432,
+          "mean_C_fenicsx": 49.51592801498403,
+          "mean_relative_error": 1.4185691847998419e-14,
+          "peak_C_coupfe": 49.766509706505964,
+          "peak_C_fenicsx": 49.76650970650566,
+          "peak_relative_error": 1.4877676816193463e-14
+        },
+        {
+          "id": "bga.6.1",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.27208962361942,
+          "mean_C_fenicsx": 49.27208962361965,
+          "mean_relative_error": 1.1071759491120717e-14,
+          "peak_C_coupfe": 49.491388056422366,
+          "peak_C_fenicsx": 49.49138805642261,
+          "peak_relative_error": 1.176374445931576e-14
+        },
+        {
+          "id": "bga.6.2",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.88118565083046,
+          "mean_C_fenicsx": 48.88118565083072,
+          "mean_relative_error": 1.2801721911608329e-14,
+          "peak_C_coupfe": 49.10625073074881,
+          "peak_C_fenicsx": 49.10625073074906,
+          "peak_relative_error": 1.2109736943413283e-14
+        },
+        {
+          "id": "bga.6.3",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.603134645146184,
+          "mean_C_fenicsx": 48.603134645146675,
+          "mean_relative_error": 2.3873481402729043e-14,
+          "peak_C_coupfe": 48.83398687658144,
+          "peak_C_fenicsx": 48.83398687658191,
+          "peak_relative_error": 2.2835503950436477e-14
+        },
+        {
+          "id": "bga.6.4",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 48.876075203072276,
+          "mean_C_fenicsx": 48.87607520307217,
+          "mean_relative_error": 5.189887261462836e-15,
+          "peak_C_coupfe": 49.11017848661442,
+          "peak_C_fenicsx": 49.11017848661429,
+          "peak_relative_error": 6.573857197852925e-15
+        },
+        {
+          "id": "bga.6.5",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.28715514572709,
+          "mean_C_fenicsx": 49.287155145727795,
+          "mean_relative_error": 3.425325592565472e-14,
+          "peak_C_coupfe": 49.517340979256915,
+          "peak_C_fenicsx": 49.5173409792576,
+          "peak_relative_error": 3.3215278473362146e-14
+        },
+        {
+          "id": "bga.6.6",
+          "material": "solder",
+          "power_W": 0.0,
+          "mean_C_coupfe": 49.43623691970417,
+          "mean_C_fenicsx": 49.43623691970373,
+          "mean_relative_error": 2.145153401404639e-14,
+          "peak_C_coupfe": 49.6887910210706,
+          "peak_C_fenicsx": 49.68879102107017,
+          "peak_relative_error": 2.0759549045851345e-14
+        },
+        {
+          "id": "substrate",
+          "material": "organic",
+          "power_W": 0.0,
+          "mean_C_coupfe": 58.244585990512284,
+          "mean_C_fenicsx": 58.2445859905117,
+          "mean_relative_error": 2.8371383695996837e-14,
+          "peak_C_coupfe": 59.911833961024435,
+          "peak_C_fenicsx": 59.911833961023575,
+          "peak_relative_error": 4.186509057580021e-14
+        },
+        {
+          "id": "interposer_attach",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 58.87321373416931,
+          "mean_C_fenicsx": 58.87321373416868,
+          "mean_relative_error": 3.079333108467949e-14,
+          "peak_C_coupfe": 60.09274704042484,
+          "peak_C_fenicsx": 60.09274704042403,
+          "peak_relative_error": 3.944314318711755e-14
+        },
+        {
+          "id": "interposer",
+          "material": "silicon",
+          "power_W": 0.0,
+          "mean_C_coupfe": 58.932006407396926,
+          "mean_C_fenicsx": 58.93200640739629,
+          "mean_relative_error": 3.1139323568777014e-14,
+          "peak_C_coupfe": 60.11295371223408,
+          "peak_C_fenicsx": 60.112953712233264,
+          "peak_relative_error": 3.978913567121507e-14
+        },
+        {
+          "id": "logic.attach",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 59.86239370542108,
+          "mean_C_fenicsx": 59.86239370542031,
+          "mean_relative_error": 3.736718828253242e-14,
+          "peak_C_coupfe": 60.536363314754105,
+          "peak_C_fenicsx": 60.5363633147533,
+          "peak_relative_error": 3.909715070302003e-14
+        },
+        {
+          "id": "logic.die",
+          "material": "silicon",
+          "power_W": 8.0,
+          "mean_C_coupfe": 59.84390243635238,
+          "mean_C_fenicsx": 59.84390243635162,
+          "mean_relative_error": 3.7021195798434896e-14,
+          "peak_C_coupfe": 60.536363314754105,
+          "peak_C_fenicsx": 60.5363633147533,
+          "peak_relative_error": 3.909715070302003e-14
+        },
+        {
+          "id": "memory.stack_0.attach_0",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 59.539657520338736,
+          "mean_C_fenicsx": 59.53965752033818,
+          "mean_relative_error": 2.6987413759606746e-14,
+          "peak_C_coupfe": 59.87599455341093,
+          "peak_C_fenicsx": 59.87599455341037,
+          "peak_relative_error": 2.7333406243704268e-14
+        },
+        {
+          "id": "memory.stack_0.die_0",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 59.70763766180931,
+          "mean_C_fenicsx": 59.70763766180875,
+          "mean_relative_error": 2.7333406243704268e-14,
+          "peak_C_coupfe": 59.87599455341093,
+          "peak_C_fenicsx": 59.87599455341037,
+          "peak_relative_error": 2.7333406243704268e-14
+        },
+        {
+          "id": "memory.stack_0.attach_1",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 59.40191434656854,
+          "mean_C_fenicsx": 59.401914346567956,
+          "mean_relative_error": 2.8371383695996837e-14,
+          "peak_C_coupfe": 59.86668833681546,
+          "peak_C_fenicsx": 59.86668833681484,
+          "peak_relative_error": 3.010134611648445e-14
+        },
+        {
+          "id": "memory.stack_0.die_1",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 59.079612268673884,
+          "mean_C_fenicsx": 59.079612268673266,
+          "mean_relative_error": 3.010134611648445e-14,
+          "peak_C_coupfe": 59.2436319014747,
+          "peak_C_fenicsx": 59.243631901474124,
+          "peak_relative_error": 2.8025391211899312e-14
+        },
+        {
+          "id": "memory.stack_0.attach_2",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 58.29970696727833,
+          "mean_C_fenicsx": 58.29970696727772,
+          "mean_relative_error": 2.9755353632386925e-14,
+          "peak_C_coupfe": 59.201267993457314,
+          "peak_C_fenicsx": 59.201267993456725,
+          "peak_relative_error": 2.871737618009436e-14
+        },
+        {
+          "id": "memory.stack_0.die_2",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 57.50308320378279,
+          "mean_C_fenicsx": 57.50308320378216,
+          "mean_relative_error": 3.079333108467949e-14,
+          "peak_C_coupfe": 57.69120792440258,
+          "peak_C_fenicsx": 57.69120792440192,
+          "peak_relative_error": 3.217730102106958e-14
+        },
+        {
+          "id": "memory.stack_0.attach_3",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.21898800196527,
+          "mean_C_fenicsx": 56.21898800196463,
+          "mean_relative_error": 3.1139323568777014e-14,
+          "peak_C_coupfe": 57.61324768974515,
+          "peak_C_fenicsx": 57.6132476897445,
+          "peak_relative_error": 3.183130853697206e-14
+        },
+        {
+          "id": "memory.stack_0.die_3",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 54.918849679604776,
+          "mean_C_fenicsx": 54.9188496796041,
+          "mean_relative_error": 3.2869285989264624e-14,
+          "peak_C_coupfe": 55.22878561500857,
+          "peak_C_fenicsx": 55.22878561500788,
+          "peak_relative_error": 3.356127095745967e-14
+        },
+        {
+          "id": "memory.stack_1.attach_0",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 59.53373894560825,
+          "mean_C_fenicsx": 59.533738945607574,
+          "mean_relative_error": 3.2869285989264624e-14,
+          "peak_C_coupfe": 59.86914457541704,
+          "peak_C_fenicsx": 59.86914457541644,
+          "peak_relative_error": 2.906336866419188e-14
+        },
+        {
+          "id": "memory.stack_1.die_0",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 59.70249231464794,
+          "mean_C_fenicsx": 59.702492314647294,
+          "mean_relative_error": 3.1485316052874536e-14,
+          "peak_C_coupfe": 59.86914457541704,
+          "peak_C_fenicsx": 59.86914457541644,
+          "peak_relative_error": 2.906336866419188e-14
+        },
+        {
+          "id": "memory.stack_1.attach_1",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 59.39693906079976,
+          "mean_C_fenicsx": 59.39693906079911,
+          "mean_relative_error": 3.1485316052874536e-14,
+          "peak_C_coupfe": 59.86264675705178,
+          "peak_C_fenicsx": 59.862646757051195,
+          "peak_relative_error": 2.8371383695996837e-14
+        },
+        {
+          "id": "memory.stack_1.die_1",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 59.07381345074261,
+          "mean_C_fenicsx": 59.07381345074195,
+          "mean_relative_error": 3.217730102106958e-14,
+          "peak_C_coupfe": 59.23668398752568,
+          "peak_C_fenicsx": 59.23668398752497,
+          "peak_relative_error": 3.459924840975224e-14
+        },
+        {
+          "id": "memory.stack_1.attach_2",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 58.29564665630571,
+          "mean_C_fenicsx": 58.295646656305074,
+          "mean_relative_error": 3.1139323568777014e-14,
+          "peak_C_coupfe": 59.20029929265293,
+          "peak_C_fenicsx": 59.20029929265222,
+          "peak_relative_error": 3.459924840975224e-14
+        },
+        {
+          "id": "memory.stack_1.die_2",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 57.50066853347158,
+          "mean_C_fenicsx": 57.50066853347095,
+          "mean_relative_error": 3.079333108467949e-14,
+          "peak_C_coupfe": 57.68873513676444,
+          "peak_C_fenicsx": 57.6887351367638,
+          "peak_relative_error": 3.1139323568777014e-14
+        },
+        {
+          "id": "memory.stack_1.attach_3",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.217818420413046,
+          "mean_C_fenicsx": 56.217818420412414,
+          "mean_relative_error": 3.079333108467949e-14,
+          "peak_C_coupfe": 57.61064649801941,
+          "peak_C_fenicsx": 57.610646498018774,
+          "peak_relative_error": 3.1139323568777014e-14
+        },
+        {
+          "id": "memory.stack_1.die_3",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 54.91819133382978,
+          "mean_C_fenicsx": 54.918191333829164,
+          "mean_relative_error": 3.010134611648445e-14,
+          "peak_C_coupfe": 55.226227471568386,
+          "peak_C_fenicsx": 55.226227471567746,
+          "peak_relative_error": 3.1139323568777014e-14
+        },
+        {
+          "id": "memory.stack_2.attach_0",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 59.54527440670704,
+          "mean_C_fenicsx": 59.545274406706454,
+          "mean_relative_error": 2.8371383695996837e-14,
+          "peak_C_coupfe": 59.8809546917625,
+          "peak_C_fenicsx": 59.88095469176194,
+          "peak_relative_error": 2.6987413759606746e-14
+        },
+        {
+          "id": "memory.stack_2.die_0",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 59.71578120137831,
+          "mean_C_fenicsx": 59.71578120137773,
+          "mean_relative_error": 2.8371383695996837e-14,
+          "peak_C_coupfe": 59.8809546917625,
+          "peak_C_fenicsx": 59.88095469176194,
+          "peak_relative_error": 2.6987413759606746e-14
+        },
+        {
+          "id": "memory.stack_2.attach_1",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 59.411088543524244,
+          "mean_C_fenicsx": 59.41108854352366,
+          "mean_relative_error": 2.8371383695996837e-14,
+          "peak_C_coupfe": 59.87596928254354,
+          "peak_C_fenicsx": 59.87596928254299,
+          "peak_relative_error": 2.6641421275509223e-14
+        },
+        {
+          "id": "memory.stack_2.die_1",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 59.0891010109591,
+          "mean_C_fenicsx": 59.089101010958515,
+          "mean_relative_error": 2.8371383695996837e-14,
+          "peak_C_coupfe": 59.25301316804152,
+          "peak_C_fenicsx": 59.25301316804093,
+          "peak_relative_error": 2.871737618009436e-14
+        },
+        {
+          "id": "memory.stack_2.attach_2",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 58.31007947192733,
+          "mean_C_fenicsx": 58.31007947192673,
+          "mean_relative_error": 2.9409361148289403e-14,
+          "peak_C_coupfe": 59.210788596131465,
+          "peak_C_fenicsx": 59.21078859613095,
+          "peak_relative_error": 2.4911458855021613e-14
+        },
+        {
+          "id": "memory.stack_2.die_2",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 57.5143818632729,
+          "mean_C_fenicsx": 57.51438186327227,
+          "mean_relative_error": 3.079333108467949e-14,
+          "peak_C_coupfe": 57.69920491612402,
+          "peak_C_fenicsx": 57.699204916123364,
+          "peak_relative_error": 3.183130853697206e-14
+        },
+        {
+          "id": "memory.stack_2.attach_3",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.231214870468726,
+          "mean_C_fenicsx": 56.23121487046807,
+          "mean_relative_error": 3.183130853697206e-14,
+          "peak_C_coupfe": 57.625791307350305,
+          "peak_C_fenicsx": 57.62579130734966,
+          "peak_relative_error": 3.1485316052874536e-14
+        },
+        {
+          "id": "memory.stack_2.die_3",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 54.93144296329152,
+          "mean_C_fenicsx": 54.93144296329084,
+          "mean_relative_error": 3.3215278473362146e-14,
+          "peak_C_coupfe": 55.23571314673977,
+          "peak_C_fenicsx": 55.235713146739016,
+          "peak_relative_error": 3.6675203314337374e-14
+        },
+        {
+          "id": "memory.stack_3.attach_0",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 59.54118925370592,
+          "mean_C_fenicsx": 59.54118925370557,
+          "mean_relative_error": 1.729962420487612e-14,
+          "peak_C_coupfe": 59.878300092531404,
+          "peak_C_fenicsx": 59.87830009253113,
+          "peak_relative_error": 1.3493706879803373e-14
+        },
+        {
+          "id": "memory.stack_3.die_0",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 59.71208442848796,
+          "mean_C_fenicsx": 59.71208442848761,
+          "mean_relative_error": 1.729962420487612e-14,
+          "peak_C_coupfe": 59.878300092531404,
+          "peak_C_fenicsx": 59.87830009253113,
+          "peak_relative_error": 1.3493706879803373e-14
+        },
+        {
+          "id": "memory.stack_3.attach_1",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 59.408145731251494,
+          "mean_C_fenicsx": 59.40814573125115,
+          "mean_relative_error": 1.6607639236681073e-14,
+          "peak_C_coupfe": 59.873100199945924,
+          "peak_C_fenicsx": 59.87310019994567,
+          "peak_relative_error": 1.2455729427510806e-14
+        },
+        {
+          "id": "memory.stack_3.die_1",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 59.087421866595214,
+          "mean_C_fenicsx": 59.08742186659489,
+          "mean_relative_error": 1.591565426848603e-14,
+          "peak_C_coupfe": 59.249992237776226,
+          "peak_C_fenicsx": 59.24999223777599,
+          "peak_relative_error": 1.1417751975218239e-14
+        },
+        {
+          "id": "memory.stack_3.attach_2",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 58.30932801124977,
+          "mean_C_fenicsx": 58.309328011249406,
+          "mean_relative_error": 1.7645616688973643e-14,
+          "peak_C_coupfe": 59.20815834198891,
+          "peak_C_fenicsx": 59.208158341988685,
+          "peak_relative_error": 1.1071759491120717e-14
+        },
+        {
+          "id": "memory.stack_3.die_2",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 57.51441653850175,
+          "mean_C_fenicsx": 57.51441653850136,
+          "mean_relative_error": 1.902958662536373e-14,
+          "peak_C_coupfe": 57.698924204772794,
+          "peak_C_fenicsx": 57.6989242047724,
+          "peak_relative_error": 1.902958662536373e-14
+        },
+        {
+          "id": "memory.stack_3.attach_3",
+          "material": "attach",
+          "power_W": 0.0,
+          "mean_C_coupfe": 56.23127440301126,
+          "mean_C_fenicsx": 56.231274403010815,
+          "mean_relative_error": 2.179752649814391e-14,
+          "peak_C_coupfe": 57.62654380956906,
+          "peak_C_fenicsx": 57.62654380956866,
+          "peak_relative_error": 1.9375579109461253e-14
+        },
+        {
+          "id": "memory.stack_3.die_3",
+          "material": "silicon",
+          "power_W": 0.5,
+          "mean_C_coupfe": 54.93196204635198,
+          "mean_C_fenicsx": 54.93196204635146,
+          "mean_relative_error": 2.5257451339119135e-14,
+          "peak_C_coupfe": 55.23677835006193,
+          "peak_C_fenicsx": 55.236778350061414,
+          "peak_relative_error": 2.5257451339119135e-14
+        },
+        {
+          "id": "encapsulation",
+          "material": "mold",
+          "power_W": 0.0,
+          "mean_C_coupfe": 55.794487280602844,
+          "mean_C_fenicsx": 55.79448728060217,
+          "mean_relative_error": 3.2869285989264624e-14,
+          "peak_C_coupfe": 59.91712099540905,
+          "peak_C_fenicsx": 59.91712099540841,
+          "peak_relative_error": 3.1139323568777014e-14
+        },
+        {
+          "id": "top_tim",
+          "material": "top_tim",
+          "power_W": 0.0,
+          "mean_C_coupfe": 53.20490315266951,
+          "mean_C_fenicsx": 53.20490315266881,
+          "mean_relative_error": 3.39072634415572e-14,
+          "peak_C_coupfe": 60.015303495084304,
+          "peak_C_fenicsx": 60.01530349508351,
+          "peak_relative_error": 3.8751158218922506e-14
+        },
+        {
+          "id": "copper_lid",
+          "material": "copper",
+          "power_W": 0.0,
+          "mean_C_coupfe": 52.053226064803006,
+          "mean_C_fenicsx": 52.05322606480232,
+          "mean_relative_error": 3.356127095745967e-14,
+          "peak_C_coupfe": 54.66317568779308,
+          "peak_C_fenicsx": 54.66317568779223,
+          "peak_relative_error": 4.117310560760517e-14
+        }
+      ],
+      "checks": {
+        "fields_within_tolerance": true,
+        "metrics_within_tolerance": true,
+        "worst_field_relative_error": 4.825188370782331e-10,
+        "worst_field": "displacement_m",
+        "worst_metric_relative_error": 3.39195787353025e-10,
+        "worst_metric": "max_displacement_um",
+        "worst_body_temperature_relative_error": 4.913093274184818e-14,
+        "worst_body": "bga.5.3"
+      }
+    }
+  },
+  "derived": {
+    "peak_die_reduction_C": {
+      "coupfe": 15.67179124674545,
+      "fenicsx": 15.671791246746253,
+      "difference": 8.029132914089132e-13,
+      "relative_error": 5.1233026191288354e-14
+    },
+    "warpage_ratio_baseline_over_improved": {
+      "coupfe": 2.0548061536298867,
+      "fenicsx": 2.0548061536247006,
+      "difference": -5.186073792629031e-12,
+      "relative_error": 2.523874956996625e-12
+    }
+  },
+  "cross_residual": {
+    "question": "does the CoupFE solution satisfy the FEniCSx reference's own discrete equations as well as the reference's own solution does?",
+    "normalisation": "thermal: ||R||/||F|| over non-Dirichlet nodes; mechanical: ||R||/||F|| over non-anchored dofs, with R = integral of sigma(u, theta):eps(v) using the reference's forms",
+    "interpretation": "both computed solutions satisfy the reference equations with small residuals; this is consistent with roundoff amplified by conditioning, but does not prove matrix equality, measure conditioning, or establish physical validity",
+    "cases": {
+      "baseline": {
+        "thermal_residual_of_coupfe_field": 7.97449730047803e-13,
+        "thermal_residual_of_fenicsx_field": 4.96171936407696e-13,
+        "mechanical_residual_of_coupfe_field": 5.719908483504744e-14,
+        "mechanical_residual_of_fenicsx_field": 2.645321464834398e-14,
+        "mechanical_net_force_of_coupfe_field_N": 6.46515919603031e-15,
+        "mechanical_net_force_of_fenicsx_field_N": 7.522739017104494e-15
+      },
+      "improved": {
+        "thermal_residual_of_coupfe_field": 6.969418015084255e-13,
+        "thermal_residual_of_fenicsx_field": 4.299463363371471e-13,
+        "mechanical_residual_of_coupfe_field": 4.5849855296454505e-14,
+        "mechanical_residual_of_fenicsx_field": 2.032442320509733e-14,
+        "mechanical_net_force_of_coupfe_field_N": 8.115412887059889e-15,
+        "mechanical_net_force_of_fenicsx_field_N": 3.57579871474497e-15
+      }
+    }
+  },
+  "tolerances": {
+    "field_relative": 1e-05,
+    "cell_relative": 1e-05,
+    "metric_relative": 0.0001
+  },
+  "solvers": {
+    "coupfe": {
+      "description": "CoupFE / CoupFE-EDA generated native Tet4 kernels, Newton driver",
+      "core_revision": "e2f42ed5772850a0a23a2ce434f430c287eae5c8",
+      "eda_revision": "3f78bab4c8b6944c3ea0a6a598a74e8923f023db",
+      "python": "3.13.12 | packaged by conda-forge | (main, Feb  5 2026, 05:53:46) [GCC 14.3.0]",
+      "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+      "thermal_driver_sha256": "f19c9cbe286080800f3874f59c533b30bef705274c56850e5deb8b456f79b2c8",
+      "mechanics_driver_sha256": "f25a98a6c339df3ce7a2536583a165e85dfd4f9a76f74a2d5e62700f624bd15d",
+      "thermal_free_residual": {
+        "baseline": 7.328090137486747e-13,
+        "improved": 6.355813095374428e-13
+      },
+      "mechanics_free_residual": {
+        "baseline": 5.774207498352404e-14,
+        "improved": 4.660849933498742e-14
+      }
+    },
+    "fenicsx": {
+      "description": "FEniCSx / DOLFINx, independent UFL weak forms, direct LU (MUMPS)",
+      "dolfinx": "0.10.0",
+      "ufl": "2025.2.1",
+      "basix": "0.10.0",
+      "petsc": "3.25.5",
+      "python": "3.12.13 | packaged by conda-forge | (main, Mar  5 2026, 16:50:00) [GCC 14.3.0]",
+      "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+      "script_sha256": "d0b7eae0399effb56ec7731e3c992af18b06a333a186be240b7bb0f6da122639",
+      "patch_checks": {
+        "cube_exact_flux_W": 2.0,
+        "cube_fe_flux_W": 1.9999999999999996,
+        "cube_flux_absolute_error_W": 4.440892098500626e-16,
+        "free_expansion_relative_error": 3.5308649654904615e-15,
+        "constrained_stress_exact_Pa": -3249999.999999999,
+        "constrained_stress_absolute_error_Pa": 0.0
+      },
+      "mesh_checks": {
+        "nodes": 88154,
+        "cells": 355233,
+        "recomputed_volume_max_relative_error": 2.3425705819590803e-14,
+        "recomputed_volume_max_absolute_error_m3": 1.6478988765704848e-25,
+        "non_positive_orientations": 0,
+        "node_coord_max_abs_error_m": 0.0,
+        "connectivity_one_to_one": true,
+        "dolfinx_total_volume_m3": 1.0622409184643928e-06,
+        "input_total_volume_m3": 1.0622409184637954e-06,
+        "total_volume_relative_error": 5.623677036608674e-13,
+        "top_facets_matched": 3704,
+        "exterior_facets": 106920,
+        "dolfinx_top_area_m2": 0.00032400000000003926,
+        "nominal_top_area_m2": 0.00032399999999999996,
+        "top_area_relative_error": 1.2130348380431956e-13,
+        "bottom_dirichlet_nodes": 2916
+      },
+      "thermal_free_residual": {
+        "baseline": 4.0308224087103914e-13,
+        "improved": 3.5204199924298204e-13
+      },
+      "mechanics_free_residual": {
+        "baseline": 2.6452644777276723e-14,
+        "improved": 2.0324049338213494e-14
+      }
+    }
+  },
+  "mesh_nodes": 88154,
+  "mesh_tets": 355233,
+  "provenance": {
+    "mesh_dir": "runs/h0.45",
+    "reference_dir": "fenicsx_verification/results",
+    "mesh_sha256": "635773e2dca195bc3b4929ec912da944bd581edca4e572f78c90611a982c609a",
+    "geometry_sha256": "183fff442917898b043df54ea657471a93b3be023c724572e95428906e751b29",
+    "compare_script_sha256": "a79a961159bac246bf4362df239c79623e062f46a270c0a5a2799adaef35e67a"
+  },
+  "scope": "Two independent implementations of one declared linear synthetic model on the same P1 Tet4 mesh. Agreement here is evidence about numerical implementation only: not real-device validation, not mesh convergence, not plasticity, and not verification of the physical package model or of its synthetic material data.",
+  "passed": true
+}

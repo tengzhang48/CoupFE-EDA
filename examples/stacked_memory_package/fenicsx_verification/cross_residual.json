@@ -1,0 +1,23 @@
+{
+  "question": "does the CoupFE solution satisfy the FEniCSx reference's own discrete equations as well as the reference's own solution does?",
+  "normalisation": "thermal: ||R||/||F|| over non-Dirichlet nodes; mechanical: ||R||/||F|| over non-anchored dofs, with R = integral of sigma(u, theta):eps(v) using the reference's forms",
+  "interpretation": "both computed solutions satisfy the reference equations with small residuals; this is consistent with roundoff amplified by conditioning, but does not prove matrix equality, measure conditioning, or establish physical validity",
+  "cases": {
+    "baseline": {
+      "thermal_residual_of_coupfe_field": 7.97449730047803e-13,
+      "thermal_residual_of_fenicsx_field": 4.96171936407696e-13,
+      "mechanical_residual_of_coupfe_field": 5.719908483504744e-14,
+      "mechanical_residual_of_fenicsx_field": 2.645321464834398e-14,
+      "mechanical_net_force_of_coupfe_field_N": 6.46515919603031e-15,
+      "mechanical_net_force_of_fenicsx_field_N": 7.522739017104494e-15
+    },
+    "improved": {
+      "thermal_residual_of_coupfe_field": 6.969418015084255e-13,
+      "thermal_residual_of_fenicsx_field": 4.299463363371471e-13,
+      "mechanical_residual_of_coupfe_field": 4.5849855296454505e-14,
+      "mechanical_residual_of_fenicsx_field": 2.032442320509733e-14,
+      "mechanical_net_force_of_coupfe_field_N": 8.115412887059889e-15,
+      "mechanical_net_force_of_fenicsx_field_N": 3.57579871474497e-15
+    }
+  }
+}

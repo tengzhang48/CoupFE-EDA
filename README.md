@@ -28,6 +28,22 @@ including periodic face/node matching and relation construction, remain in the
 EDA package while generic affine constraints and finite-element operators remain
 in core.
 
+## Featured example: stacked-memory package
+
+[`examples/stacked_memory_package/`](examples/stacked_memory_package/) takes a
+synthetic 90-body package from CAD to a conformal Tet4 mesh, solves steady heat
+conduction for two top thermal-interface materials, and carries the
+temperature into a thermoelastic warpage solve on the same mesh. The better
+interface lowers the peak die temperature by about 16 °C and halves the
+substrate warpage; an independent FEniCSx solve of the same declared model
+agrees to about 1e-9 on every field.
+
+![Substrate warpage for the two thermal-interface materials](examples/stacked_memory_package/figures/warpage_comparison.png)
+
+```bash
+python examples/stacked_memory_package/run.py --check   # about 2 min; needs gmsh and gfortran
+```
+
 ## Explore the repository
 
 | Area | What belongs there | Start here |
