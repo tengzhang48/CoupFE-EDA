@@ -33,6 +33,7 @@ benchmarks or experimental oracles.
 
 | Workflow | Current retained result | Boundary | Tier |
 |---|---|---|---|
+| [`python examples/stacked_memory_package/run.py --check`](examples/stacked_memory_package/) | 90-body synthetic stacked-memory package: CAD → conformal Tet4 → steady conduction for two top-TIM conductivities → one-way thermoelastic warpage. Peak die 75.7 → 60.4 °C and warpage 3.47 → 1.66 µm at 0.65 mm (`--mesh-size 0.45`: 76.2 → 60.5 °C, 3.91 → 1.90 µm); an independent FEniCSx solve agrees to ≤ 4.8e-10 on every field | Synthetic geometry and representative properties; steady, linear, one-way; warpage changes 11–13% between the two meshes; no device, plasticity, or life claim | 🟠 |
 | [`python examples/solder_plane_cycle/run.py --check`](examples/solder_plane_cycle/) | Six-Quad4 SnPbAg cycle; top-layer cycle energy and solver residual telemetry | Idealized plane-strain block; no stabilized-cycle or package-life validation | 🟢 |
 | [`python examples/etv_partitioned_cycle/run.py --check`](examples/etv_partitioned_cycle/) | SAC305 quasisteady versus lumped-transient temperature sensitivity at slow and fast periods | Partitioned uniform-temperature feedback; not a monolithic `phi-T-u` or device result | 🟢 |
 | [`python examples/etv_partitioned_cycle/run.py --mesh-size 20 --check`](examples/etv_partitioned_cycle/) | Selected public 20 × 20 SAC305 mechanics case with retained second-cycle accumulated element-mean `dW` fields | Single mesh with a mesh-specific 5 µm top-row aggregation; not convergence, crack/life, or experimental evidence | 🟢 |

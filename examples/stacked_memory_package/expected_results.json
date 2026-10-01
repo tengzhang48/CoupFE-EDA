@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "input_role": "Regression oracle read only when run.py is called with --check",
+  "configuration": "Synthetic stacked-memory package, h = 0.65 mm conformal Tet4 (single-thread Gmsh build with the Netgen optimizer); top-TIM k = 1 and 5 W/(m K); steady conduction then one-way linear thermoelasticity",
+  "reproducibility": "The mesh is bitwise reproducible with the same Gmsh version and one meshing thread; a different Gmsh version is reported by the first metric.",
+  "metrics": [
+    {
+      "path": "mesh.gmsh_version",
+      "value": "4.15.2"
+    },
+    {
+      "path": "mesh.nodes",
+      "value": 40253,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "mesh.elements",
+      "value": 155422,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "mesh.cad_bodies",
+      "value": 90,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "mesh.materials",
+      "value": 7,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "mesh.body_adjacencies",
+      "value": 176,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "power_W",
+      "value": 16.0,
+      "relative_tolerance": 1e-12
+    },
+    {
+      "path": "thermal.baseline.top_tim_k_W_mK",
+      "value": 1.0,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "thermal.baseline.peak_die_C",
+      "value": 75.68510144896146,
+      "relative_tolerance": 1e-07
+    },
+    {
+      "path": "mechanics.baseline.substrate_warpage_um",
+      "value": 3.465062439012657,
+      "relative_tolerance": 1e-06
+    },
+    {
+      "path": "mechanics.baseline.active_die_p95_vm_MPa",
+      "value": 9.666652285473978,
+      "relative_tolerance": 1e-06
+    },
+    {
+      "path": "thermal.improved.top_tim_k_W_mK",
+      "value": 5.0,
+      "absolute_tolerance": 0.0
+    },
+    {
+      "path": "thermal.improved.peak_die_C",
+      "value": 60.398948471998104,
+      "relative_tolerance": 1e-07
+    },
+    {
+      "path": "mechanics.improved.substrate_warpage_um",
+      "value": 1.6627350247418702,
+      "relative_tolerance": 1e-06
+    },
+    {
+      "path": "mechanics.improved.active_die_p95_vm_MPa",
+      "value": 6.499292387104787,
+      "relative_tolerance": 1e-06
+    },
+    {
+      "path": "comparison.peak_die_reduction_C",
+      "value": 15.286152976963358,
+      "relative_tolerance": 1e-06
+    },
+    {
+      "path": "comparison.warpage_ratio_improved_to_baseline",
+      "value": 0.4798571610200634,
+      "relative_tolerance": 1e-06
+    }
+  ],
+  "bounds": [
+    {
+      "path": "thermal.baseline.balance_error_relative",
+      "maximum_exclusive": 1e-08
+    },
+    {
+      "path": "thermal.baseline.free_residual_relative",
+      "maximum_exclusive": 1e-08
+    },
+    {
+      "path": "thermal.improved.balance_error_relative",
+      "maximum_exclusive": 1e-08
+    },
+    {
+      "path": "thermal.improved.free_residual_relative",
+      "maximum_exclusive": 1e-08
+    },
+    {
+      "path": "mechanics.baseline.free_residual_relative",
+      "maximum_exclusive": 1e-07
+    },
+    {
+      "path": "mechanics.improved.free_residual_relative",
+      "maximum_exclusive": 1e-07
+    },
+    {
+      "path": "verification.cube_flux_absolute_error_W",
+      "maximum_exclusive": 1e-11
+    },
+    {
+      "path": "verification.zero_power_max_rise_K",
+      "maximum_exclusive": 1e-12
+    },
+    {
+      "path": "verification.free_expansion_relative_error",
+      "maximum_exclusive": 1e-08
+    },
+    {
+      "path": "verification.constrained_stress_error_Pa",
+      "maximum_exclusive": 1e-06
+    }
+  ]
+}

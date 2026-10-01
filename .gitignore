@@ -31,3 +31,8 @@ web/public/legal/
 *.out
 *.snm
 *.toc
+
+# Stacked-memory package example: generated kernels and run outputs.
+examples/stacked_memory_package/_kernels/
+examples/stacked_memory_package/runs/
+examples/stacked_memory_package/fenicsx_verification/results/
